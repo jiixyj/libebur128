@@ -163,6 +163,7 @@ int ebur128_write_frames(ebur128_state* st,
       src_index += needed_frames * st->channels;
       frames -= needed_frames;
       ebur128_filter_new_frames(st, needed_frames);
+      if (st->zg_index >= st->blocks) return 1;
       ebur128_calc_gating_block(st);
       ebur128_calc_block_loudness(st);
       ++st->zg_index;
