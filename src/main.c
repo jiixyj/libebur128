@@ -1,4 +1,6 @@
+#include <math.h>
 #include <sndfile.h>
+#include <string.h>
 #include <stdlib.h>
 
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
@@ -12,14 +14,13 @@ int filter(double* dest, const double* source,
            size_t frames, int channels, int c,
            const double* b,
            const double* a,
-           double** v,
-           size_t filter_size) {
+           double** v) {
   size_t i;
   for (i = 0; i < frames; ++i) {
-    v[c][0] = source[i * channels + c]
+    v[c][0] = source[i * (size_t) channels + (size_t) c]
                 - a[1] * v[c][1]
                 - a[2] * v[c][2];
-    dest[i * channels + c] =
+    dest[i * (size_t) channels + (size_t) c] =
                   b[0] * v[c][0]
                 + b[1] * v[c][1]
                 + b[2] * v[c][2];
@@ -36,22 +37,22 @@ int do_stuff(double* audio_data, size_t frames, int channels,
   static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
   static double b2[] = {1.0, -2.0, 1.0};
   static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
-  int c, i;
+  int c;
+  size_t i;
   double tmp;
   for (c = 0; c < channels; ++c) {
     filter(audio_data, audio_data,
            frames, channels, c,
            b, a,
-           v,
-           3);
+           v);
     filter(audio_data, audio_data,
            frames, channels, c,
            b2, a2,
-           v2,
-           3);
+           v2);
     tmp = 0.0;
     for (i = 0; i < frames; ++i) {
-      tmp += audio_data[i * channels + c] * audio_data[i * channels + c];
+      tmp += audio_data[i * (size_t) channels + (size_t) c] *
+             audio_data[i * (size_t) channels + (size_t) c];
     }
     z[c] += tmp;
   }
@@ -123,13 +124,13 @@ int main(int ac, const char* av[]) {
   result = init_filter_state(&v2, file_info.channels, 3);
   CHECK_ERROR(result, "Could not initialize filter!\n", 1, release_filter_state_1)
 
-  z = (double*) calloc(file_info.channels, sizeof(double));
+  z = (double*) calloc((size_t) file_info.channels, sizeof(double));
   CHECK_ERROR(!z, "Could not allocate memory!\n", 1, release_filter_state_2)
 
-  while (nr_frames_read = sf_readf_double(file, audio_data,
-                                          file_info.samplerate * 10)) {
+  while ((nr_frames_read = sf_readf_double(file, audio_data,
+                                           file_info.samplerate * 10))) {
     nr_frames_read_all += nr_frames_read;
-    result = do_stuff(audio_data, nr_frames_read, file_info.channels,
+    result = do_stuff(audio_data, (size_t) nr_frames_read, file_info.channels,
                       v, v2, z);
     CHECK_ERROR(result, "Calculation failed!\n", 1, free_z)
 
@@ -142,7 +143,7 @@ int main(int ac, const char* av[]) {
               "Could not read full file!\n", 1, free_z)
 
   for (i = 0; i < file_info.channels; ++i) {
-    z[i] /= nr_frames_read_all;
+    z[i] /= (double) nr_frames_read_all;
     fprintf(stderr, "channel %d: %f\n", i, z[i]);
   }
 
