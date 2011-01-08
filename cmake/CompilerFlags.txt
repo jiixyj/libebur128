@@ -71,9 +71,6 @@ list(APPEND FLAGS "-Wswitch-enum")
 # list(APPEND FLAGS "-Wno-pmf-conversions")
 
 list(APPEND FLAGS "-fPIC")
-list(APPEND FLAGS "-funsafe-loop-optimizations")
-list(APPEND FLAGS "-fno-strict-aliasing")
-list(APPEND FLAGS "-funit-at-a-time")
 
 
 if(CMAKE_COMPILER_IS_GNUC)
