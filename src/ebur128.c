@@ -164,14 +164,13 @@ void ebur128_calc_gating_block(ebur128_state* st) {
 void ebur128_calc_block_loudness(ebur128_state* st) {
   size_t c;
   for (c = 0; c < st->channels; ++c) {
-    switch (c) {
-      case 0: case 1: case 2:
-        break;
-      case 4: case 5:
-        st->zg[c][st->zg_index] *= 1.41;
-        break;
-      default:
-        st->zg[c][st->zg_index] *= 0;
+    if (c == 0 || c == 1 || c == 2) {
+    } else if (st->channels == 5 && (c == 3 || c == 4)) {
+      st->zg[c][st->zg_index] *= 1.41;
+    } else if (st->channels == 6 && (c == 4 || c == 5)) {
+      st->zg[c][st->zg_index] *= 1.41;
+    } else {
+      st->zg[c][st->zg_index] *= 0;
     }
     st->lg[st->zg_index] += st->zg[c][st->zg_index];
   }
