@@ -55,9 +55,9 @@ ebur128_state* ebur128_init(size_t frames, int channels) {
   state->audio_data_index = 0;
   state->frames = frames;
   state->blocks = (size_t) (frames / 9600 - 1);
-  errcode = ebur128_init_multi_array(&(state->v), state->channels, 3);
+  errcode = ebur128_init_multi_array(&(state->v), state->channels, 5);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
-  errcode = ebur128_init_multi_array(&(state->v2), state->channels, 3);
+  errcode = ebur128_init_multi_array(&(state->v2), state->channels, 5);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_v)
   errcode = ebur128_init_multi_array(&(state->zg), state->channels, state->blocks);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_v2)
@@ -94,44 +94,37 @@ int ebur128_destroy(ebur128_state** st) {
   return 0;
 }
 
-int ebur128_filter(double* dest, const double* source,
-                   size_t frames, size_t channels,
-                   const double* b,
-                   const double* a,
-                   double** v) {
+int ebur128_filter(ebur128_state* st, size_t frames) {
+  static double b[] = { 1.53512485958697,
+                       -5.761945908580320,
+                        8.116910049252580,
+                       -5.088481811112080,
+                        1.19839281085285};
+  static double a[] = {-3.68070674801639,
+                        5.087045247971131,
+                       -3.13154635144673,
+                        0.7252088884778705};
+  double* audio_data = st->audio_data + st->audio_data_index;
   size_t i, c;
   for (i = 0; i < frames; ++i) {
-    for (c = 0; c < channels; ++c) {
-      v[c][0] = source[i * channels + c]
-                  - a[1] * v[c][1]
-                  - a[2] * v[c][2];
-      dest[i * channels + c] =
-                    b[0] * v[c][0]
-                  + b[1] * v[c][1]
-                  + b[2] * v[c][2];
-      v[c][2] = v[c][1];
-      v[c][1] = v[c][0];
+    for (c = 0; c < st->channels; ++c) {
+      st->v[c][0] = audio_data[i * st->channels + c]
+                  - a[0] * st->v[c][1]
+                  - a[1] * st->v[c][2]
+                  - a[2] * st->v[c][3]
+                  - a[3] * st->v[c][4];
+      audio_data[i * st->channels + c] =
+                    b[0] * st->v[c][0]
+                  + b[1] * st->v[c][1]
+                  + b[2] * st->v[c][2]
+                  + b[3] * st->v[c][3]
+                  + b[4] * st->v[c][4];
+      st->v[c][4] = st->v[c][3];
+      st->v[c][3] = st->v[c][2];
+      st->v[c][2] = st->v[c][1];
+      st->v[c][1] = st->v[c][0];
     }
   }
-  return 0;
-}
-
-int ebur128_filter_new_frames(ebur128_state* st, size_t frames) {
-
-  static double b[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
-  static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
-  static double b2[] = {1.0, -2.0, 1.0};
-  static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
-  double* audio_data = st->audio_data + st->audio_data_index;
-  ebur128_filter(audio_data, audio_data,
-                 frames, st->channels,
-                 b, a,
-                 st->v);
-  ebur128_filter(audio_data, audio_data,
-                 frames, st->channels,
-                 b2, a2,
-                 st->v2);
-
   return 0;
 }
 
@@ -174,7 +167,7 @@ int ebur128_write_frames(ebur128_state* st,
       memcpy(&st->audio_data[st->audio_data_index], &src[src_index], needed_frames * st->channels * sizeof(double));
       src_index += needed_frames * st->channels;
       frames -= needed_frames;
-      ebur128_filter_new_frames(st, needed_frames);
+      ebur128_filter(st, needed_frames);
       if (st->zg_index >= st->blocks) return 1;
       ebur128_calc_gating_block(st);
       ebur128_calc_block_loudness(st);
@@ -183,7 +176,7 @@ int ebur128_write_frames(ebur128_state* st,
       st->audio_data_index = 9600 * st->channels;
     } else {
       memcpy(&st->audio_data[st->audio_data_index], &src[src_index], frames * st->channels * sizeof(double));
-      ebur128_filter_new_frames(st, frames);
+      ebur128_filter(st, frames);
       st->audio_data_index += frames * st->channels;
       frames = 0;
     }
