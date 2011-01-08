@@ -52,12 +52,31 @@ int do_stuff(double* audio_data, size_t frames, int channels,
   return 0;
 }
 
-void init_filter_state(double*** v, int channels, int filter_size) {
-  int i;
+int init_filter_state(double*** v, int channels, int filter_size) {
+  int i, errcode = 0;
   *v = (double**) calloc((size_t) channels, sizeof(double*));
+  CHECK_ERROR(!(*v), "Could not allocate memory!\n", 1, exit)
   for (i = 0; i < channels; ++i) {
     (*v)[i] = (double*) calloc((size_t) filter_size, sizeof(double));
+    CHECK_ERROR(!((*v)[i]), "Could not allocate memory!\n", 1, free_all)
   }
+  return 0;
+
+free_all:
+  for (i = 0; i < channels; ++i) {
+    free((*v)[i]);
+  }
+  free(*v);
+exit:
+  return errcode;
+}
+
+void release_filter_state(double*** v, int channels) {
+  int i;
+  for (i = 0; i < channels; ++i) {
+    free((*v)[i]);
+  }
+  free(*v);
 }
 
 int main(int ac, const char* av[]) {
@@ -90,23 +109,31 @@ int main(int ac, const char* av[]) {
                               * sizeof(double));
   CHECK_ERROR(!audio_data, "Could not allocate memory!\n", 1, close_file_out)
 
-  init_filter_state(&v, file_info.channels, 3);
-  init_filter_state(&v2, file_info.channels, 3);
+  result = init_filter_state(&v, file_info.channels, 3);
+  CHECK_ERROR(result, "Could not initialize filter!\n", 1, free_audio_data)
+  result = init_filter_state(&v2, file_info.channels, 3);
+  CHECK_ERROR(result, "Could not initialize filter!\n", 1, release_filter_state_1)
 
   while (nr_frames_read = sf_readf_double(file, audio_data,
                                           file_info.samplerate * 10)) {
     nr_frames_read_all += nr_frames_read;
     result = do_stuff(audio_data, nr_frames_read, file_info.channels,
                       v, v2);
-    CHECK_ERROR(result, "Calculation failed!\n", 1, free_audio_data)
+    CHECK_ERROR(result, "Calculation failed!\n", 1, release_filter_state_2)
 
     nr_frames_written = sf_writef_double(file_out, audio_data, nr_frames_read);
     CHECK_ERROR(nr_frames_written != nr_frames_read,
                 "Could not write to file!\n"
-                "File system full?\n", 1, free_audio_data)
+                "File system full?\n", 1, release_filter_state_2)
   }
   CHECK_ERROR(file_info.frames != nr_frames_read_all,
-              "Could not read full file!\n", 1, free_audio_data)
+              "Could not read full file!\n", 1, release_filter_state_2)
+
+release_filter_state_2:
+  release_filter_state(&v2, file_info.channels);
+
+release_filter_state_1:
+  release_filter_state(&v, file_info.channels);
 
 free_audio_data:
   free(audio_data);
