@@ -8,14 +8,51 @@
     goto goto_point;                                                           \
   }
 
-int do_stuff(int* audio_data, SF_INFO* file_info) {
-  int i;
-  for (i = 0; i < file_info->frames; ++i) {
-    int c;
-    for (c = 0; c < file_info->channels; ++c) {
-      audio_data[i * file_info->channels + c] /= 2;
-    }
+int filter(double* dest, const double* source,
+           size_t frames, int channels, int channel,
+           const double* b,
+           const double* a,
+           double* v,
+           size_t* v_index,
+           size_t filter_size) {
+  size_t i;
+  for (i = 0; i < frames; ++i) {
+    v[*v_index] = source[i * channels + channel]
+                - a[1] * v[(*v_index + filter_size - 1) % filter_size]
+                - a[2] * v[(*v_index + filter_size - 2) % filter_size];
+    dest[i * channels + channel] =
+                  b[0] * v[*v_index]
+                + b[1] * v[(*v_index + filter_size - 1) % filter_size]
+                + b[2] * v[(*v_index + filter_size - 2) % filter_size];
+    *v_index = (*v_index + 1) % filter_size;
   }
+  return 0;
+}
+
+int do_stuff(double* audio_data, SF_INFO* file_info) {
+
+  static double b[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
+  static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
+  static double b2[] = {1.0, -2.0, 1.0};
+  static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
+  int c;
+  for (c = 0; c < file_info->channels; ++c) {
+    double v[] = {0.0, 0.0, 0.0};
+    size_t v_index = 0;
+    double v2[] = {0.0, 0.0, 0.0};
+    size_t v2_index = 0;
+    filter(audio_data, audio_data,
+           file_info->frames, file_info->channels, c,
+           b, a,
+           v, &v_index,
+           3);
+    filter(audio_data, audio_data,
+           file_info->frames, file_info->channels, c,
+           b2, a2,
+           v2, &v2_index,
+           3);
+  }
+
   return 0;
 }
 
@@ -23,7 +60,7 @@ int main(int ac, const char* av[]) {
   SF_INFO file_info;
   SNDFILE* file;
   SNDFILE* file_out;
-  int* audio_data;
+  double* audio_data;
   sf_count_t nr_frames_read;
   sf_count_t nr_frames_written;
   int errcode = 0;
@@ -34,12 +71,12 @@ int main(int ac, const char* av[]) {
   file = sf_open(av[1], SFM_READ, &file_info);
   CHECK_ERROR(!file, "Could not open input file!\n", 1, exit)
 
-  audio_data = (int*) malloc((unsigned long) file_info.frames
-                           * (unsigned long) file_info.channels
-                           * sizeof(int));
+  audio_data = (double*) malloc((unsigned long) file_info.frames
+                              * (unsigned long) file_info.channels
+                              * sizeof(double));
   CHECK_ERROR(!audio_data, "Could not allocate memory!\n", 1, close_file)
 
-  nr_frames_read = sf_readf_int(file, audio_data, file_info.frames);
+  nr_frames_read = sf_readf_double(file, audio_data, file_info.frames);
   CHECK_ERROR(nr_frames_read != file_info.frames,
               "Could not read full file!\n", 1, free_audio_data)
 
@@ -49,7 +86,7 @@ int main(int ac, const char* av[]) {
   file_out = sf_open("out.wav", SFM_WRITE, &file_info);
   CHECK_ERROR(!file_out, "Could not open output file!\n", 1, free_audio_data)
 
-  nr_frames_written = sf_writef_int(file_out, audio_data, nr_frames_read);
+  nr_frames_written = sf_writef_double(file_out, audio_data, nr_frames_read);
   CHECK_ERROR(nr_frames_written != nr_frames_read,
               "Could not write full file!\n", 1, close_file_out)
 
