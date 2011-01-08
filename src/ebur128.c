@@ -59,10 +59,8 @@ ebur128_state* ebur128_init(size_t frames, int channels) {
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
   errcode = ebur128_init_multi_array(&(state->v2), state->channels, 3);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_v)
-  state->z = (double*) calloc(state->channels, sizeof(double));
-  CHECK_ERROR(!state->z, "Could not allocate memory!\n", 0, free_v2)
   errcode = ebur128_init_multi_array(&(state->zg), state->channels, state->blocks);
-  CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_z)
+  CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_v2)
   state->zg_index = 0;
   state->lg = (double*) calloc(state->blocks, sizeof(double));
   CHECK_ERROR(!state->lg, "Could not allocate memory!\n", 0, free_zg)
@@ -71,8 +69,6 @@ ebur128_state* ebur128_init(size_t frames, int channels) {
 
 free_zg:
   ebur128_release_multi_array(&(state->zg), state->channels);
-free_z:
-  free(state->z);
 free_v2:
   ebur128_release_multi_array(&(state->v2), state->channels);
 free_v:
@@ -89,7 +85,6 @@ int ebur128_destroy(ebur128_state** st) {
   free((*st)->audio_data);
   ebur128_release_multi_array(&(*st)->v, (*st)->channels);
   ebur128_release_multi_array(&(*st)->v2, (*st)->channels);
-  free((*st)->z);
   ebur128_release_multi_array(&(*st)->zg, (*st)->channels);
   free((*st)->lg);
 
@@ -126,8 +121,6 @@ int ebur128_filter_new_frames(ebur128_state* st, size_t frames) {
   static double b2[] = {1.0, -2.0, 1.0};
   static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
   size_t c;
-  size_t i;
-  double tmp;
   double* audio_data = st->audio_data + st->audio_data_index;
   for (c = 0; c < st->channels; ++c) {
     ebur128_filter(audio_data, audio_data,
@@ -138,12 +131,6 @@ int ebur128_filter_new_frames(ebur128_state* st, size_t frames) {
                    frames, st->channels, c,
                    b2, a2,
                    st->v2);
-    tmp = 0.0;
-    for (i = 0; i < frames; ++i) {
-      tmp += audio_data[i * st->channels + c] *
-             audio_data[i * st->channels + c];
-    }
-    st->z[c] += tmp;
   }
 
   return 0;

@@ -15,7 +15,6 @@ typedef struct {
   size_t channels;
   double** v;
   double** v2;
-  double* z;
   double** zg;
   size_t zg_index;
   double* lg;
