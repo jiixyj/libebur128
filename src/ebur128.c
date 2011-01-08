@@ -95,21 +95,23 @@ int ebur128_destroy(ebur128_state** st) {
 }
 
 int ebur128_filter(double* dest, const double* source,
-                   size_t frames, size_t channels, size_t c,
+                   size_t frames, size_t channels,
                    const double* b,
                    const double* a,
                    double** v) {
-  size_t i;
+  size_t i, c;
   for (i = 0; i < frames; ++i) {
-    v[c][0] = source[i * channels + c]
-                - a[1] * v[c][1]
-                - a[2] * v[c][2];
-    dest[i * channels + c] =
-                  b[0] * v[c][0]
-                + b[1] * v[c][1]
-                + b[2] * v[c][2];
-    v[c][2] = v[c][1];
-    v[c][1] = v[c][0];
+    for (c = 0; c < channels; ++c) {
+      v[c][0] = source[i * channels + c]
+                  - a[1] * v[c][1]
+                  - a[2] * v[c][2];
+      dest[i * channels + c] =
+                    b[0] * v[c][0]
+                  + b[1] * v[c][1]
+                  + b[2] * v[c][2];
+      v[c][2] = v[c][1];
+      v[c][1] = v[c][0];
+    }
   }
   return 0;
 }
@@ -120,18 +122,15 @@ int ebur128_filter_new_frames(ebur128_state* st, size_t frames) {
   static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
   static double b2[] = {1.0, -2.0, 1.0};
   static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
-  size_t c;
   double* audio_data = st->audio_data + st->audio_data_index;
-  for (c = 0; c < st->channels; ++c) {
-    ebur128_filter(audio_data, audio_data,
-                   frames, st->channels, c,
-                   b, a,
-                   st->v);
-    ebur128_filter(audio_data, audio_data,
-                   frames, st->channels, c,
-                   b2, a2,
-                   st->v2);
-  }
+  ebur128_filter(audio_data, audio_data,
+                 frames, st->channels,
+                 b, a,
+                 st->v);
+  ebur128_filter(audio_data, audio_data,
+                 frames, st->channels,
+                 b2, a2,
+                 st->v2);
 
   return 0;
 }
