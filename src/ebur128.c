@@ -14,10 +14,10 @@
 int ebur128_init_multi_array(double*** v, size_t channels, size_t filter_size) {
   size_t i;
   int errcode = 0;
-  *v = (double**) calloc((size_t) channels, sizeof(double*));
+  *v = (double**) calloc(channels, sizeof(double*));
   CHECK_ERROR(!(*v), "Could not allocate memory!\n", 1, exit)
   for (i = 0; i < channels; ++i) {
-    (*v)[i] = (double*) calloc((size_t) filter_size, sizeof(double));
+    (*v)[i] = (double*) calloc(filter_size, sizeof(double));
     CHECK_ERROR(!((*v)[i]), "Could not allocate memory!\n", 1, free_all)
   }
   return 0;
@@ -47,14 +47,14 @@ ebur128_state* ebur128_init(size_t frames, int channels) {
   if (frames / 9600 - 1 < 1) return NULL;
   state = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!state, "Could not allocate memory!\n", 0, exit)
-  state->audio_data = (double*) malloc((size_t) 19200
-                                     * (size_t) channels
+  state->channels = (size_t) channels;
+  state->audio_data = (double*) malloc(19200
+                                     * state->channels
                                      * sizeof(double));
   CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_state)
   state->audio_data_index = 0;
   state->frames = frames;
   state->blocks = (size_t) (frames / 9600 - 1);
-  state->channels = (size_t) channels;
   errcode = ebur128_init_multi_array(&(state->v), state->channels, 3);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
   errcode = ebur128_init_multi_array(&(state->v2), state->channels, 3);
@@ -106,10 +106,10 @@ int ebur128_filter(double* dest, const double* source,
                    double** v) {
   size_t i;
   for (i = 0; i < frames; ++i) {
-    v[c][0] = source[i * (size_t) channels + (size_t) c]
+    v[c][0] = source[i * channels + c]
                 - a[1] * v[c][1]
                 - a[2] * v[c][2];
-    dest[i * (size_t) channels + (size_t) c] =
+    dest[i * channels + c] =
                   b[0] * v[c][0]
                 + b[1] * v[c][1]
                 + b[2] * v[c][2];
@@ -140,8 +140,8 @@ int ebur128_filter_new_frames(ebur128_state* st, size_t frames) {
                    st->v2);
     tmp = 0.0;
     for (i = 0; i < frames; ++i) {
-      tmp += audio_data[i * (size_t) st->channels + (size_t) c] *
-             audio_data[i * (size_t) st->channels + (size_t) c];
+      tmp += audio_data[i * st->channels + c] *
+             audio_data[i * st->channels + c];
     }
     st->z[c] += tmp;
   }
@@ -154,8 +154,8 @@ void ebur128_calc_gating_block(ebur128_state* st) {
   for (c = 0; c < st->channels; ++c) {
     double sum = 0.0;
     for (i = 0; i < 19200; ++i) {
-      sum += st->audio_data[i * (size_t) st->channels + (size_t) c] *
-             st->audio_data[i * (size_t) st->channels + (size_t) c];
+      sum += st->audio_data[i * st->channels + c] *
+             st->audio_data[i * st->channels + c];
     }
     sum /= 19200;
     st->zg[c][st->zg_index] = sum;
