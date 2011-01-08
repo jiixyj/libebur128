@@ -31,32 +31,58 @@ exit:
   return errcode;
 }
 
-ebur128_state* ebur128_init(size_t frames, int channels) {
-  ebur128_state* state = (ebur128_state*) malloc(sizeof(ebur128_state));
-  state->audio_data = (double*) malloc((size_t) 19200
-                                     * (size_t) channels
-                                     * sizeof(double));
-  state->audio_data_index = 0;
-  state->frames = frames;
-  if (frames / 9600 - 1 < 1) return NULL;
-  state->blocks = (size_t) (frames / 9600 - 1);
-  state->channels = (size_t) channels;
-  ebur128_init_multi_array(&(state->v), state->channels, 3);
-  ebur128_init_multi_array(&(state->v2), state->channels, 3);
-  state->z = (double*) calloc(state->channels, sizeof(double));
-  ebur128_init_multi_array(&(state->zg), state->channels, state->blocks);
-  state->zg_index = 0;
-  state->lg = (double*) calloc(state->blocks, sizeof(double));
-
-  return state;
-}
-
 void ebur128_release_multi_array(double*** v, size_t channels) {
   size_t i;
   for (i = 0; i < channels; ++i) {
     free((*v)[i]);
   }
   free(*v);
+  *v = NULL;
+}
+
+ebur128_state* ebur128_init(size_t frames, int channels) {
+  int errcode;
+  ebur128_state* state;
+
+  if (frames / 9600 - 1 < 1) return NULL;
+  state = (ebur128_state*) malloc(sizeof(ebur128_state));
+  CHECK_ERROR(!state, "Could not allocate memory!\n", 0, exit)
+  state->audio_data = (double*) malloc((size_t) 19200
+                                     * (size_t) channels
+                                     * sizeof(double));
+  CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_state)
+  state->audio_data_index = 0;
+  state->frames = frames;
+  state->blocks = (size_t) (frames / 9600 - 1);
+  state->channels = (size_t) channels;
+  errcode = ebur128_init_multi_array(&(state->v), state->channels, 3);
+  CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
+  errcode = ebur128_init_multi_array(&(state->v2), state->channels, 3);
+  CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_v)
+  state->z = (double*) calloc(state->channels, sizeof(double));
+  CHECK_ERROR(!state->z, "Could not allocate memory!\n", 0, free_v2)
+  errcode = ebur128_init_multi_array(&(state->zg), state->channels, state->blocks);
+  CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_z)
+  state->zg_index = 0;
+  state->lg = (double*) calloc(state->blocks, sizeof(double));
+  CHECK_ERROR(!state->lg, "Could not allocate memory!\n", 0, free_zg)
+
+  return state;
+
+free_zg:
+  ebur128_release_multi_array(&(state->zg), state->channels);
+free_z:
+  free(state->z);
+free_v2:
+  ebur128_release_multi_array(&(state->v2), state->channels);
+free_v:
+  ebur128_release_multi_array(&(state->v), state->channels);
+free_audio_data:
+  free(state->audio_data);
+free_state:
+  free(state);
+exit:
+  return NULL;
 }
 
 int ebur128_destroy(ebur128_state** st) {
