@@ -185,7 +185,7 @@ double ebur128_relative_threshold(ebur128_state* st) {
   for (j = 0; j < st->channels; ++j) {
     double tmp = 0.0;
     int above_thresh_counter = 0;
-    for (i = 0; i < st->blocks; ++i) {
+    for (i = 0; i < st->zg_index; ++i) {
       if (st->lg[i] >= -70) {
         ++above_thresh_counter;
         tmp += st->zg[j][i];
@@ -206,7 +206,7 @@ double ebur128_gated_loudness(ebur128_state* st, double relative_threshold) {
   for (j = 0; j < st->channels; ++j) {
     double tmp = 0.0;
     int above_thresh_counter = 0;
-    for (i = 0; i < st->blocks; ++i) {
+    for (i = 0; i < st->zg_index; ++i) {
       if (st->lg[i] >= relative_threshold) {
         ++above_thresh_counter;
         tmp += st->zg[j][i];

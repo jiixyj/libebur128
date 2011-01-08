@@ -27,7 +27,11 @@ int main(int ac, const char* av[]) {
   CHECK_ERROR(ac != 2, "usage: r128-test FILENAME\n", 1, exit)
 
   memset(&file_info, '\0', sizeof(file_info));
-  file = sf_open(av[1], SFM_READ, &file_info);
+  if (av[1][0] == '-' && av[1][1] == '\0') {
+    file = sf_open_fd(0, SFM_READ, &file_info, SF_FALSE);
+  } else {
+    file = sf_open(av[1], SFM_READ, &file_info);
+  }
   CHECK_ERROR(!file, "Could not open input file!\n", 1, exit)
 
   st = ebur128_init( (size_t) file_info.frames, file_info.channels);
@@ -40,8 +44,10 @@ int main(int ac, const char* av[]) {
     result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
     CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
   }
-  CHECK_ERROR(file_info.frames != nr_frames_read_all,
-              "Could not read full file!\n", 1, free_buffer)
+  if (file_info.frames != nr_frames_read_all) {
+    fprintf(stderr, "Warning: Could not read full file"
+                            " or determine right length!\n");
+  }
 
   relative_threshold = ebur128_relative_threshold(st);
   gated_loudness = ebur128_gated_loudness(st, relative_threshold);
