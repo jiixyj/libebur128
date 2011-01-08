@@ -13,18 +13,17 @@ int filter(double* dest, const double* source,
            const double* b,
            const double* a,
            double* v,
-           size_t* v_index,
            size_t filter_size) {
   size_t i;
   for (i = 0; i < frames; ++i) {
-    v[*v_index] = source[i * channels + channel]
-                - a[1] * v[(*v_index + filter_size - 1) % filter_size]
-                - a[2] * v[(*v_index + filter_size - 2) % filter_size];
+    v[0] = source[i * channels + channel]
+                - a[1] * v[1]
+                - a[2] * v[2];
     dest[i * channels + channel] =
-                  b[0] * v[*v_index]
-                + b[1] * v[(*v_index + filter_size - 1) % filter_size]
-                + b[2] * v[(*v_index + filter_size - 2) % filter_size];
-    *v_index = (*v_index + 1) % filter_size;
+                  b[0] * v[0]
+                + b[1] * v[1]
+                + b[2] * v[2];
+    memmove(&v[1], &v[0], 2 * sizeof(double));
   }
   return 0;
 }
@@ -38,18 +37,16 @@ int do_stuff(double* audio_data, SF_INFO* file_info) {
   int c;
   for (c = 0; c < file_info->channels; ++c) {
     double v[] = {0.0, 0.0, 0.0};
-    size_t v_index = 0;
     double v2[] = {0.0, 0.0, 0.0};
-    size_t v2_index = 0;
     filter(audio_data, audio_data,
            file_info->frames, file_info->channels, c,
            b, a,
-           v, &v_index,
+           v,
            3);
     filter(audio_data, audio_data,
            file_info->frames, file_info->channels, c,
            b2, a2,
-           v2, &v2_index,
+           v2,
            3);
   }
 
