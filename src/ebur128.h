@@ -1,5 +1,21 @@
 #include <stdlib.h>
 
+typedef struct {
+  double* audio_data;
+  size_t frames;
+  int channels;
+  int audio_data_half;
+  double** v;
+  double** v2;
+  double* z;
+  double** zg;
+  size_t zg_index;
+  double loudness;
+  double* lg;
+} ebur128_state;
+
+int ebur128_init(ebur128_state* state, size_t frames, int channels);
+
 int filter(double* dest, const double* source,
            size_t frames, int channels, int c,
            const double* b,
@@ -7,9 +23,7 @@ int filter(double* dest, const double* source,
            double** v);
 
 
-int do_stuff(double* audio_data, size_t frames, int channels,
-             double** v, double** v2,
-             double* z);
+int ebur128_do_stuff(ebur128_state* state, size_t frames);
 
 int init_filter_state(double*** v, int channels, int filter_size);
 

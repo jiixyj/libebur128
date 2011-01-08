@@ -9,6 +9,24 @@
     goto goto_point;                                                           \
   }
 
+int ebur128_init(ebur128_state* state, size_t frames, int channels) {
+  state->audio_data = (double*) malloc((size_t) 19200 * 2
+                                     * (size_t) channels
+                                     * sizeof(double));
+  state->frames = frames;
+  state->channels = channels;
+  state->audio_data_half = 0;
+  init_filter_state(&(state->v), channels, 3);
+  init_filter_state(&(state->v2), channels, 3);
+  state->z = (double*) calloc((size_t) channels, sizeof(double));
+  init_filter_state(&(state->zg), channels, frames / 9600 - 1);
+  state->zg_index = 0;
+  double loudness = 0.0;
+  state->lg = (double*) calloc((size_t) frames / 9600 - 1, sizeof(double));
+
+  return 0;
+}
+
 int filter(double* dest, const double* source,
            size_t frames, int channels, int c,
            const double* b,
@@ -28,9 +46,7 @@ int filter(double* dest, const double* source,
   return 0;
 }
 
-int do_stuff(double* audio_data, size_t frames, int channels,
-             double** v, double** v2,
-             double* z) {
+int ebur128_do_stuff(ebur128_state* st, size_t frames) {
 
   static double b[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
   static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
@@ -39,21 +55,22 @@ int do_stuff(double* audio_data, size_t frames, int channels,
   int c;
   size_t i;
   double tmp;
-  for (c = 0; c < channels; ++c) {
+  double* audio_data = st->audio_data + st->audio_data_half * 19200 * st->channels;
+  for (c = 0; c < st->channels; ++c) {
     filter(audio_data, audio_data,
-           frames, channels, c,
+           frames, st->channels, c,
            b, a,
-           v);
+           st->v);
     filter(audio_data, audio_data,
-           frames, channels, c,
+           frames, st->channels, c,
            b2, a2,
-           v2);
+           st->v2);
     tmp = 0.0;
     for (i = 0; i < frames; ++i) {
-      tmp += audio_data[i * (size_t) channels + (size_t) c] *
-             audio_data[i * (size_t) channels + (size_t) c];
+      tmp += audio_data[i * (size_t) st->channels + (size_t) c] *
+             audio_data[i * (size_t) st->channels + (size_t) c];
     }
-    z[c] += tmp;
+    st->z[c] += tmp;
   }
 
   return 0;
