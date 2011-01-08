@@ -27,5 +27,6 @@ include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
 
 
+add_library(ebur128 src/ebur128.c)
 add_executable(r128-test src/main.c)
-target_link_libraries(r128-test ${SNDFILE_LIBRARIES})
+target_link_libraries(r128-test ebur128 ${SNDFILE_LIBRARIES})
