@@ -9,27 +9,27 @@
   }
 
 int filter(double* dest, const double* source,
-           size_t frames, int channels, int channel,
+           size_t frames, int channels, int c,
            const double* b,
            const double* a,
-           double* v,
+           double** v,
            size_t filter_size) {
   size_t i;
   for (i = 0; i < frames; ++i) {
-    v[0] = source[i * channels + channel]
-                - a[1] * v[1]
-                - a[2] * v[2];
-    dest[i * channels + channel] =
-                  b[0] * v[0]
-                + b[1] * v[1]
-                + b[2] * v[2];
-    memmove(&v[1], &v[0], 2 * sizeof(double));
+    v[c][0] = source[i * channels + c]
+                - a[1] * v[c][1]
+                - a[2] * v[c][2];
+    dest[i * channels + c] =
+                  b[0] * v[c][0]
+                + b[1] * v[c][1]
+                + b[2] * v[c][2];
+    memmove(&v[c][1], &v[c][0], 2 * sizeof(double));
   }
   return 0;
 }
 
 int do_stuff(double* audio_data, size_t frames, int channels,
-             double v[], double v2[]) {
+             double** v, double** v2) {
 
   static double b[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
   static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
@@ -52,6 +52,14 @@ int do_stuff(double* audio_data, size_t frames, int channels,
   return 0;
 }
 
+void init_filter_state(double*** v, int channels, int filter_size) {
+  int i;
+  *v = (double**) calloc((size_t) channels, sizeof(double*));
+  for (i = 0; i < channels; ++i) {
+    (*v)[i] = (double*) calloc((size_t) filter_size, sizeof(double));
+  }
+}
+
 int main(int ac, const char* av[]) {
   SF_INFO file_info;
   SNDFILE* file;
@@ -61,6 +69,9 @@ int main(int ac, const char* av[]) {
   sf_count_t nr_frames_read;
   sf_count_t nr_frames_read_all = 0;
   sf_count_t nr_frames_written;
+  double** v;
+  double** v2;
+  int i;
   int errcode = 0;
   int result;
 
@@ -74,13 +85,14 @@ int main(int ac, const char* av[]) {
   CHECK_ERROR(!file_out, "Could not open output file!\n", 1, close_file)
   file_info.frames = nr_frames;
 
-  audio_data = (double*) malloc((unsigned long) file_info.samplerate * 10
-                              * (unsigned long) file_info.channels
+  audio_data = (double*) malloc((size_t) file_info.samplerate * 10
+                              * (size_t) file_info.channels
                               * sizeof(double));
   CHECK_ERROR(!audio_data, "Could not allocate memory!\n", 1, close_file_out)
 
-  double v[] = {0.0, 0.0, 0.0};
-  double v2[] = {0.0, 0.0, 0.0};
+  init_filter_state(&v, file_info.channels, 3);
+  init_filter_state(&v2, file_info.channels, 3);
+
   while (nr_frames_read = sf_readf_double(file, audio_data,
                                           file_info.samplerate * 10)) {
     nr_frames_read_all += nr_frames_read;
