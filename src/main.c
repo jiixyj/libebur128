@@ -30,43 +30,13 @@ int main(int ac, const char* av[]) {
   ebur128_state st;
   ebur128_init(&st, file_info.frames, file_info.channels);
 
-  while ((nr_frames_read = sf_readf_double(file, st.audio_data +
-                                                 st.audio_data_half * 19200 *
-                                                 st.channels,
-                                           19200))) {
+  double* buffer = (double*) malloc((size_t) 5000
+                                     * (size_t) st.channels
+                                     * sizeof(double));
+
+  while ((nr_frames_read = sf_readf_double(file, buffer, 5000))) {
     nr_frames_read_all += nr_frames_read;
-    result = ebur128_do_stuff(&st, (size_t) nr_frames_read);
-    CHECK_ERROR(result, "Calculation failed!\n", 1, close_file)
-
-    if (st.audio_data_half == 0) {
-      if (st.zg_index != 0) {
-        if (nr_frames_read < 9600) break;
-        memcpy(st.audio_data + 19200 * st.channels,
-               st.audio_data,
-               9600 * st.channels * sizeof(double));
-        calc_gating_block(st.audio_data + 19200 * st.channels,
-                          nr_frames_read, st.channels,
-                          st.zg, st.zg_index);
-        ++st.zg_index;
-      }
-      if (nr_frames_read < 19200) break;
-      calc_gating_block(st.audio_data, nr_frames_read, st.channels,
-                        st.zg, st.zg_index);
-      ++st.zg_index;
-    } else {
-      if (nr_frames_read < 9600) break;
-      calc_gating_block(st.audio_data + 9600 * st.channels,
-                        nr_frames_read, st.channels,
-                        st.zg, st.zg_index);
-      ++st.zg_index;
-      if (nr_frames_read < 19200) break;
-      calc_gating_block(st.audio_data + 19200 * st.channels,
-                        nr_frames_read, st.channels,
-                        st.zg, st.zg_index);
-      ++st.zg_index;
-    }
-
-    st.audio_data_half = st.audio_data_half ? 0 : 1;
+    ebur128_write_frames(&st, buffer, nr_frames_read);
   }
   CHECK_ERROR(file_info.frames != nr_frames_read_all,
               "Could not read full file!\n", 1, close_file)
@@ -78,27 +48,6 @@ int main(int ac, const char* av[]) {
 
   fprintf(stderr, "relative threshold: %f LKFS\n", relative_threshold);
   fprintf(stderr, "gated loudness: %f LKFS\n", gated_loudness);
-
-
-/*
-free_lg:
-  free(lg);
-
-free_zg:
-  release_filter_state(&zg, file_info.channels);
-
-free_z:
-  free(z);
-
-release_filter_state_2:
-  release_filter_state(&v2, file_info.channels);
-
-release_filter_state_1:
-  release_filter_state(&v, file_info.channels);
-
-free_audio_data:
-  free(audio_data);
-*/
 
 close_file:
   if (sf_close(file)) {

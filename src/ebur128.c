@@ -10,9 +10,10 @@
   }
 
 int ebur128_init(ebur128_state* state, size_t frames, int channels) {
-  state->audio_data = (double*) malloc((size_t) 19200 * 2
+  state->audio_data = (double*) malloc((size_t) 19200
                                      * (size_t) channels
                                      * sizeof(double));
+  state->audio_data_index = 0;
   state->frames = frames;
   state->channels = channels;
   state->audio_data_half = 0;
@@ -25,6 +26,29 @@ int ebur128_init(ebur128_state* state, size_t frames, int channels) {
   state->lg = (double*) calloc((size_t) frames / 9600 - 1, sizeof(double));
 
   return 0;
+}
+
+int ebur128_write_frames(ebur128_state* st,
+                         const double* src, size_t frames) {
+  size_t src_index = 0;
+  while (frames > 0) {
+    size_t needed_frames = 19200 - st->audio_data_index / st->channels;
+    if (frames >= needed_frames) {
+      memcpy(&st->audio_data[st->audio_data_index], &src[src_index], needed_frames * st->channels * sizeof(double));
+      src_index += needed_frames * st->channels;
+      frames -= needed_frames;
+      ebur128_do_stuff(st, needed_frames);
+      calc_gating_block(st->audio_data, 19200, st->channels, st->zg, st->zg_index);
+      ++st->zg_index;
+      memcpy(st->audio_data, st->audio_data + 9600 * st->channels, 9600 * st->channels * sizeof(double));
+      st->audio_data_index = 9600 * st->channels;
+    } else {
+      memcpy(&st->audio_data[st->audio_data_index], &src[src_index], frames * st->channels * sizeof(double));
+      ebur128_do_stuff(st, frames);
+      st->audio_data_index += frames * st->channels;
+      frames = 0;
+    }
+  }
 }
 
 int filter(double* dest, const double* source,
@@ -55,7 +79,7 @@ int ebur128_do_stuff(ebur128_state* st, size_t frames) {
   int c;
   size_t i;
   double tmp;
-  double* audio_data = st->audio_data + st->audio_data_half * 19200 * st->channels;
+  double* audio_data = st->audio_data + st->audio_data_index;
   for (c = 0; c < st->channels; ++c) {
     filter(audio_data, audio_data,
            frames, st->channels, c,

@@ -2,6 +2,7 @@
 
 typedef struct {
   double* audio_data;
+  size_t audio_data_index;
   size_t frames;
   int channels;
   int audio_data_half;
