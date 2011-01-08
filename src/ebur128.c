@@ -113,7 +113,8 @@ int ebur128_filter(double* dest, const double* source,
                   b[0] * v[c][0]
                 + b[1] * v[c][1]
                 + b[2] * v[c][2];
-    memmove(&v[c][1], &v[c][0], 2 * sizeof(double));
+    v[c][2] = v[c][1];
+    v[c][1] = v[c][0];
   }
   return 0;
 }
