@@ -33,6 +33,8 @@ int main(int ac, const char* av[]) {
     file = sf_open(av[1], SFM_READ, &file_info);
   }
   CHECK_ERROR(!file, "Could not open input file!\n", 1, exit)
+  CHECK_ERROR(file_info.samplerate != 48000,
+              "Only 48000 kHz sample rate is supported.\n", 1, close_file)
 
   st = ebur128_init( (size_t) file_info.frames, file_info.channels);
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
