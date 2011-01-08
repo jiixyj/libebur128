@@ -29,13 +29,15 @@ int filter(double* dest, const double* source,
 }
 
 int do_stuff(double* audio_data, size_t frames, int channels,
-             double** v, double** v2) {
+             double** v, double** v2,
+             double* z) {
 
   static double b[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
   static double a[] = {1.0, -1.69065929318241, 0.73248077421585};
   static double b2[] = {1.0, -2.0, 1.0};
   static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
-  int c;
+  int c, i;
+  double tmp;
   for (c = 0; c < channels; ++c) {
     filter(audio_data, audio_data,
            frames, channels, c,
@@ -47,6 +49,11 @@ int do_stuff(double* audio_data, size_t frames, int channels,
            b2, a2,
            v2,
            3);
+    tmp = 0.0;
+    for (i = 0; i < frames; ++i) {
+      tmp += audio_data[i * channels + c] * audio_data[i * channels + c];
+    }
+    z[c] += tmp;
   }
 
   return 0;
@@ -90,6 +97,8 @@ int main(int ac, const char* av[]) {
   sf_count_t nr_frames_written;
   double** v;
   double** v2;
+  double* z;
+  double loudness = 0.0;
   int i;
   int errcode = 0;
   int result;
@@ -114,20 +123,48 @@ int main(int ac, const char* av[]) {
   result = init_filter_state(&v2, file_info.channels, 3);
   CHECK_ERROR(result, "Could not initialize filter!\n", 1, release_filter_state_1)
 
+  z = (double*) calloc(file_info.channels, sizeof(double));
+  CHECK_ERROR(!z, "Could not allocate memory!\n", 1, release_filter_state_2)
+
   while (nr_frames_read = sf_readf_double(file, audio_data,
                                           file_info.samplerate * 10)) {
     nr_frames_read_all += nr_frames_read;
     result = do_stuff(audio_data, nr_frames_read, file_info.channels,
-                      v, v2);
-    CHECK_ERROR(result, "Calculation failed!\n", 1, release_filter_state_2)
+                      v, v2, z);
+    CHECK_ERROR(result, "Calculation failed!\n", 1, free_z)
 
     nr_frames_written = sf_writef_double(file_out, audio_data, nr_frames_read);
     CHECK_ERROR(nr_frames_written != nr_frames_read,
                 "Could not write to file!\n"
-                "File system full?\n", 1, release_filter_state_2)
+                "File system full?\n", 1, free_z)
   }
   CHECK_ERROR(file_info.frames != nr_frames_read_all,
-              "Could not read full file!\n", 1, release_filter_state_2)
+              "Could not read full file!\n", 1, free_z)
+
+  for (i = 0; i < file_info.channels; ++i) {
+    z[i] /= nr_frames_read_all;
+    fprintf(stderr, "channel %d: %f\n", i, z[i]);
+  }
+
+  for (i = 0; i < file_info.channels; ++i) {
+    switch (i) {
+      case 0: case 1: case 2:
+        break;
+      case 4: case 5:
+        z[i] *= 1.41;
+        break;
+      default:
+        z[i] *= 0;
+    }
+    loudness += z[i];
+  }
+  loudness = 10 * (log(loudness) / log(10.0));
+  loudness -= 0.691;
+  fprintf(stderr, "loudness: %f LKFS\n", loudness);
+
+
+free_z:
+  free(z);
 
 release_filter_state_2:
   release_filter_state(&v2, file_info.channels);
