@@ -106,6 +106,7 @@ int main(int ac, const char* av[]) {
 
   CHECK_ERROR(ac != 2, "usage: r128-test FILENAME\n", 1, exit)
 
+  memset(&file_info, '\0', sizeof(file_info));
   file = sf_open(av[1], SFM_READ, &file_info);
   CHECK_ERROR(!file, "Could not open input file!\n", 1, exit)
   nr_frames = file_info.frames;
