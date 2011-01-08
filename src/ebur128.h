@@ -1,6 +1,10 @@
 #ifndef _EBUR128_H_
 #define _EBUR128_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <string.h>
 
 typedef struct {
@@ -24,5 +28,9 @@ int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);
 
 double ebur128_relative_threshold(ebur128_state* st);
 double ebur128_gated_loudness(ebur128_state* st, double relative_threshold);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* _EBUR128_H_ */
