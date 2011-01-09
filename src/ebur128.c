@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define PI 3.14159265358979323846
+
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
     fprintf(stderr, message);                                                  \
@@ -43,8 +45,21 @@ void ebur128_release_multi_array(double*** v, size_t channels) {
 int ebur128_init_filter(ebur128_state* st) {
   static double b1[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
   static double a1[] = {1.0, -1.69065929318241, 0.73248077421585};
-  static double b2[] = {1.0, -2.0, 1.0};
-  static double a2[] = {1.0, -1.99004745483398, 0.99007225036621};
+
+
+  double f0 = 38.13547087606643;
+  double Q = 0.500327037324428;
+
+  double w0 = 2 * PI * f0 / st->samplerate;
+  double alpha = sin(w0) / (2*Q);
+
+  double b2[] = {1.0, -2.0, 1.0};
+  double a2[] = {1.0, 0.0, 0.0};
+  a2[1] = -2 * cos(w0) / (1.0 + alpha);
+  a2[2] = (1.0 - alpha) / (1.0 + alpha);
+
+  fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]);
+
 
   int errcode = 0;
   st->a = (double*) calloc(5, sizeof(double));
