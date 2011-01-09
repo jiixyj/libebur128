@@ -13,6 +13,9 @@ typedef struct {
   size_t frames;
   size_t blocks;
   size_t channels;
+  size_t samplerate;
+  double* a;
+  double* b;
   double** v;
   double** v2;
   double** zg;
@@ -20,7 +23,7 @@ typedef struct {
   double* lg;
 } ebur128_state;
 
-ebur128_state* ebur128_init(size_t frames, int channels);
+ebur128_state* ebur128_init(size_t frames, int channels, int samplerate);
 int ebur128_destroy(ebur128_state** st);
 
 int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);

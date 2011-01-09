@@ -36,7 +36,9 @@ int main(int ac, const char* av[]) {
   CHECK_ERROR(file_info.samplerate != 48000,
               "Only 48000 kHz sample rate is supported.\n", 1, close_file)
 
-  st = ebur128_init( (size_t) file_info.frames, file_info.channels);
+  st = ebur128_init( (size_t) file_info.frames,
+                              file_info.channels,
+                              file_info.samplerate);
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
 
   buffer = (double*) malloc(48000 * st->channels * sizeof(double));
