@@ -44,9 +44,22 @@ void ebur128_release_multi_array(double*** v, size_t channels) {
 
 int ebur128_init_filter(ebur128_state* st) {
   int errcode = 0;
+  double fc = 1681.974450955531;
+  double G = 3.999843853973343;
+  double K = tan(PI * fc / st->samplerate);
+  double v0 = pow(10, G / 20.0);
 
-  static double b1[] = {1.53512485958697, -2.69169618940638, 1.19839281085285};
-  static double a1[] = {1.0, -1.69065929318241, 0.73248077421585};
+  double sqrt2 = pow(2, 0.5);   /* BS.1770-1 uses 1.414076664088622 */
+  double sqrtv0 = pow(v0, 0.5); /* BS.1770-1 uses 1.258720930232561 */
+
+  double b1[] = {0.0, 0.0, 0.0};
+  double a1[] = {1.0, 0.0, 0.0};
+  double denom = 1 + sqrt2 * K + K * K;
+  b1[0] = (v0 + sqrt2 * sqrtv0 * K + K * K) / denom;
+  b1[1] = 2 * (K * K - v0) / denom;
+  b1[2] = (v0 - sqrt2 * sqrtv0 * K + K * K) / denom;
+  a1[1] = 2 * (K * K - 1) / denom;
+  a1[2] = (1 - sqrt2 * K + K * K) / denom;
 
 
   double f0 = 38.13547087606643;
@@ -59,8 +72,6 @@ int ebur128_init_filter(ebur128_state* st) {
   double a2[] = {1.0, 0.0, 0.0};
   a2[1] = -2 * cos(w0) / (1.0 + alpha);
   a2[2] = (1.0 - alpha) / (1.0 + alpha);
-
-  fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]);
 
 
   st->a = (double*) calloc(5, sizeof(double));
