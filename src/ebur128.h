@@ -8,10 +8,10 @@ extern "C" {
 #include <string.h>
 #include <sys/queue.h>
 
-TAILQ_HEAD(ebur128_double_queue, ebur128_dq_entry);
+LIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {
   double z;
-  TAILQ_ENTRY(ebur128_dq_entry) entries;
+  LIST_ENTRY(ebur128_dq_entry) entries;
 };
 
 typedef struct {

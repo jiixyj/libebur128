@@ -118,7 +118,7 @@ ebur128_state* ebur128_init(int channels, int samplerate) {
   errcode = ebur128_init_filter(state);
   CHECK_ERROR(errcode, "Could not initialize filter!\n", 0, free_v)
 
-  TAILQ_INIT(&state->block_list);
+  LIST_INIT(&state->block_list);
 
   return state;
 
@@ -138,9 +138,9 @@ int ebur128_destroy(ebur128_state** st) {
   ebur128_release_multi_array(&(*st)->v, (*st)->channels);
   free((*st)->a);
   free((*st)->b);
-  while ((*st)->block_list.tqh_first != NULL) {
-    entry = (*st)->block_list.tqh_first;
-    TAILQ_REMOVE(&(*st)->block_list, (*st)->block_list.tqh_first, entries);
+  while ((*st)->block_list.lh_first != NULL) {
+    entry = (*st)->block_list.lh_first;
+    LIST_REMOVE((*st)->block_list.lh_first, entries);
     free(entry);
   }
 
@@ -198,7 +198,7 @@ int ebur128_calc_gating_block(ebur128_state* st) {
     }
     block->z += sum;
   }
-  TAILQ_INSERT_TAIL(&st->block_list, block, entries);
+  LIST_INSERT_HEAD(&st->block_list, block, entries);
   return 0;
 }
 
@@ -231,15 +231,15 @@ double ebur128_relative_threshold(ebur128_state* st) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   int above_thresh_counter = 0;
-  for (it = st->block_list.tqh_first; it != NULL;
-       it = it->entries.tqe_next) {
-    if (it->z >= 0.0000001172465305) {
+  for (it = st->block_list.lh_first; it != NULL;
+       it = it->entries.le_next) {
+    if (it->z >= 1.1724653045822964e-7) {
       ++above_thresh_counter;
       relative_threshold += it->z;
     }
   }
   relative_threshold /= above_thresh_counter;
-  return 0.1584893192 * relative_threshold;
+  return 0.1584893192461113 * relative_threshold;
 }
 
 double ebur128_gated_loudness(ebur128_state* st) {
@@ -247,8 +247,8 @@ double ebur128_gated_loudness(ebur128_state* st) {
   struct ebur128_dq_entry* it;
   double gated_loudness = 0.0;
   int above_thresh_counter = 0;
-  for (it = st->block_list.tqh_first; it != NULL;
-       it = it->entries.tqe_next) {
+  for (it = st->block_list.lh_first; it != NULL;
+       it = it->entries.le_next) {
     if (it->z >= relative_threshold) {
       ++above_thresh_counter;
       gated_loudness += it->z;
