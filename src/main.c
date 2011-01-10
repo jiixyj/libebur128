@@ -17,60 +17,70 @@ int main(int ac, const char* av[]) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
-  sf_count_t nr_frames_read_all = 0;
-  ebur128_state* st;
+  sf_count_t nr_frames_read_all;
+  ebur128_state* st = NULL;
   double* buffer;
   double gated_loudness;
   int errcode = 0;
   int result;
-  size_t seconds = 0;
+  int i;
 
-  CHECK_ERROR(ac != 2, "usage: r128-test FILENAME\n", 1, exit)
+  CHECK_ERROR(ac < 2, "usage: r128-test FILENAME(S) ...\n", 1, exit)
 
-  memset(&file_info, '\0', sizeof(file_info));
-  if (av[1][0] == '-' && av[1][1] == '\0') {
-    file = sf_open_fd(0, SFM_READ, &file_info, SF_FALSE);
-  } else {
-    file = sf_open(av[1], SFM_READ, &file_info);
-  }
-  CHECK_ERROR(!file, "Could not open input file!\n", 1, exit)
-
-  st = ebur128_init(file_info.channels, file_info.samplerate);
-  CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
-
-  buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
-  CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, destroy_ebur128)
-  while ((nr_frames_read = sf_readf_double(file, buffer, st->samplerate))) {
-    nr_frames_read_all += nr_frames_read;
-    result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
-    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
-    ++seconds;
-    if (seconds == 60) {
-      fprintf(stderr, "segment: %f LUFS\n", ebur128_gated_loudness_segment(st));
-      ebur128_start_new_segment(st);
-      seconds = 0;
+  for (i = 1; i < ac; ++i) {
+    memset(&file_info, '\0', sizeof(file_info));
+    if (av[1][0] == '-' && av[1][1] == '\0') {
+      file = sf_open_fd(0, SFM_READ, &file_info, SF_FALSE);
+    } else {
+      file = sf_open(av[i], SFM_READ, &file_info);
     }
+    CHECK_ERROR(!file, "Could not open input file!\n", 1, endloop)
+    nr_frames_read_all = 0;
+
+    if (!st) {
+      st = ebur128_init(file_info.channels, file_info.samplerate);
+      CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
+    } else {
+      CHECK_ERROR(st->channels != (size_t) file_info.channels ||
+                  st->samplerate != (size_t) file_info.samplerate,
+                  "All files must have the same samplerate "
+                  "and number of channels! Skipping...\n",
+                  1, close_file)
+    }
+
+    buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
+    CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
+    while ((nr_frames_read = sf_readf_double(file, buffer, (sf_count_t) st->samplerate))) {
+      nr_frames_read_all += nr_frames_read;
+      result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
+      CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+    }
+    if (file_info.frames != nr_frames_read_all) {
+      fprintf(stderr, "Warning: Could not read full file"
+                              " or determine right length!\n");
+    }
+
+    fprintf(stderr, "segment %d: %f LUFS\n", i, ebur128_gated_loudness_segment(st));
+    ebur128_start_new_segment(st);
+    if (i == ac - 1) {
+      gated_loudness = ebur128_gated_loudness_global(st);
+      fprintf(stderr, "global loudness: %f LUFS\n", gated_loudness);
+    }
+
+  free_buffer:
+    free(buffer);
+    buffer = NULL;
+
+  close_file:
+    if (sf_close(file)) {
+      fprintf(stderr, "Could not close input file!\n");
+    }
+
+  endloop: ;
   }
-  if (file_info.frames != nr_frames_read_all) {
-    fprintf(stderr, "Warning: Could not read full file"
-                            " or determine right length!\n");
-  }
 
-  gated_loudness = ebur128_gated_loudness_global(st);
-
-  fprintf(stderr, "gated loudness: %f LUFS\n", gated_loudness);
-
-free_buffer:
-  free(buffer);
-  buffer = NULL;
-
-destroy_ebur128:
-  ebur128_destroy(&st);
-
-close_file:
-  if (sf_close(file)) {
-    fprintf(stderr, "Could not close input file!\n");
-  }
+  if (st)
+    ebur128_destroy(&st);
 
 exit:
   return errcode;
