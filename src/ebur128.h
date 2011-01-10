@@ -6,24 +6,26 @@ extern "C" {
 #endif
 
 #include <string.h>
+#include <sys/queue.h>
+
+TAILQ_HEAD(ebur128_double_queue, ebur128_dq_entry);
+struct ebur128_dq_entry {
+  double z, l;
+  TAILQ_ENTRY(ebur128_dq_entry) entries;
+};
 
 typedef struct {
   double* audio_data;
   size_t audio_data_index;
-  size_t frames;
-  size_t blocks;
   size_t channels;
   size_t samplerate;
   double* a;
   double* b;
   double** v;
-  double** v2;
-  double** zg;
-  size_t zg_index;
-  double* lg;
+  struct ebur128_double_queue block_list;
 } ebur128_state;
 
-ebur128_state* ebur128_init(size_t frames, int channels, int samplerate);
+ebur128_state* ebur128_init(int channels, int samplerate);
 int ebur128_destroy(ebur128_state** st);
 
 int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);

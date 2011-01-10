@@ -34,9 +34,7 @@ int main(int ac, const char* av[]) {
   }
   CHECK_ERROR(!file, "Could not open input file!\n", 1, exit)
 
-  st = ebur128_init( (size_t) file_info.frames,
-                              file_info.channels,
-                              file_info.samplerate);
+  st = ebur128_init(file_info.channels, file_info.samplerate);
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
 
   buffer = (double*) malloc(48000 * st->channels * sizeof(double));
