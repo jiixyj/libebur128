@@ -174,10 +174,11 @@ int ebur128_filter(ebur128_state* st, size_t frames) {
   return 0;
 }
 
-void ebur128_calc_gating_block(ebur128_state* st) {
+int ebur128_calc_gating_block(ebur128_state* st) {
   size_t i, c;
   struct ebur128_dq_entry* block;
   block = malloc(sizeof(struct ebur128_dq_entry));
+  if (!block) return 1;
   block->z = 0.0;
   for (c = 0; c < st->channels; ++c) {
     double sum = 0.0;
@@ -199,10 +200,12 @@ void ebur128_calc_gating_block(ebur128_state* st) {
   block->l = 10 * (log(block->z) / log(10.0));
   block->l -= 0.691;
   TAILQ_INSERT_TAIL(&st->block_list, block, entries);
+  return 0;
 }
 
 int ebur128_write_frames(ebur128_state* st,
                          const double* src, size_t frames) {
+  int errcode = 0;
   size_t src_index = 0;
   while (frames > 0) {
     size_t needed_frames = st->samplerate * 2 / 5 - st->audio_data_index / st->channels;
@@ -211,7 +214,8 @@ int ebur128_write_frames(ebur128_state* st,
       src_index += needed_frames * st->channels;
       frames -= needed_frames;
       ebur128_filter(st, needed_frames);
-      ebur128_calc_gating_block(st);
+      errcode = ebur128_calc_gating_block(st);
+      if (errcode) return 1;
       memcpy(st->audio_data, st->audio_data + st->samplerate / 5 * st->channels, st->samplerate / 5 * st->channels * sizeof(double));
       st->audio_data_index = st->samplerate / 5 * st->channels;
     } else {
