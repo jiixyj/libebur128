@@ -46,7 +46,7 @@ int ebur128_init_filter(ebur128_state* st) {
   int errcode = 0;
   double fc = 1681.974450955531;
   double G = 3.999843853973343;
-  double K = tan(PI * fc / st->samplerate);
+  double K = tan(PI * fc / (double) st->samplerate);
   double v0 = pow(10, G / 20.0);
 
   double sqrt2 = pow(2, 0.5);   /* BS.1770-1 uses 1.414076664088622 */
@@ -61,7 +61,7 @@ int ebur128_init_filter(ebur128_state* st) {
   a1[1] = 2 * (K * K - 1) / denom;
   a1[2] = (1 - sqrt2 * K + K * K) / denom;
 
-
+  {
   double f0 = 38.13547087606643;
   double Q = 0.500327037324428;
 
@@ -90,6 +90,7 @@ int ebur128_init_filter(ebur128_state* st) {
   st->a[2] = a1[0] * a2[2] + a1[1] * a2[1] + a1[2] * a2[0];
   st->a[3] = a1[1] * a2[2] + a1[2] * a2[1];
   st->a[4] = a1[2] * a2[2];
+  }
 
   return 0;
 
@@ -186,7 +187,7 @@ int ebur128_calc_gating_block(ebur128_state* st) {
       sum += st->audio_data[i * st->channels + c] *
              st->audio_data[i * st->channels + c];
     }
-    sum /= st->samplerate * 2 / 5;
+    sum /= (double) (st->samplerate * 2 / 5);
     if (c == 0 || c == 1 || c == 2) {
     } else if (st->channels == 5 && (c == 3 || c == 4)) {
       sum *= 1.41;
