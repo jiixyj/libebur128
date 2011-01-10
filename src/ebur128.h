@@ -23,14 +23,17 @@ typedef struct {
   double* b;
   double** v;
   struct ebur128_double_queue block_list;
+  size_t block_counter;
 } ebur128_state;
 
 ebur128_state* ebur128_init(int channels, int samplerate);
 int ebur128_destroy(ebur128_state** st);
 
 int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);
+void ebur128_start_new_segment(ebur128_state* st);
 
-double ebur128_gated_loudness(ebur128_state* st);
+double ebur128_gated_loudness_segment(ebur128_state* st);
+double ebur128_gated_loudness_global(ebur128_state* st);
 
 #ifdef __cplusplus
 }

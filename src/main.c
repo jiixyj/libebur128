@@ -23,6 +23,7 @@ int main(int ac, const char* av[]) {
   double gated_loudness;
   int errcode = 0;
   int result;
+  size_t seconds = 0;
 
   CHECK_ERROR(ac != 2, "usage: r128-test FILENAME\n", 1, exit)
 
@@ -37,21 +38,27 @@ int main(int ac, const char* av[]) {
   st = ebur128_init(file_info.channels, file_info.samplerate);
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
 
-  buffer = (double*) malloc(48000 * st->channels * sizeof(double));
+  buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
   CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, destroy_ebur128)
-  while ((nr_frames_read = sf_readf_double(file, buffer, 48000))) {
+  while ((nr_frames_read = sf_readf_double(file, buffer, st->samplerate))) {
     nr_frames_read_all += nr_frames_read;
     result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
     CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+    ++seconds;
+    if (seconds == 60) {
+      fprintf(stderr, "segment: %f LUFS\n", ebur128_gated_loudness_segment(st));
+      ebur128_start_new_segment(st);
+      seconds = 0;
+    }
   }
   if (file_info.frames != nr_frames_read_all) {
     fprintf(stderr, "Warning: Could not read full file"
                             " or determine right length!\n");
   }
 
-  gated_loudness = ebur128_gated_loudness(st);
+  gated_loudness = ebur128_gated_loudness_global(st);
 
-  fprintf(stderr, "gated loudness: %f LKFS\n", gated_loudness);
+  fprintf(stderr, "gated loudness: %f LUFS\n", gated_loudness);
 
 free_buffer:
   free(buffer);
