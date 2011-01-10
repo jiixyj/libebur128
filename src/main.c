@@ -20,7 +20,7 @@ int main(int ac, const char* av[]) {
   sf_count_t nr_frames_read_all = 0;
   ebur128_state* st;
   double* buffer;
-  double relative_threshold, gated_loudness;
+  double gated_loudness;
   int errcode = 0;
   int result;
 
@@ -49,10 +49,8 @@ int main(int ac, const char* av[]) {
                             " or determine right length!\n");
   }
 
-  relative_threshold = ebur128_relative_threshold(st);
-  gated_loudness = ebur128_gated_loudness(st, relative_threshold);
+  gated_loudness = ebur128_gated_loudness(st);
 
-  fprintf(stderr, "relative threshold: %f LKFS\n", relative_threshold);
   fprintf(stderr, "gated loudness: %f LKFS\n", gated_loudness);
 
 free_buffer:

@@ -198,8 +198,6 @@ int ebur128_calc_gating_block(ebur128_state* st) {
     }
     block->z += sum;
   }
-  block->l = 10 * (log(block->z) / log(10.0));
-  block->l -= 0.691;
   TAILQ_INSERT_TAIL(&st->block_list, block, entries);
   return 0;
 }
@@ -235,25 +233,23 @@ double ebur128_relative_threshold(ebur128_state* st) {
   int above_thresh_counter = 0;
   for (it = st->block_list.tqh_first; it != NULL;
        it = it->entries.tqe_next) {
-    if (it->l >= -70) {
+    if (it->z >= 0.0000001172465305) {
       ++above_thresh_counter;
       relative_threshold += it->z;
     }
   }
   relative_threshold /= above_thresh_counter;
-  relative_threshold = 10 * (log(relative_threshold) / log(10.0));
-  relative_threshold -= 0.691;
-  relative_threshold -= 8.0;
-  return relative_threshold;
+  return 0.1584893192 * relative_threshold;
 }
 
-double ebur128_gated_loudness(ebur128_state* st, double relative_threshold) {
+double ebur128_gated_loudness(ebur128_state* st) {
+  double relative_threshold = ebur128_relative_threshold(st);
   struct ebur128_dq_entry* it;
   double gated_loudness = 0.0;
   int above_thresh_counter = 0;
   for (it = st->block_list.tqh_first; it != NULL;
        it = it->entries.tqe_next) {
-    if (it->l >= relative_threshold) {
+    if (it->z >= relative_threshold) {
       ++above_thresh_counter;
       gated_loudness += it->z;
     }
