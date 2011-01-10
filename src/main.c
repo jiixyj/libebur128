@@ -50,7 +50,8 @@ int main(int ac, const char* av[]) {
 
     buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
     CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
-    while ((nr_frames_read = sf_readf_double(file, buffer, (sf_count_t) st->samplerate))) {
+    while ((nr_frames_read = sf_readf_double(file, buffer,
+                                             (sf_count_t) st->samplerate))) {
       nr_frames_read_all += nr_frames_read;
       result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
       CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
@@ -60,7 +61,8 @@ int main(int ac, const char* av[]) {
                               " or determine right length!\n");
     }
 
-    fprintf(stderr, "segment %d: %f LUFS\n", i, ebur128_gated_loudness_segment(st));
+    fprintf(stderr, "segment %d: %f LUFS\n", i,
+                    ebur128_gated_loudness_segment(st));
     ebur128_start_new_segment(st);
     if (i == ac - 1) {
       gated_loudness = ebur128_gated_loudness_global(st);

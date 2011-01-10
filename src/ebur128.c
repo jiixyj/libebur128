@@ -203,24 +203,27 @@ int ebur128_calc_gating_block(ebur128_state* st) {
   return 0;
 }
 
-int ebur128_write_frames(ebur128_state* st,
-                         const double* src, size_t frames) {
+int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames) {
   int errcode = 0;
   size_t src_index = 0;
   while (frames > 0) {
-    size_t needed_frames = st->samplerate * 2 / 5 - st->audio_data_index / st->channels;
+    size_t needed_frames = st->samplerate * 2 / 5 -
+                           st->audio_data_index / st->channels;
     if (frames >= needed_frames) {
-      memcpy(&st->audio_data[st->audio_data_index], &src[src_index], needed_frames * st->channels * sizeof(double));
+      memcpy(&st->audio_data[st->audio_data_index], &src[src_index],
+             needed_frames * st->channels * sizeof(double));
       src_index += needed_frames * st->channels;
       frames -= needed_frames;
       ebur128_filter(st, needed_frames);
       errcode = ebur128_calc_gating_block(st);
       ++st->block_counter;
       if (errcode) return 1;
-      memcpy(st->audio_data, st->audio_data + st->samplerate / 5 * st->channels, st->samplerate / 5 * st->channels * sizeof(double));
+      memcpy(st->audio_data, st->audio_data + st->samplerate / 5 * st->channels,
+             st->samplerate / 5 * st->channels * sizeof(double));
       st->audio_data_index = st->samplerate / 5 * st->channels;
     } else {
-      memcpy(&st->audio_data[st->audio_data_index], &src[src_index], frames * st->channels * sizeof(double));
+      memcpy(&st->audio_data[st->audio_data_index], &src[src_index],
+             frames * st->channels * sizeof(double));
       ebur128_filter(st, frames);
       st->audio_data_index += frames * st->channels;
       frames = 0;
