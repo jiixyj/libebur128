@@ -26,6 +26,7 @@ enum channels {
 typedef struct {
   double* audio_data;
   size_t audio_data_index;
+  size_t needed_frames;
   size_t channels;
   int* channel_map;
   size_t samplerate;

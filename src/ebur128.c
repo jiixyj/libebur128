@@ -132,7 +132,6 @@ ebur128_state* ebur128_init(int channels, int samplerate) {
                                      * state->channels
                                      * sizeof(double));
   CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_channel_map)
-  state->audio_data_index = 0;
   errcode = ebur128_init_multi_array(&(state->v), state->channels, 5);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
   errcode = ebur128_init_filter(state);
@@ -140,6 +139,11 @@ ebur128_state* ebur128_init(int channels, int samplerate) {
 
   LIST_INIT(&state->block_list);
   state->block_counter = 0;
+
+  /* the first block needs 400ms of audio data */
+  state->needed_frames = state->samplerate * 2 / 5;
+  /* start at the beginning of the buffer */
+  state->audio_data_index = 0;
 
   return state;
 
@@ -232,25 +236,26 @@ int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames) {
   int errcode = 0;
   size_t src_index = 0;
   while (frames > 0) {
-    size_t needed_frames = st->samplerate * 2 / 5 -
-                           st->audio_data_index / st->channels;
-    if (frames >= needed_frames) {
+    if (frames >= st->needed_frames) {
       memcpy(&st->audio_data[st->audio_data_index], &src[src_index],
-             needed_frames * st->channels * sizeof(double));
-      src_index += needed_frames * st->channels;
-      frames -= needed_frames;
-      ebur128_filter(st, needed_frames);
+             st->needed_frames * st->channels * sizeof(double));
+      src_index += st->needed_frames * st->channels;
+      frames -= st->needed_frames;
+      ebur128_filter(st, st->needed_frames);
       errcode = ebur128_calc_gating_block(st);
       if (errcode) return 1;
       ++st->block_counter;
-      memcpy(st->audio_data, st->audio_data + st->samplerate / 5 * st->channels,
-             st->samplerate / 5 * st->channels * sizeof(double));
-      st->audio_data_index = st->samplerate / 5 * st->channels;
+      st->audio_data_index += st->needed_frames * st->channels;
+      if (st->audio_data_index == st->samplerate * 2 / 5 * st->channels) {
+        st->audio_data_index = 0;
+      }
+      st->needed_frames = st->samplerate / 5;
     } else {
       memcpy(&st->audio_data[st->audio_data_index], &src[src_index],
              frames * st->channels * sizeof(double));
       ebur128_filter(st, frames);
       st->audio_data_index += frames * st->channels;
+      st->needed_frames -= frames;
       frames = 0;
     }
   }
