@@ -215,8 +215,8 @@ int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames) {
       frames -= needed_frames;
       ebur128_filter(st, needed_frames);
       errcode = ebur128_calc_gating_block(st);
-      ++st->block_counter;
       if (errcode) return 1;
+      ++st->block_counter;
       memcpy(st->audio_data, st->audio_data + st->samplerate / 5 * st->channels,
              st->samplerate / 5 * st->channels * sizeof(double));
       st->audio_data_index = st->samplerate / 5 * st->channels;
