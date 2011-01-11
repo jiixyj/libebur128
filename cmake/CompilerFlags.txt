@@ -73,23 +73,6 @@ list(APPEND FLAGS "-Wswitch-enum")
 list(APPEND FLAGS "-fPIC")
 
 
-if(CMAKE_COMPILER_IS_GNUC)
-  if(COMPILER_VERSION STRLESS "4.2.2")
-    list(REMOVE_ITEM FLAGS "-Wmissing-noreturn")
-    list(REMOVE_ITEM FLAGS "-pedantic")
-  endif()
-  if(COMPILER_VERSION STRLESS "4.4.2")
-    list(REMOVE_ITEM FLAGS "-Wabi")
-    list(REMOVE_ITEM FLAGS "-Wunsafe-loop-optimizations")
-  endif()
-elseif("${COMPILER_TYPE}" MATCHES "clang.*")
-  list(APPEND FLAGS "-Wno-mismatched-tags")
-endif()
-
-if(APPLE)
-  list(REMOVE_ITEM FLAGS "-Wmissing-include-dirs")
-endif()
-
 if(WIN32)
   list(REMOVE_ITEM FLAGS "-fPIC")
 endif()
