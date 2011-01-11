@@ -49,8 +49,8 @@ int ebur128_init_filter(ebur128_state* st) {
   double K = tan(PI * fc / (double) st->samplerate);
   double v0 = pow(10, G / 20.0);
 
-  double sqrt2 = pow(2, 0.5);   /* BS.1770-1 uses 1.414076664088622 */
-  double sqrtv0 = pow(v0, 0.5); /* BS.1770-1 uses 1.258720930232561 */
+  double sqrt2 = 1.414076664088622;
+  double sqrtv0 = st->samplerate == 48000 ? 1.258720930232561 : pow(v0, 0.5);
 
   double b1[] = {0.0, 0.0, 0.0};
   double a1[] = {1.0, 0.0, 0.0};
