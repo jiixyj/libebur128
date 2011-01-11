@@ -188,7 +188,6 @@ int ebur128_calc_gating_block(ebur128_state* st) {
       sum += st->audio_data[i * st->channels + c] *
              st->audio_data[i * st->channels + c];
     }
-    sum /= (double) (st->samplerate * 2 / 5);
     if (c == 0 || c == 1 || c == 2) {
     } else if (st->channels == 5 && (c == 3 || c == 4)) {
       sum *= 1.41;
@@ -240,9 +239,10 @@ double ebur128_relative_threshold(ebur128_state* st, size_t block_count) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   int above_thresh_counter = 0;
+  double threshold = 1.1724653045822964e-7 * (double) (st->samplerate * 2 / 5);
   for (it = st->block_list.lh_first; it != NULL;
        it = it->entries.le_next) {
-    if (it->z >= 1.1724653045822964e-7) {
+    if (it->z >= threshold) {
       ++above_thresh_counter;
       relative_threshold += it->z;
     }
@@ -267,7 +267,7 @@ double ebur128_gated_loudness(ebur128_state* st, size_t block_count) {
     --block_count;
     if (!block_count) break;
   }
-  gated_loudness /= above_thresh_counter;
+  gated_loudness /= above_thresh_counter * (double) (st->samplerate * 2 / 5);
   gated_loudness = 10 * (log(gated_loudness) / log(10.0));
   gated_loudness -= 0.691;
   return gated_loudness;
