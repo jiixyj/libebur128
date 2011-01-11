@@ -128,7 +128,7 @@ ebur128_state* ebur128_init(int channels, int samplerate) {
   errcode = ebur128_init_channel_map(state);
   CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
   state->samplerate = (size_t) samplerate;
-  state->audio_data = (double*) malloc(state->samplerate * 2 / 5
+  state->audio_data = (double*) malloc(state->samplerate * 3
                                      * state->channels
                                      * sizeof(double));
   CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_channel_map)
@@ -213,9 +213,22 @@ int ebur128_calc_gating_block(ebur128_state* st) {
   for (c = 0; c < st->channels; ++c) {
     double sum = 0.0;
     if (st->channel_map[c] == EBUR128_UNUSED) continue;
-    for (i = 0; i < st->samplerate * 2 / 5; ++i) {
-      sum += st->audio_data[i * st->channels + c] *
-             st->audio_data[i * st->channels + c];
+    if (st->audio_data_index == st->samplerate / 5 * st->channels) {
+      for (i = 0; i < st->samplerate / 5; ++i) {
+        sum += st->audio_data[i * st->channels + c] *
+               st->audio_data[i * st->channels + c];
+      }
+      for (i = st->samplerate / 5 * 14; i < st->samplerate / 5 * 15; ++i) {
+        sum += st->audio_data[i * st->channels + c] *
+               st->audio_data[i * st->channels + c];
+      }
+    } else {
+      for (i = st->audio_data_index / st->channels - st->samplerate * 2 / 5;
+           i < st->audio_data_index / st->channels;
+           ++i) {
+        sum += st->audio_data[i * st->channels + c] *
+               st->audio_data[i * st->channels + c];
+      }
     }
     if (st->channel_map[c] == EBUR128_LEFT_SURROUND ||
         st->channel_map[c] == EBUR128_RIGHT_SURROUND) {
@@ -242,14 +255,17 @@ int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames) {
       src_index += st->needed_frames * st->channels;
       frames -= st->needed_frames;
       ebur128_filter(st, st->needed_frames);
+      st->audio_data_index += st->needed_frames * st->channels;
+      /* calculate the new gating block */
       errcode = ebur128_calc_gating_block(st);
       if (errcode) return 1;
       ++st->block_counter;
-      st->audio_data_index += st->needed_frames * st->channels;
-      if (st->audio_data_index == st->samplerate * 2 / 5 * st->channels) {
+      /* 200ms are needed for all blocks besides the first one */
+      st->needed_frames = st->samplerate / 5;
+      /* reset audio_data_index when buffer full */
+      if (st->audio_data_index == st->samplerate * 3 * st->channels) {
         st->audio_data_index = 0;
       }
-      st->needed_frames = st->samplerate / 5;
     } else {
       memcpy(&st->audio_data[st->audio_data_index], &src[src_index],
              frames * st->channels * sizeof(double));
