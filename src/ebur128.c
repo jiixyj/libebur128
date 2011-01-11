@@ -100,6 +100,24 @@ exit:
   return errcode;
 }
 
+int ebur128_init_channel_map(ebur128_state* st) {
+  size_t i;
+  st->channel_map = (int*) calloc(st->channels, sizeof(int));
+  if (!st->channel_map) return 1;
+  for (i = 0; i < st->channels; ++i) {
+    switch (i) {
+      case 0:  st->channel_map[i] = EBUR128_LEFT;           break;
+      case 1:  st->channel_map[i] = EBUR128_RIGHT;          break;
+      case 2:  st->channel_map[i] = EBUR128_CENTER;         break;
+      case 3:  st->channel_map[i] = EBUR128_UNUSED;         break;
+      case 4:  st->channel_map[i] = EBUR128_LEFT_SURROUND;  break;
+      case 5:  st->channel_map[i] = EBUR128_RIGHT_SURROUND; break;
+      default: st->channel_map[i] = EBUR128_UNUSED;         break;
+    }
+  }
+  return 0;
+}
+
 ebur128_state* ebur128_init(int channels, int samplerate) {
   int errcode;
   ebur128_state* state;
@@ -107,11 +125,13 @@ ebur128_state* ebur128_init(int channels, int samplerate) {
   state = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!state, "Could not allocate memory!\n", 0, exit)
   state->channels = (size_t) channels;
+  errcode = ebur128_init_channel_map(state);
+  CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
   state->samplerate = (size_t) samplerate;
   state->audio_data = (double*) malloc(state->samplerate * 2 / 5
                                      * state->channels
                                      * sizeof(double));
-  CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_state)
+  CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_channel_map)
   state->audio_data_index = 0;
   errcode = ebur128_init_multi_array(&(state->v), state->channels, 5);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
@@ -127,6 +147,8 @@ free_v:
   ebur128_release_multi_array(&(state->v), state->channels);
 free_audio_data:
   free(state->audio_data);
+free_channel_map:
+  free(state->channel_map);
 free_state:
   free(state);
 exit:
@@ -136,6 +158,7 @@ exit:
 int ebur128_destroy(ebur128_state** st) {
   struct ebur128_dq_entry* entry;
   free((*st)->audio_data);
+  free((*st)->channel_map);
   ebur128_release_multi_array(&(*st)->v, (*st)->channels);
   free((*st)->a);
   free((*st)->b);
@@ -155,6 +178,7 @@ int ebur128_filter(ebur128_state* st, size_t frames) {
   double* audio_data = st->audio_data + st->audio_data_index;
   size_t i, c;
   for (c = 0; c < st->channels; ++c) {
+    if (st->channel_map[c] == EBUR128_UNUSED) continue;
     for (i = 0; i < frames; ++i) {
       st->v[c][0] = audio_data[i * st->channels + c]
                   - st->a[1] * st->v[c][1]
@@ -184,22 +208,24 @@ int ebur128_calc_gating_block(ebur128_state* st) {
   block->z = 0.0;
   for (c = 0; c < st->channels; ++c) {
     double sum = 0.0;
+    if (st->channel_map[c] == EBUR128_UNUSED) continue;
     for (i = 0; i < st->samplerate * 2 / 5; ++i) {
       sum += st->audio_data[i * st->channels + c] *
              st->audio_data[i * st->channels + c];
     }
-    if (c == 0 || c == 1 || c == 2) {
-    } else if (st->channels == 5 && (c == 3 || c == 4)) {
+    if (st->channel_map[c] == EBUR128_LEFT_SURROUND ||
+        st->channel_map[c] == EBUR128_RIGHT_SURROUND) {
       sum *= 1.41;
-    } else if (st->channels == 6 && (c == 4 || c == 5)) {
-      sum *= 1.41;
-    } else {
-      sum *= 0;
     }
     block->z += sum;
   }
   LIST_INSERT_HEAD(&st->block_list, block, entries);
   return 0;
+}
+
+void ebur128_set_channel_map(ebur128_state* st,
+                            int* channel_map) {
+  memcpy(st->channel_map, channel_map, st->channels * sizeof(int));
 }
 
 int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames) {
