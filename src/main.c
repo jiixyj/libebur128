@@ -1,3 +1,4 @@
+/* See LICENSE file for copyright and license details. */
 #include <math.h>
 #include <sndfile.h>
 #include <string.h>

@@ -1,3 +1,4 @@
+/* See LICENSE file for copyright and license details. */
 #ifndef _EBUR128_H_
 #define _EBUR128_H_
 
