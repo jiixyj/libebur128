@@ -14,6 +14,7 @@ struct ebur128_dq_entry {
   LIST_ENTRY(ebur128_dq_entry) entries;
 };
 
+/* Use these values when setting the channel map */
 enum channels {
   EBUR128_UNUSED = 0,
   EBUR128_LEFT,
@@ -23,6 +24,7 @@ enum channels {
   EBUR128_RIGHT_SURROUND
 };
 
+/* Use these values in ebur128_init */
 enum mode {
   EBUR128_MODE_M_I,
   EBUR128_MODE_M_S_I,
@@ -61,9 +63,14 @@ void ebur128_set_channel_map(ebur128_state* st, int* channel_map);
 int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);
 void ebur128_start_new_segment(ebur128_state* st);
 
+/* Get integrated loudness of the last segment/track. After this you should
+ * start a new segment with ebur128_start_new_segment */
 double ebur128_gated_loudness_segment(ebur128_state* st);
+/* Get integrated loudness of the whole programme */
 double ebur128_gated_loudness_global(ebur128_state* st);
+/* Get momentary loudness (last 400ms) */
 double ebur128_loudness_momentary(ebur128_state* st);
+/* Get short-term loudness (last 3s) */
 double ebur128_loudness_shortterm(ebur128_state* st);
 
 #ifdef __cplusplus
