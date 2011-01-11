@@ -120,7 +120,7 @@ int ebur128_init_channel_map(ebur128_state* st) {
   return 0;
 }
 
-ebur128_state* ebur128_init(int channels, int samplerate, int mode) {
+ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   int errcode;
   ebur128_state* state;
 

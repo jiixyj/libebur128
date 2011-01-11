@@ -7,7 +7,9 @@ extern "C" {
 #endif
 
 #include <string.h>
-#include <sys/queue.h>
+
+/* This can be replaced by any BSD-like queue implementation */
+#include "queue.h"
 
 LIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {
@@ -34,7 +36,7 @@ enum mode {
 };
 
 typedef struct {
-  int mode;
+  size_t mode;
   double* audio_data;
   size_t audio_data_frames;
   size_t audio_data_index;
@@ -49,7 +51,7 @@ typedef struct {
   size_t block_counter;
 } ebur128_state;
 
-ebur128_state* ebur128_init(int channels, int samplerate, int mode);
+ebur128_state* ebur128_init(int channels, int samplerate, size_t mode);
 int ebur128_destroy(ebur128_state** st);
 
 /* The length of channel_map should be equal to the number of channels.
