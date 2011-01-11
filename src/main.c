@@ -39,7 +39,9 @@ int main(int ac, const char* av[]) {
 
 
     if (!st) {
-      st = ebur128_init(file_info.channels, file_info.samplerate);
+      st = ebur128_init(file_info.channels,
+                        file_info.samplerate,
+                        EBUR128_MODE_M_I);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
 
       result = sf_command(file, SFC_GET_CHANNEL_MAP_INFO,
@@ -93,6 +95,7 @@ int main(int ac, const char* av[]) {
       nr_frames_read_all += nr_frames_read;
       result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
       CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+      /* printf("%f\n", ebur128_loudness_shortterm(st)); */
     }
     if (file_info.frames != nr_frames_read_all) {
       fprintf(stderr, "Warning: Could not read full file"

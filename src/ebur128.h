@@ -23,8 +23,14 @@ enum channels {
   EBUR128_RIGHT_SURROUND
 };
 
+enum mode {
+  EBUR128_MODE_M_I,
+  EBUR128_MODE_M_S_I
+};
+
 typedef struct {
   double* audio_data;
+  size_t audio_data_frames;
   size_t audio_data_index;
   size_t needed_frames;
   size_t channels;
@@ -37,7 +43,7 @@ typedef struct {
   size_t block_counter;
 } ebur128_state;
 
-ebur128_state* ebur128_init(int channels, int samplerate);
+ebur128_state* ebur128_init(int channels, int samplerate, int mode);
 int ebur128_destroy(ebur128_state** st);
 
 /* The length of channel_map should be equal to the number of channels.
@@ -54,6 +60,8 @@ void ebur128_start_new_segment(ebur128_state* st);
 
 double ebur128_gated_loudness_segment(ebur128_state* st);
 double ebur128_gated_loudness_global(ebur128_state* st);
+double ebur128_loudness_momentary(ebur128_state* st);
+double ebur128_loudness_shortterm(ebur128_state* st);
 
 #ifdef __cplusplus
 }
