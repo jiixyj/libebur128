@@ -25,10 +25,13 @@ enum channels {
 
 enum mode {
   EBUR128_MODE_M_I,
-  EBUR128_MODE_M_S_I
+  EBUR128_MODE_M_S_I,
+  EBUR128_MODE_M,
+  EBUR128_MODE_M_S
 };
 
 typedef struct {
+  int mode;
   double* audio_data;
   size_t audio_data_frames;
   size_t audio_data_index;
