@@ -67,13 +67,16 @@ int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);
 void ebur128_start_new_segment(ebur128_state* st);
 
 /* Get integrated loudness of the last segment/track. After this you should
- * start a new segment with ebur128_start_new_segment */
+ * start a new segment with ebur128_start_new_segment. Returns NaN if mode is
+ * not EBUR128_MODE_M_I or EBUR128_MODE_M_S_I. */
 double ebur128_gated_loudness_segment(ebur128_state* st);
-/* Get integrated loudness of the whole programme */
+/* Get integrated loudness of the whole programme. Returns NaN if mode is not
+ * EBUR128_MODE_M_I or EBUR128_MODE_M_S_I. */
 double ebur128_gated_loudness_global(ebur128_state* st);
 /* Get momentary loudness (last 400ms) */
 double ebur128_loudness_momentary(ebur128_state* st);
-/* Get short-term loudness (last 3s) */
+/* Get short-term loudness (last 3s). Will return NaN if mode is not
+ * EBUR128_MODE_M_S_I or EBUR128_MODE_M_S. */
 double ebur128_loudness_shortterm(ebur128_state* st);
 
 #ifdef __cplusplus
