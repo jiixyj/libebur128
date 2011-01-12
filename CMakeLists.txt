@@ -62,6 +62,7 @@ set(CPACK_PACKAGE_VERSION_PATCH "0")
 
 set(CPACK_BINARY_ZIP ON)
 set(CPACK_BINARY_NSIS OFF)
+set(CPACK_SOURCE_ZIP ON)
 set(CPACK_SOURCE_IGNORE_FILES "build/;.git/;.gitignore;lib/;mingw/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
 include(CPack)
