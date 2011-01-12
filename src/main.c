@@ -103,9 +103,11 @@ int main(int ac, const char* av[]) {
                               " or determine right length!\n");
     }
 
-    fprintf(stderr, "segment %d: %.1f LUFS\n", i,
-                    ebur128_gated_loudness_segment(st));
-    ebur128_start_new_segment(st);
+    if (ac != 2) {
+      fprintf(stderr, "segment %d: %.1f LUFS\n", i,
+                      ebur128_gated_loudness_segment(st));
+      ebur128_start_new_segment(st);
+    }
     if (i == ac - 1) {
       gated_loudness = ebur128_gated_loudness_global(st);
       fprintf(stderr, "global loudness: %.1f LUFS\n", gated_loudness);
