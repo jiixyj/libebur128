@@ -52,7 +52,13 @@ install(TARGETS r128-test
         ARCHIVE DESTINATION lib)
 install(FILES LICENSE DESTINATION .)
 install(DIRECTORY doc/license DESTINATION .)
-install(FILES lib/libsndfile-1.dll DESTINATION .)
+if(WIN32)
+  install(FILES lib/libsndfile-1.dll DESTINATION .)
+endif()
+
+set(CPACK_PACKAGE_VERSION_MAJOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "1")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
 
 set(CPACK_BINARY_ZIP ON)
 set(CPACK_BINARY_NSIS OFF)
