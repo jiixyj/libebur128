@@ -75,9 +75,38 @@ int main(int ac, const char* av[]) {
                         EBUR128_MODE_M_I);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_codec)
 
-      /* Special case seq-3341-6-5channels-16bit.wav.
-       * Set channel map with function ebur128_set_channel_map. */
-      if (codec_context->channels == 5) {
+      if (codec_context->channel_layout) {
+        int channel_map_index = 0;
+        int bit_counter = 0;
+        while (channel_map_index < codec_context->channels) {
+          if (codec_context->channel_layout & (1 << bit_counter)) {
+            switch (1 << bit_counter) {
+              case CH_FRONT_LEFT:
+                st->channel_map[channel_map_index] = EBUR128_LEFT;
+                break;
+              case CH_FRONT_RIGHT:
+                st->channel_map[channel_map_index] = EBUR128_RIGHT;
+                break;
+              case CH_FRONT_CENTER:
+                st->channel_map[channel_map_index] = EBUR128_CENTER;
+                break;
+              case CH_BACK_LEFT:
+                st->channel_map[channel_map_index] = EBUR128_LEFT_SURROUND;
+                break;
+              case CH_BACK_RIGHT:
+                st->channel_map[channel_map_index] = EBUR128_RIGHT_SURROUND;
+                break;
+              default:
+                st->channel_map[channel_map_index] = EBUR128_UNUSED;
+                break;
+            }
+            ++channel_map_index;
+          }
+          ++bit_counter;
+        }
+      } else if (codec_context->channels == 5) {
+        /* Special case seq-3341-6-5channels-16bit.wav.
+         * Set channel map with function ebur128_set_channel_map. */
         int channel_map_five[] = {EBUR128_LEFT,
                                   EBUR128_RIGHT,
                                   EBUR128_CENTER,
@@ -92,6 +121,7 @@ int main(int ac, const char* av[]) {
                   "and number of channels! Skipping...\n",
                   1, close_codec)
     }
+
 
     while (av_read_frame(format_context, &packet) >= 0) {
       if (packet.stream_index == audio_stream) {
