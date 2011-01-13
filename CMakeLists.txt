@@ -24,6 +24,17 @@ else()
   set(SNDFILE_LIBRARIES sndfile-1)
 endif()
 
+##### ffmpeg
+if(NOT WIN32)
+  pkg_check_modules(LIBAVCODEC libavcodec)
+  pkg_check_modules(LIBAVFORMAT libavformat)
+  include_directories(SYSTEM ${LIBAVCODEC_INCLUDEDIR})
+  include_directories(SYSTEM ${LIBAVFORMAT_INCLUDEDIR})
+else()
+  set(LIBAVCODEC_LIBRARIES avcodec-52)
+  set(LIBAVFORMAT_LIBRARIES avformat-52)
+endif()
+
 
 ######################################
 ##### Compiler setup             #####
@@ -38,21 +49,21 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -ansi ${VALID_FLAGS}")
 ######################################
 add_library(ebur128 src/ebur128.c)
 
-add_executable(r128-test src/sndfile_example.c)
-target_link_libraries(r128-test ebur128 ${SNDFILE_LIBRARIES})
+add_executable(r128-sndfile src/sndfile_example.c)
+target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES})
 
 add_executable(r128-minimal-example src/minimal_example.c)
 target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -std=c99 ${VALID_FLAGS}")
 add_executable(r128-ffmpeg src/ffmpeg_example.c)
-target_link_libraries(r128-ffmpeg ebur128 avcodec avformat)
+target_link_libraries(r128-ffmpeg ebur128 ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES})
 
 
 ######################################
 ##### Install                    #####
 ######################################
-install(TARGETS r128-test
+install(TARGETS r128-sndfile r128-ffmpeg
         RUNTIME DESTINATION .
         ARCHIVE DESTINATION lib)
 install(FILES LICENSE DESTINATION .)
