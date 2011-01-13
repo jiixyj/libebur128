@@ -100,6 +100,7 @@ int main(int ac, const char* av[]) {
         float*   data_float =  (float*)   audio_buf;
         double*  data_double = (double*)  audio_buf;
 
+        uint8_t* old_data = packet.data;
         while (packet.size > 0) {
           int data_size = sizeof(audio_buf);
           int len = avcodec_decode_audio3(codec_context, (int16_t*) audio_buf, &data_size, &packet);
@@ -136,7 +137,9 @@ int main(int ac, const char* av[]) {
           packet.data += len;
           packet.size -= len;
         }
+        packet.data = old_data;
       }
+      av_free_packet(&packet);
     }
 
     if (ac != 2) {
