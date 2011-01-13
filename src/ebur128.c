@@ -2,6 +2,7 @@
 #include "./ebur128.h"
 
 #include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -191,10 +192,11 @@ int ebur128_destroy(ebur128_state** st) {
 int ebur128_filter(ebur128_state* st, const short* src, size_t frames) {
   double* audio_data = st->audio_data + st->audio_data_index;
   size_t i, c;
+  double scaling_factor = -SHRT_MIN > SHRT_MAX ? -SHRT_MIN : SHRT_MAX;
   for (c = 0; c < st->channels; ++c) {
     if (st->channel_map[c] == EBUR128_UNUSED) continue;
     for (i = 0; i < frames; ++i) {
-      st->v[c][0] = src[i * st->channels + c] / 32768.0
+      st->v[c][0] = src[i * st->channels + c] / scaling_factor
                   - st->a[1] * st->v[c][1]
                   - st->a[2] * st->v[c][2]
                   - st->a[3] * st->v[c][3]
