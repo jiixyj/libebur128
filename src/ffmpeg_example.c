@@ -33,6 +33,7 @@ int main(int ac, const char* av[]) {
 
   // Register all formats and codecs
   av_register_all();
+  av_log_set_level(AV_LOG_ERROR);
 
   for (int i = 1; i < ac; ++i) {
     if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
