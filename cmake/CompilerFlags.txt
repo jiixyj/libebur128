@@ -14,7 +14,7 @@ execute_process(
 include(CheckCCompilerFlag)
 
 
-list(APPEND FLAGS "-ansi")
+list(APPEND FLAGS "-std=c99")
 list(APPEND FLAGS "-pedantic")
 
 list(APPEND FLAGS "-Wfatal-errors")
