@@ -29,7 +29,8 @@ endif()
 ##### Compiler setup             #####
 ######################################
 include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
+set(CMAKE_C_FLAGS_OLD "${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -ansi ${VALID_FLAGS}")
 
 
 ######################################
@@ -40,11 +41,12 @@ add_library(ebur128 src/ebur128.c)
 add_executable(r128-test src/sndfile_example.c)
 target_link_libraries(r128-test ebur128 ${SNDFILE_LIBRARIES})
 
-add_executable(r128-ffmpeg src/ffmpeg_example.c)
-target_link_libraries(r128-ffmpeg ebur128 avcodec avformat)
-
 add_executable(r128-minimal-example src/minimal_example.c)
 target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -std=c99 ${VALID_FLAGS}")
+add_executable(r128-ffmpeg src/ffmpeg_example.c)
+target_link_libraries(r128-ffmpeg ebur128 avcodec avformat)
 
 
 ######################################

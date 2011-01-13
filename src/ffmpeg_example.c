@@ -24,21 +24,18 @@ int main(int ac, const char* av[]) {
   AVCodec         *pCodec;
   AVPacket        avpkt;
 
-  size_t nr_frames_read;
-  size_t nr_frames_read_all;
   ebur128_state* st = NULL;
   short* buffer;
   double gated_loudness;
   int errcode = 0;
   int result;
-  int i;
 
   CHECK_ERROR(ac < 2, "usage: r128-test FILENAME(S) ...\n", 1, exit)
 
   // Register all formats and codecs
   av_register_all();
 
-  for (i = 1; i < ac; ++i) {
+  for (int i = 1; i < ac; ++i) {
     // Open audio file
     if (av_open_input_file(&pFormatCtx, av[i], NULL, 0, NULL) != 0) {
       return -1;
@@ -48,12 +45,12 @@ int main(int ac, const char* av[]) {
       return -1;
     }
     // Dump information about file onto standard error
-    dump_format(pFormatCtx, 0, av[1], 0);
+    // dump_format(pFormatCtx, 0, av[1], 0);
     // Find the first audio stream
     int audioStream = -1;
-    for (int i = 0; (unsigned) i < pFormatCtx->nb_streams; ++i) {
-      if (pFormatCtx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO) {
-        audioStream = i;
+    for (int j = 0; (unsigned) j < pFormatCtx->nb_streams; ++j) {
+      if (pFormatCtx->streams[j]->codec->codec_type == CODEC_TYPE_AUDIO) {
+        audioStream = j;
         break;
       }
     }
@@ -72,7 +69,6 @@ int main(int ac, const char* av[]) {
       return -1;
     }
 
-    nr_frames_read_all = 0;
 
 
     if (!st) {
@@ -103,44 +99,52 @@ int main(int ac, const char* av[]) {
     CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
     while (av_read_frame(pFormatCtx, &avpkt) >= 0) {
       if (avpkt.stream_index == audioStream) {
-        uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE]; 
-        int16_t *data = (int16_t *)audio_buf; 
-        int data_size, len; 
+        uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE];
+        int16_t* data_short = (int16_t*) audio_buf;
+        int32_t* data_int = (int32_t*) audio_buf;
+        float* data_float = (float*) audio_buf;
+        double* data_double = (double*) audio_buf;
 
-        static int total_samples; 
-
-        while (avpkt.size > 0) { 
-            data_size = sizeof(audio_buf); 
-            len = avcodec_decode_audio3(pCodecCtx, data, &data_size, &avpkt); 
-            if (len < 0) { 
-                avpkt.size = 0; 
+        while (avpkt.size > 0) {
+            int data_size = sizeof(audio_buf);
+            int len = avcodec_decode_audio3(pCodecCtx, (int16_t*) audio_buf, &data_size, &avpkt);
+            if (len < 0) {
+                avpkt.size = 0;
                 break;
-            } 
-
-            total_samples += data_size / 2 / pCodecCtx->channels; 
+            }
+            // sample_fmt
             /* printf("total_samples=%d\n", total_samples);  */
-            result = ebur128_write_frames_short(st, data, (size_t) data_size / 2 / pCodecCtx->channels);
-            CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
-
-
-
-            avpkt.data += len; 
-            avpkt.size -= len; 
-        } 
+            switch (pCodecCtx->sample_fmt) {
+              case SAMPLE_FMT_U8:
+                CHECK_ERROR(1, "8 bit audio not supported by libebur128!\n", 1, free_buffer)
+                break;
+              case SAMPLE_FMT_S16:
+                result = ebur128_write_frames_short(st, data_short, (size_t) data_size / sizeof(int16_t) / (size_t) pCodecCtx->channels);
+                CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+                break;
+              case SAMPLE_FMT_S32:
+                result = ebur128_write_frames_int(st, data_int, (size_t) data_size / sizeof(int32_t) / (size_t) pCodecCtx->channels);
+                CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+                break;
+              case SAMPLE_FMT_FLT:
+                result = ebur128_write_frames_float(st, data_float, (size_t) data_size / sizeof(float) / (size_t) pCodecCtx->channels);
+                CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+                break;
+              case SAMPLE_FMT_DBL:
+                result = ebur128_write_frames_double(st, data_double, (size_t) data_size / sizeof(double) / (size_t) pCodecCtx->channels);
+                CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+                break;
+              case SAMPLE_FMT_NONE:
+              case SAMPLE_FMT_NB:
+              default:
+                CHECK_ERROR(1, "Unknown sample format!\n", 1, free_buffer)
+                break;
+            }
+            avpkt.data += len;
+            avpkt.size -= len;
+        }
       }
     }
-
-
-
-
-
-    /*  nr_frames_read_all += nr_frames_read;
-      result = ebur128_write_frames_short(st, buffer, (size_t) nr_frames_read);
-      CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
-    if (file_info.frames != nr_frames_read_all) {
-      fprintf(stderr, "Warning: Could not read full file"
-                              " or determine right length!\n");
-    }*/
 
     if (ac != 2) {
       fprintf(stderr, "segment %d: %.1f LUFS\n", i,
