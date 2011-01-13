@@ -94,7 +94,7 @@ int main(int ac, const char* av[]) {
     while ((nr_frames_read = sf_readf_short(file, buffer,
                                              (sf_count_t) st->samplerate))) {
       nr_frames_read_all += nr_frames_read;
-      result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
+      result = ebur128_write_frames_short(st, buffer, (size_t) nr_frames_read);
       CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
       /* printf("%f\n", ebur128_loudness_shortterm(st)); */
     }

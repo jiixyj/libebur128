@@ -189,32 +189,37 @@ int ebur128_destroy(ebur128_state** st) {
   return 0;
 }
 
-int ebur128_filter(ebur128_state* st, const short* src, size_t frames) {
-  double* audio_data = st->audio_data + st->audio_data_index;
-  size_t i, c;
-  double scaling_factor = -SHRT_MIN > SHRT_MAX ? -SHRT_MIN : SHRT_MAX;
-  for (c = 0; c < st->channels; ++c) {
-    if (st->channel_map[c] == EBUR128_UNUSED) continue;
-    for (i = 0; i < frames; ++i) {
-      st->v[c][0] = src[i * st->channels + c] / scaling_factor
-                  - st->a[1] * st->v[c][1]
-                  - st->a[2] * st->v[c][2]
-                  - st->a[3] * st->v[c][3]
-                  - st->a[4] * st->v[c][4];
-      audio_data[i * st->channels + c] =
-                    st->b[0] * st->v[c][0]
-                  + st->b[1] * st->v[c][1]
-                  + st->b[2] * st->v[c][2]
-                  + st->b[3] * st->v[c][3]
-                  + st->b[4] * st->v[c][4];
-      st->v[c][4] = st->v[c][3];
-      st->v[c][3] = st->v[c][2];
-      st->v[c][2] = st->v[c][1];
-      st->v[c][1] = st->v[c][0];
-    }
-  }
-  return 0;
+#define EBUR128_FILTER(type, min_scale, max_scale)                             \
+int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
+  double* audio_data = st->audio_data + st->audio_data_index;                  \
+  size_t i, c;                                                                 \
+  double scaling_factor = -min_scale > max_scale ? -min_scale : max_scale;     \
+  for (c = 0; c < st->channels; ++c) {                                         \
+    if (st->channel_map[c] == EBUR128_UNUSED) continue;                        \
+    for (i = 0; i < frames; ++i) {                                             \
+      st->v[c][0] = src[i * st->channels + c] / scaling_factor                 \
+                  - st->a[1] * st->v[c][1]                                     \
+                  - st->a[2] * st->v[c][2]                                     \
+                  - st->a[3] * st->v[c][3]                                     \
+                  - st->a[4] * st->v[c][4];                                    \
+      audio_data[i * st->channels + c] =                                       \
+                    st->b[0] * st->v[c][0]                                     \
+                  + st->b[1] * st->v[c][1]                                     \
+                  + st->b[2] * st->v[c][2]                                     \
+                  + st->b[3] * st->v[c][3]                                     \
+                  + st->b[4] * st->v[c][4];                                    \
+      st->v[c][4] = st->v[c][3];                                               \
+      st->v[c][3] = st->v[c][2];                                               \
+      st->v[c][2] = st->v[c][1];                                               \
+      st->v[c][1] = st->v[c][0];                                               \
+    }                                                                          \
+  }                                                                            \
+  return 0;                                                                    \
 }
+EBUR128_FILTER(short, SHRT_MIN, SHRT_MAX)
+EBUR128_FILTER(int, (long) INT_MIN, (long) INT_MAX)
+EBUR128_FILTER(float, -1.0f, 1.0f)
+EBUR128_FILTER(double, -1.0, 1.0)
 
 int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block) {
   size_t i, c;
@@ -260,36 +265,42 @@ void ebur128_set_channel_map(ebur128_state* st,
   memcpy(st->channel_map, channel_map, st->channels * sizeof(int));
 }
 
-int ebur128_write_frames(ebur128_state* st, const short* src, size_t frames) {
-  int errcode = 0;
-  size_t src_index = 0;
-  while (frames > 0) {
-    if (frames >= st->needed_frames) {
-      ebur128_filter(st, src + src_index, st->needed_frames);
-      src_index += st->needed_frames * st->channels;
-      frames -= st->needed_frames;
-      st->audio_data_index += st->needed_frames * st->channels;
-      /* calculate the new gating block */
-      if (st->mode == EBUR128_MODE_M_I || st->mode == EBUR128_MODE_M_S_I) {
-        errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5);
-        if (errcode) return 1;
-        ++st->block_counter;
-      }
-      /* 200ms are needed for all blocks besides the first one */
-      st->needed_frames = st->samplerate / 5;
-      /* reset audio_data_index when buffer full */
-      if (st->audio_data_index == st->audio_data_frames * st->channels) {
-        st->audio_data_index = 0;
-      }
-    } else {
-      ebur128_filter(st, src + src_index, frames);
-      st->audio_data_index += frames * st->channels;
-      st->needed_frames -= frames;
-      frames = 0;
-    }
-  }
-  return 0;
+#define EBUR128_WRITE_FRAMES(type)                                             \
+int ebur128_write_frames_##type(ebur128_state* st,                             \
+                                const type* src, size_t frames) {              \
+  int errcode = 0;                                                             \
+  size_t src_index = 0;                                                        \
+  while (frames > 0) {                                                         \
+    if (frames >= st->needed_frames) {                                         \
+      ebur128_filter_##type(st, src + src_index, st->needed_frames);           \
+      src_index += st->needed_frames * st->channels;                           \
+      frames -= st->needed_frames;                                             \
+      st->audio_data_index += st->needed_frames * st->channels;                \
+      /* calculate the new gating block */                                     \
+      if (st->mode == EBUR128_MODE_M_I || st->mode == EBUR128_MODE_M_S_I) {    \
+        errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5);       \
+        if (errcode) return 1;                                                 \
+        ++st->block_counter;                                                   \
+      }                                                                        \
+      /* 200ms are needed for all blocks besides the first one */              \
+      st->needed_frames = st->samplerate / 5;                                  \
+      /* reset audio_data_index when buffer full */                            \
+      if (st->audio_data_index == st->audio_data_frames * st->channels) {      \
+        st->audio_data_index = 0;                                              \
+      }                                                                        \
+    } else {                                                                   \
+      ebur128_filter_##type(st, src + src_index, frames);                      \
+      st->audio_data_index += frames * st->channels;                           \
+      st->needed_frames -= frames;                                             \
+      frames = 0;                                                              \
+    }                                                                          \
+  }                                                                            \
+  return 0;                                                                    \
 }
+EBUR128_WRITE_FRAMES(short)
+EBUR128_WRITE_FRAMES(int)
+EBUR128_WRITE_FRAMES(float)
+EBUR128_WRITE_FRAMES(double)
 
 void ebur128_start_new_segment(ebur128_state* st) {
   st->block_counter = 0;
