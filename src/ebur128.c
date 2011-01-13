@@ -324,7 +324,8 @@ double ebur128_gated_loudness(ebur128_state* st,
   struct ebur128_dq_entry* it;
   double gated_loudness = 0.0;
   int above_thresh_counter = 0;
-  if (!st->block_list.lh_first) return 0.0 / 0.0;
+  if (!(st->mode == EBUR128_MODE_M_I ||
+        st->mode == EBUR128_MODE_M_S_I)) return 0.0 / 0.0;
   for (it = st->block_list.lh_first; it != NULL;
        it = it->entries.le_next) {
     if (it->z >= relative_threshold) {
