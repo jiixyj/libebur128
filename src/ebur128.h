@@ -63,7 +63,7 @@ int ebur128_destroy(ebur128_state** st);
  *                  EBUR128_RIGHT_SURROUND} */
 void ebur128_set_channel_map(ebur128_state* st, int* channel_map);
 
-int ebur128_write_frames(ebur128_state* st, const double* src, size_t frames);
+int ebur128_write_frames(ebur128_state* st, const short* src, size_t frames);
 void ebur128_start_new_segment(ebur128_state* st);
 
 /* Get integrated loudness of the last segment/track. After this you should

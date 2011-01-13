@@ -20,7 +20,7 @@ int main(int ac, const char* av[]) {
   sf_count_t nr_frames_read;
   sf_count_t nr_frames_read_all;
   ebur128_state* st = NULL;
-  double* buffer;
+  short* buffer;
   double gated_loudness;
   int errcode = 0;
   int result;
@@ -89,9 +89,9 @@ int main(int ac, const char* av[]) {
                   1, close_file)
     }
 
-    buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
+    buffer = (short*) malloc(st->samplerate * st->channels * sizeof(short));
     CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
-    while ((nr_frames_read = sf_readf_double(file, buffer,
+    while ((nr_frames_read = sf_readf_short(file, buffer,
                                              (sf_count_t) st->samplerate))) {
       nr_frames_read_all += nr_frames_read;
       result = ebur128_write_frames(st, buffer, (size_t) nr_frames_read);
