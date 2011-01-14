@@ -153,19 +153,19 @@ int main(int ac, const char* av[]) {
               CHECK_ERROR(1, "8 bit audio not supported by libebur128!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_S16:
-              result = ebur128_get_frames_short(st, data_short, (size_t) data_size / sizeof(int16_t) / (size_t) codec_context->channels);
+              result = ebur128_add_frames_short(st, data_short, (size_t) data_size / sizeof(int16_t) / (size_t) codec_context->channels);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_S32:
-              result = ebur128_get_frames_int(st, data_int, (size_t) data_size / sizeof(int32_t) / (size_t) codec_context->channels);
+              result = ebur128_add_frames_int(st, data_int, (size_t) data_size / sizeof(int32_t) / (size_t) codec_context->channels);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_FLT:
-              result = ebur128_get_frames_float(st, data_float, (size_t) data_size / sizeof(float) / (size_t) codec_context->channels);
+              result = ebur128_add_frames_float(st, data_float, (size_t) data_size / sizeof(float) / (size_t) codec_context->channels);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_DBL:
-              result = ebur128_get_frames_double(st, data_double, (size_t) data_size / sizeof(double) / (size_t) codec_context->channels);
+              result = ebur128_add_frames_double(st, data_double, (size_t) data_size / sizeof(double) / (size_t) codec_context->channels);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_NONE:

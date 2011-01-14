@@ -43,7 +43,7 @@ int main(int ac, const char* av[]) {
   while ((nr_frames_read = sf_readf_double(file, buffer,
                                            (sf_count_t) st->samplerate))) {
     nr_frames_read_all += nr_frames_read;
-    ebur128_get_frames_double(st, buffer, (size_t) nr_frames_read);
+    ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
   }
   if (file_info.frames != nr_frames_read_all) {
     fprintf(stderr, "Warning: Could not read full file"
