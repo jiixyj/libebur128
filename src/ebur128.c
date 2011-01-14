@@ -265,9 +265,9 @@ void ebur128_set_channel_map(ebur128_state* st,
   memcpy(st->channel_map, channel_map, st->channels * sizeof(int));
 }
 
-#define EBUR128_WRITE_FRAMES(type)                                             \
-int ebur128_write_frames_##type(ebur128_state* st,                             \
-                                const type* src, size_t frames) {              \
+#define EBUR128_GET_FRAMES(type)                                               \
+int ebur128_get_frames_##type(ebur128_state* st,                               \
+                              const type* src, size_t frames) {                \
   int errcode = 0;                                                             \
   size_t src_index = 0;                                                        \
   while (frames > 0) {                                                         \
@@ -297,10 +297,10 @@ int ebur128_write_frames_##type(ebur128_state* st,                             \
   }                                                                            \
   return 0;                                                                    \
 }
-EBUR128_WRITE_FRAMES(short)
-EBUR128_WRITE_FRAMES(int)
-EBUR128_WRITE_FRAMES(float)
-EBUR128_WRITE_FRAMES(double)
+EBUR128_GET_FRAMES(short)
+EBUR128_GET_FRAMES(int)
+EBUR128_GET_FRAMES(float)
+EBUR128_GET_FRAMES(double)
 
 void ebur128_start_new_segment(ebur128_state* st) {
   st->block_counter = 0;
