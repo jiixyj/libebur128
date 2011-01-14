@@ -47,38 +47,39 @@ void ebur128_release_multi_array(double*** v, size_t channels) {
 
 int ebur128_init_filter(ebur128_state* st) {
   int errcode = 0;
-  double fc = 1681.974450955533;
-  double G = 3.999843853973347;
-  double K = tan(PI * fc / (double) st->samplerate);
-  double v0 = pow(10, G / 20.0);
 
-  double sqrt2 = 1.414076664088621;
-  double sqrtv0 = st->samplerate == 48000 ? 1.258720930232562 : pow(v0, 0.5);
+  double f0 = 1681.974450955533;
+  double G  =    3.999843853973347;
+  double Q  =    0.7071752369554196;
+
+  double K      = tan(PI * f0 / (double) st->samplerate);
+  double Vh     = pow(10, G / 20.0);
+  double Vb     = pow(Vh, 0.4996667741545416);
 
   double b1[] = {0.0, 0.0, 0.0};
   double a1[] = {1.0, 0.0, 0.0};
-  double denom = 1 + sqrt2 * K + K * K;
-  b1[0] = (v0 + sqrt2 * sqrtv0 * K + K * K) / denom;
-  b1[1] = 2 * (K * K - v0) / denom;
-  b1[2] = (v0 - sqrt2 * sqrtv0 * K + K * K) / denom;
-  a1[1] = 2 * (K * K - 1) / denom;
-  a1[2] = (1 - sqrt2 * K + K * K) / denom;
+  double a0 = 1 + K / Q + K * K;
+  b1[0] = (Vh + Vb * K / Q + K * K) / a0;
+  b1[1] =          2 * (K * K - Vh) / a0;
+  b1[2] = (Vh - Vb * K / Q + K * K) / a0;
+  a1[1] =          2 * (K * K -  1) / a0;
+  a1[2] =       (1 - K / Q + K * K) / a0;
 
   /* fprintf(stderr, "%.14f %.14f %.14f %.14f %.14f\n",
                      b1[0], b1[1], b1[2], a1[1], a1[2]); */
 
   {
-  double f0 = 38.13547087602444;
+  f0 = 38.13547087602444;
+  Q  =  0.5003270373238773;
 
-  double alpha = tan(PI * f0 / (double) st->samplerate);
-  double sqrt2 = 1.998692705772502;
+  K = tan(PI * f0 / (double) st->samplerate);
 
   double b2[] = {1.0, -2.0, 1.0};
   double a2[] = {1.0, 0.0, 0.0};
-  a2[1] = 2 * (alpha * alpha - 1) / (1 + sqrt2 * alpha + alpha * alpha);
-  a2[2] = (1 - sqrt2 * alpha + alpha * alpha) / (1 + sqrt2 * alpha + alpha * alpha);
+  a2[1] =     2 * (K * K - 1) / (1 + K / Q + K * K);
+  a2[2] = (1 - K / Q + K * K) / (1 + K / Q + K * K);
 
-  fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]);
+  /* fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]); */
 
 
   st->a = (double*) calloc(5, sizeof(double));
