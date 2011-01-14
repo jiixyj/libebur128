@@ -18,7 +18,7 @@ Requirements
 ------------
 
 The library itself has no requirements besides ANSI C.
-The scanner needs libsndfile.
+The scanner needs libsndfile or ffmpeg (libavcodec/libavformat).
 
 
 Installation
@@ -34,14 +34,14 @@ In the root folder, type:
 
 It is also possible to compile the scanner directly with gcc:
 
-    gcc -O3 -I../include main.c ebur128.c -o r128-test -lm -lsndfile
+    gcc -O3 -I../include sndfile-example.c ebur128.c -o r128-test -lm -lsndfile
 
 
 Usage
 -----
 
-Run r128-test with the files you want to scan as arguments. The output will look
-like this:
+Run r128-sndfile or r128-ffmpeg with the files you want to scan as arguments.
+The output will look like this:
 
     segment 1: -9.8 LUFS
     segment 2: -9.9 LUFS
@@ -60,4 +60,5 @@ like this:
     global loudness: -11.3 LUFS
 
 
-For examples how to use the library, see minimal-example.c and main.c.
+For examples how to use the library, see minimal-example.c, sndfile-example.c
+and ffmpeg-example.c.
