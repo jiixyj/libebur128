@@ -35,9 +35,11 @@ int main(int ac, const char* av[]) {
 
   for (int i = 1; i < ac; ++i) {
     if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
+      fprintf(stderr, "Could not open input file!\n");
       continue;
     }
     if (av_find_stream_info(format_context) < 0) {
+      fprintf(stderr, "Could not find stream info!\n");
       goto close_file;
     }
     // Dump information about file onto standard error
@@ -52,6 +54,7 @@ int main(int ac, const char* av[]) {
       }
     }
     if (audio_stream == -1) {
+      fprintf(stderr, "Could not find an audio stream in file!\n");
       goto close_file;
     }
     // Get a pointer to the codec context for the audio stream
@@ -59,10 +62,12 @@ int main(int ac, const char* av[]) {
     // Find the decoder for the video stream
     codec = avcodec_find_decoder(codec_context->codec_id);
     if (codec == NULL) {
+      fprintf(stderr, "Could not find a decoder for the audio format!\n");
       goto close_file;
     }
     // Open codec
     if (avcodec_open(codec_context, codec) < 0) {
+      fprintf(stderr, "Could not open the codec!\n");
       goto close_file;
     }
 
