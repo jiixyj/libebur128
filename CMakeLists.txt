@@ -18,7 +18,7 @@ endif()
 ##### libsndfile
 if(NOT WIN32)
   include(FindPkgConfig)
-  pkg_check_modules(SNDFILE REQUIRED sndfile>=1.0.23)
+  pkg_check_modules(SNDFILE REQUIRED sndfile>=1.0.21)
   include_directories(SYSTEM ${SNDFILE_INCLUDEDIR})
 else()
   set(SNDFILE_LIBRARIES sndfile-1)
