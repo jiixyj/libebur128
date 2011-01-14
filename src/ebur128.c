@@ -69,17 +69,16 @@ int ebur128_init_filter(ebur128_state* st) {
 
   {
   double f0 = 38.13547087602444;
-  double Q = .5003270373238773;
 
-  double w0 = 2 * PI * f0 / (double) st->samplerate;
-  double alpha = sin(w0) / (2*Q);
+  double alpha = tan(PI * f0 / (double) st->samplerate);
+  double sqrt2 = 1.998692705772502;
 
   double b2[] = {1.0, -2.0, 1.0};
   double a2[] = {1.0, 0.0, 0.0};
-  a2[1] = -2 * cos(w0) / (1.0 + alpha);
-  a2[2] = (1.0 - alpha) / (1.0 + alpha);
+  a2[1] = 2 * (alpha * alpha - 1) / (1 + sqrt2 * alpha + alpha * alpha);
+  a2[2] = (1 - sqrt2 * alpha + alpha * alpha) / (1 + sqrt2 * alpha + alpha * alpha);
 
-  /* fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]); */
+  fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]);
 
 
   st->a = (double*) calloc(5, sizeof(double));

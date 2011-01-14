@@ -189,7 +189,7 @@ int main(int ac, const char* av[]) {
     }
     if (i == ac - 1) {
       gated_loudness = ebur128_gated_loudness_global(st);
-      fprintf(stderr, "global loudness: %.1f LUFS\n", gated_loudness);
+      fprintf(stderr, "global loudness: %f LUFS\n", gated_loudness);
     }
 
   close_codec:
