@@ -134,7 +134,13 @@ int main(int ac, const char* av[]) {
         uint8_t* old_data = packet.data;
         while (packet.size > 0) {
           int data_size = sizeof(audio_buf);
+#if LIBAVCODEC_VERSION_MAJOR >= 52 &&  \
+    LIBAVCODEC_VERSION_MINOR >= 26 &&  \
+    LIBAVCODEC_VERSION_MICRO >= 0
           int len = avcodec_decode_audio3(codec_context, (int16_t*) audio_buf, &data_size, &packet);
+#else
+          int len = avcodec_decode_audio2(codec_context, (int16_t*) audio_buf, &data_size, packet.data, packet.size);
+#endif
           if (len < 0) {
             packet.size = 0;
             break;
