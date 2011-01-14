@@ -47,13 +47,13 @@ void ebur128_release_multi_array(double*** v, size_t channels) {
 
 int ebur128_init_filter(ebur128_state* st) {
   int errcode = 0;
-  double fc = 1681.974450955531;
-  double G = 3.999843853973343;
+  double fc = 1681.974450955533;
+  double G = 3.999843853973347;
   double K = tan(PI * fc / (double) st->samplerate);
   double v0 = pow(10, G / 20.0);
 
-  double sqrt2 = 1.414076664088622;
-  double sqrtv0 = st->samplerate == 48000 ? 1.258720930232561 : pow(v0, 0.5);
+  double sqrt2 = 1.414076664088621;
+  double sqrtv0 = st->samplerate == 48000 ? 1.258720930232562 : pow(v0, 0.5);
 
   double b1[] = {0.0, 0.0, 0.0};
   double a1[] = {1.0, 0.0, 0.0};
@@ -64,9 +64,12 @@ int ebur128_init_filter(ebur128_state* st) {
   a1[1] = 2 * (K * K - 1) / denom;
   a1[2] = (1 - sqrt2 * K + K * K) / denom;
 
+  /* fprintf(stderr, "%.14f %.14f %.14f %.14f %.14f\n",
+                     b1[0], b1[1], b1[2], a1[1], a1[2]); */
+
   {
-  double f0 = 38.13547087606643;
-  double Q = 0.500327037324428;
+  double f0 = 38.13547087602444;
+  double Q = .5003270373238773;
 
   double w0 = 2 * PI * f0 / (double) st->samplerate;
   double alpha = sin(w0) / (2*Q);
@@ -75,6 +78,8 @@ int ebur128_init_filter(ebur128_state* st) {
   double a2[] = {1.0, 0.0, 0.0};
   a2[1] = -2 * cos(w0) / (1.0 + alpha);
   a2[2] = (1.0 - alpha) / (1.0 + alpha);
+
+  /* fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]); */
 
 
   st->a = (double*) calloc(5, sizeof(double));
