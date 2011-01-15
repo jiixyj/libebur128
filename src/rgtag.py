@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# See LICENSE file for copyright and license details.
 import sys
 tg = '{:.2f}'.format(float(sys.argv[2])) + " dB"
 tp = '{:.8f}'.format(float(sys.argv[3]))
