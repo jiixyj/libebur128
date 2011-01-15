@@ -12,6 +12,7 @@ Features
 * Portable ANSI C code
 * Implements M, S and I modes
 * Supports all samplerates by recalculation of the filter coefficients
+* Tagging support for MP3, OGG and FLAC
 
 
 Requirements
@@ -19,6 +20,7 @@ Requirements
 
 The library itself has no requirements besides ANSI C.
 The scanner needs libsndfile or ffmpeg (libavcodec/libavformat).
+You need Python and Mutagen for the ReplayGain tagging support.
 
 
 Installation
@@ -59,6 +61,17 @@ The output will look like this:
     segment 14: -11.6 LUFS
     global loudness: -11.3 LUFS
 
+
+If you have Python and Mutagen (a tagging library) installed, r128-ffmpeg also
+supports ReplayGain tagging with a little helper script called "rgtag". Just
+run r128-ffmpeg like this:
+
+    r128-ffmpeg -t rgtag.py FILENAME(S)...
+
+and rgtag.py will tag your files. Currently only gain is supported, and peak
+will always be set to 1.0.
+The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
+of -23 LU).
 
 For examples how to use the library, see minimal-example.c, sndfile-example.c
 and ffmpeg-example.c.
