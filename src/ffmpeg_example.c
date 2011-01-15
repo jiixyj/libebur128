@@ -1,4 +1,5 @@
 /* See LICENSE file for copyright and license details. */
+#include <float.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -33,7 +34,10 @@ int main(int ac, const char* av[]) {
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
 
+  double* segment_loudness = calloc(ac - 1, sizeof(double));
+
   for (int i = 1; i < ac; ++i) {
+    segment_loudness[i - 1] = DBL_MAX;
     if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
       fprintf(stderr, "Could not open input file!\n");
       continue;
@@ -182,9 +186,10 @@ int main(int ac, const char* av[]) {
       av_free_packet(&packet);
     }
 
+    segment_loudness[i - 1] = ebur128_gated_loudness_segment(st);
     if (ac != 2) {
       fprintf(stderr, "segment %d: %.1f LUFS\n", i,
-                      ebur128_gated_loudness_segment(st));
+                      segment_loudness[i - 1]);
       ebur128_start_new_segment(st);
     }
     if (i == ac - 1) {
@@ -201,6 +206,8 @@ int main(int ac, const char* av[]) {
 
   if (st)
     ebur128_destroy(&st);
+  if (segment_loudness)
+    free(segment_loudness);
 
 exit:
   return errcode;
