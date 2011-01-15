@@ -9,6 +9,9 @@ link_directories(${${PROJECT_NAME}_SOURCE_DIR}/lib)
 if(IS_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include)
   include_directories(SYSTEM ${${PROJECT_NAME}_SOURCE_DIR}/include)
 endif()
+if(WIN32 AND IS_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/mingw-include)
+  include_directories(SYSTEM ${${PROJECT_NAME}_SOURCE_DIR}/mingw-include)
+endif()
 
 
 ######################################
@@ -80,6 +83,6 @@ set(CPACK_PACKAGE_VERSION_PATCH "2")
 set(CPACK_BINARY_ZIP ON)
 set(CPACK_BINARY_NSIS OFF)
 set(CPACK_SOURCE_ZIP ON)
-set(CPACK_SOURCE_IGNORE_FILES "build/;.git/;.gitignore;lib/;mingw/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
+set(CPACK_SOURCE_IGNORE_FILES "build/;.git/;.gitignore;lib/;mingw/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
 include(CPack)
