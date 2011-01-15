@@ -71,6 +71,7 @@ install(TARGETS r128-sndfile r128-ffmpeg
         RUNTIME DESTINATION .
         ARCHIVE DESTINATION lib)
 install(FILES LICENSE DESTINATION .)
+install(FILES src/rgtag.py DESTINATION .)
 install(DIRECTORY doc/license DESTINATION .)
 if(WIN32)
   install(FILES lib/libsndfile-1.dll DESTINATION .)
