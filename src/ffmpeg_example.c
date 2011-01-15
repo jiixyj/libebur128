@@ -26,18 +26,27 @@ int main(int ac, const char* av[]) {
   ebur128_state* st = NULL;
   double gated_loudness;
   int errcode = 0;
+
+  int ac_offset = 1;
+  int rgtag_found = 0;
+
   int result;
 
-  CHECK_ERROR(ac < 2, "usage: r128-test FILENAME(S) ...\n", 1, exit)
+  CHECK_ERROR(ac < 2, "usage: r128-test [-t RGTAG_EXE] FILENAME(S) ...\n", 1, exit)
+
+  if (strcmp(av[1], "-t") == 0 && ac >= 3) {
+    ac_offset += 2;
+    rgtag_found = 1;
+  }
 
   // Register all formats and codecs
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
 
-  double* segment_loudness = calloc(ac - 1, sizeof(double));
+  double* segment_loudness = calloc(ac - ac_offset, sizeof(double));
 
-  for (int i = 1; i < ac; ++i) {
-    segment_loudness[i - 1] = DBL_MAX;
+  for (int i = ac_offset; i < ac; ++i) {
+    segment_loudness[i - ac_offset] = DBL_MAX;
     if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
       fprintf(stderr, "Could not open input file!\n");
       continue;
@@ -186,10 +195,10 @@ int main(int ac, const char* av[]) {
       av_free_packet(&packet);
     }
 
-    segment_loudness[i - 1] = ebur128_gated_loudness_segment(st);
+    segment_loudness[i - ac_offset] = ebur128_gated_loudness_segment(st);
     if (ac != 2) {
-      fprintf(stderr, "segment %d: %.1f LUFS\n", i,
-                      segment_loudness[i - 1]);
+      fprintf(stderr, "segment %d: %.1f LUFS\n", i + 1 - ac_offset,
+                      segment_loudness[i - ac_offset]);
       ebur128_start_new_segment(st);
     }
     if (i == ac - 1) {
@@ -202,6 +211,19 @@ int main(int ac, const char* av[]) {
 
   close_file:
     av_close_input_file(format_context);
+  }
+
+  if (rgtag_found) {
+    char command[1024];
+    for (int i = ac_offset; i < ac; ++i) {
+      if (segment_loudness[i - ac_offset] != DBL_MAX) {
+        snprintf(command, 1024, "%s \"%s\" %f 1 %f 1", av[2], av[i],
+                                -18.0 - segment_loudness[i - ac_offset],
+                                -18.0 - gated_loudness);
+        printf("%s\n", command);
+        system(command);
+      }
+    }
   }
 
   if (st)
