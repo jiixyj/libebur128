@@ -226,11 +226,13 @@ EBUR128_FILTER(int, (long) INT_MIN, (long) INT_MAX)
 EBUR128_FILTER(float, -1.0f, 1.0f)
 EBUR128_FILTER(double, -1.0, 1.0)
 
-int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block) {
+int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
+                              double* optional_output) {
   size_t i, c;
+  double threshold = 1.1724653045822964e-7 * (double) (frames_per_block);
   struct ebur128_dq_entry* block;
   block = malloc(sizeof(struct ebur128_dq_entry));
-  if (!block) return 1;
+  if (!block) return -1;
   block->z = 0.0;
   for (c = 0; c < st->channels; ++c) {
     double sum = 0.0;
@@ -261,8 +263,17 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block) {
     }
     block->z += sum;
   }
-  LIST_INSERT_HEAD(&st->block_list, block, entries);
-  return 0;
+  if (optional_output) {
+    *optional_output = block->z;
+    free(block);
+    return 0;
+  } else if (block->z >= threshold) {
+    LIST_INSERT_HEAD(&st->block_list, block, entries);
+    return 0;
+  } else {
+    free(block);
+    return 1;
+  }
 }
 
 void ebur128_set_channel_map(ebur128_state* st,
@@ -283,9 +294,9 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       st->audio_data_index += st->needed_frames * st->channels;                \
       /* calculate the new gating block */                                     \
       if (st->mode == EBUR128_MODE_M_I || st->mode == EBUR128_MODE_M_S_I) {    \
-        errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5);       \
-        if (errcode) return 1;                                                 \
-        ++st->block_counter;                                                   \
+        errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5, NULL); \
+        if (errcode == -1) return 1;                                           \
+        else if (errcode == 0) ++st->block_counter;                            \
       }                                                                        \
       /* 200ms are needed for all blocks besides the first one */              \
       st->needed_frames = st->samplerate / 5;                                  \
@@ -312,18 +323,14 @@ void ebur128_start_new_segment(ebur128_state* st) {
 }
 
 double ebur128_relative_threshold(ebur128_state* st,
-                                  size_t block_count,
-                                  size_t frames_per_block) {
+                                  size_t block_count) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   int above_thresh_counter = 0;
-  double threshold = 1.1724653045822964e-7 * (double) (frames_per_block);
   for (it = st->block_list.lh_first; it != NULL;
        it = it->entries.le_next) {
-    if (it->z >= threshold) {
-      ++above_thresh_counter;
-      relative_threshold += it->z;
-    }
+    ++above_thresh_counter;
+    relative_threshold += it->z;
     --block_count;
     if (!block_count) break;
   }
@@ -356,27 +363,23 @@ double ebur128_gated_loudness(ebur128_state* st,
 }
 
 double ebur128_gated_loudness_global(ebur128_state* st) {
-  double relative_threshold = ebur128_relative_threshold(st, 0,
-                                                        st->samplerate * 2 / 5);
+  double relative_threshold = ebur128_relative_threshold(st, 0);
   return ebur128_gated_loudness(st, 0, st->samplerate * 2 / 5, relative_threshold);
 }
 
 double ebur128_gated_loudness_segment(ebur128_state* st) {
-  double relative_threshold = ebur128_relative_threshold(st, st->block_counter,
-                                                        st->samplerate * 2 / 5);
+  double relative_threshold = ebur128_relative_threshold(st, st->block_counter);
   return ebur128_gated_loudness(st, st->block_counter, st->samplerate * 2 / 5, relative_threshold);
 }
 
 double ebur128_loudness_in_interval(ebur128_state* st, size_t interval_frames) {
   double loudness;
-  struct ebur128_dq_entry* entry;
 
   if (interval_frames > st->audio_data_frames) return 0.0 / 0.0;
-  ebur128_calc_gating_block(st, interval_frames);
-  loudness = ebur128_gated_loudness(st, 1, interval_frames, -DBL_MAX);
-  entry = st->block_list.lh_first;
-  LIST_REMOVE(st->block_list.lh_first, entries);
-  free(entry);
+  ebur128_calc_gating_block(st, interval_frames, &loudness);
+  loudness /= (double) (interval_frames);
+  loudness = 10 * (log(loudness) / log(10.0));
+  loudness -= 0.691;
   return loudness;
 }
 
