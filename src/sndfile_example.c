@@ -1,8 +1,11 @@
 /* See LICENSE file for copyright and license details. */
+#define _POSIX_C_SOURCE 2
+#include <float.h>
 #include <math.h>
 #include <sndfile.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "./ebur128.h"
 
@@ -14,23 +17,40 @@
   }
 
 
-int main(int ac, const char* av[]) {
+int main(int ac, char* const av[]) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
   sf_count_t nr_frames_read_all;
   ebur128_state* st = NULL;
-  short* buffer;
-  double gated_loudness;
+  double* buffer;
+  double gated_loudness = DBL_MAX;
   int errcode = 0;
   int result;
   int i;
+  char* rgtag_exe = NULL;
+  int c;
+  double* segment_loudness;
+  double* segment_peaks;
 
   CHECK_ERROR(ac < 2, "usage: r128-test FILENAME(S) ...\n", 1, exit)
+  while ((c = getopt(ac, av, "t:")) != -1) {
+    switch (c) {
+      case 't':
+        rgtag_exe = optarg;
+        break;
+      default:
+        return 1;
+        break;
+    }
+  }
 
-  for (i = 1; i < ac; ++i) {
+  segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
+  segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
+  for (i = optind; i < ac; ++i) {
+    segment_loudness[i - optind] = DBL_MAX;
     memset(&file_info, '\0', sizeof(file_info));
-    if (av[1][0] == '-' && av[1][1] == '\0') {
+    if (av[i][0] == '-' && av[1][1] == '\0') {
       file = sf_open_fd(0, SFM_READ, &file_info, SF_FALSE);
     } else {
       file = sf_open(av[i], SFM_READ, &file_info);
@@ -89,12 +109,22 @@ int main(int ac, const char* av[]) {
                   1, close_file)
     }
 
-    buffer = (short*) malloc(st->samplerate * st->channels * sizeof(short));
+    buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
     CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
-    while ((nr_frames_read = sf_readf_short(file, buffer,
+    segment_peaks[i - optind] = 0.0;
+    while ((nr_frames_read = sf_readf_double(file, buffer,
                                              (sf_count_t) st->samplerate))) {
+      size_t j;
+      if (rgtag_exe) {
+        for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
+          if (buffer[j] > segment_peaks[i - optind])
+            segment_peaks[i - optind] = buffer[j];
+          else if (-buffer[j] > segment_peaks[i - optind])
+            segment_peaks[i - optind] = -buffer[j];
+        }
+      }
       nr_frames_read_all += nr_frames_read;
-      result = ebur128_add_frames_short(st, buffer, (size_t) nr_frames_read);
+      result = ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
       CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
       /* printf("%f\n", ebur128_loudness_shortterm(st)); */
     }
@@ -103,14 +133,15 @@ int main(int ac, const char* av[]) {
                               " or determine right length!\n");
     }
 
-    if (ac != 2) {
-      fprintf(stderr, "segment %d: %.1f LUFS\n", i,
-                      ebur128_gated_loudness_segment(st));
+    segment_loudness[i - optind] = ebur128_gated_loudness_segment(st);
+    if (ac - optind != 1) {
+      fprintf(stderr, "segment %d: %.1f LUFS\n", i + 1 - optind,
+                      segment_loudness[i - optind]);
       ebur128_start_new_segment(st);
     }
     if (i == ac - 1) {
       gated_loudness = ebur128_gated_loudness_global(st);
-      fprintf(stderr, "global loudness: %.1f LUFS\n", gated_loudness);
+      fprintf(stderr, "global loudness: %f LUFS\n", gated_loudness);
     }
 
   free_buffer:
@@ -125,8 +156,35 @@ int main(int ac, const char* av[]) {
   endloop: ;
   }
 
+  if (rgtag_exe) {
+    char command[1024];
+    double global_peak = 0.0;
+    /* Get global peak */
+    for (i = 0; i < ac - optind; ++i) {
+      if (segment_peaks[i] > global_peak) {
+        global_peak = segment_peaks[i];
+      }
+    }
+    for (i = optind; i < ac; ++i) {
+      if (segment_loudness[i - optind] < DBL_MAX &&
+          gated_loudness < DBL_MAX) {
+        snprintf(command, 1024, "%s \"%s\" %f %f %f %f", rgtag_exe, av[i],
+                                -18.0 - segment_loudness[i - optind],
+                                segment_peaks[i - optind],
+                                -18.0 - gated_loudness,
+                                global_peak);
+        printf("%s\n", command);
+        system(command);
+      }
+    }
+  }
+
   if (st)
     ebur128_destroy(&st);
+  if (segment_loudness)
+    free(segment_loudness);
+  if (segment_peaks)
+    free(segment_peaks);
 
 exit:
   return errcode;
