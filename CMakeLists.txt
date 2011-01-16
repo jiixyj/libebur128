@@ -39,6 +39,14 @@ else()
   set(LIBAVUTIL_LIBRARIES avutil-50)
 endif()
 
+##### mpg123
+if(NOT WIN32)
+  pkg_check_modules(MPG123 libmpg123)
+  include_directories(SYSTEM ${MPG123_INCLUDEDIR})
+else()
+  set(MPG123_LIBRARIES mpg123-0)
+endif()
+
 
 ######################################
 ##### Compiler setup             #####
@@ -54,7 +62,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -ansi ${VALID_FLAGS}")
 add_library(ebur128 src/ebur128.c)
 
 add_executable(r128-sndfile src/sndfile_example.c)
-target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES})
+target_link_libraries(r128-sndfile ebur128 ${MPG123_LIBRARIES} ${SNDFILE_LIBRARIES})
 
 add_executable(r128-minimal-example src/minimal_example.c)
 target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
