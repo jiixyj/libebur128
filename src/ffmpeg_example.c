@@ -24,7 +24,7 @@ int main(int ac, const char* av[]) {
   AVPacket packet;
 
   ebur128_state* st = NULL;
-  double gated_loudness;
+  double gated_loudness = DBL_MAX;
   int errcode = 0;
 
   int ac_offset = 1;
@@ -43,7 +43,7 @@ int main(int ac, const char* av[]) {
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
 
-  double* segment_loudness = calloc(ac - ac_offset, sizeof(double));
+  double* segment_loudness = calloc((size_t) (ac - ac_offset), sizeof(double));
 
   for (int i = ac_offset; i < ac; ++i) {
     segment_loudness[i - ac_offset] = DBL_MAX;
@@ -216,7 +216,8 @@ int main(int ac, const char* av[]) {
   if (rgtag_found) {
     char command[1024];
     for (int i = ac_offset; i < ac; ++i) {
-      if (segment_loudness[i - ac_offset] != DBL_MAX) {
+      if (segment_loudness[i - ac_offset] < DBL_MAX &&
+          gated_loudness < DBL_MAX) {
         snprintf(command, 1024, "%s \"%s\" %f 1 %f 1", av[2], av[i],
                                 -18.0 - segment_loudness[i - ac_offset],
                                 -18.0 - gated_loudness);
