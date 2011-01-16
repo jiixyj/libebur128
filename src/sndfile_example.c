@@ -96,6 +96,7 @@ int main(int ac, char* const av[]) {
   double gated_loudness = DBL_MAX;
   double* segment_loudness;
   double* segment_peaks;
+  int calculate_lra = 0;
 
   int errcode = 0;
   int result;
@@ -103,11 +104,16 @@ int main(int ac, char* const av[]) {
   char* rgtag_exe = NULL;
   int c;
 
-  CHECK_ERROR(ac < 2, "usage: r128-test FILENAME(S) ...\n", 1, exit)
-  while ((c = getopt(ac, av, "t:")) != -1) {
+  CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t RGTAG_EXE] FILENAME(S) ...\n\n"
+                      " -r: calculate loudness range in LRA\n"
+                      " -t: specify ReplayGain tagging script\n", 1, exit)
+  while ((c = getopt(ac, av, "t:r")) != -1) {
     switch (c) {
       case 't':
         rgtag_exe = optarg;
+        break;
+      case 'r':
+        calculate_lra = 1;
         break;
       default:
         return 1;
@@ -161,7 +167,7 @@ int main(int ac, char* const av[]) {
     if (!st) {
       st = ebur128_init(channels,
                         samplerate,
-                        EBUR128_MODE_M_S_I);
+                        calculate_lra ? EBUR128_MODE_M_S_I : EBUR128_MODE_M_I);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
 
       if (file) {
@@ -241,14 +247,16 @@ int main(int ac, char* const av[]) {
       CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
 
 
-      if (first_seconds != 2) {
-        ++first_seconds;
-      } else {
-        struct ebur128_dq_entry* block;
-        block = malloc(sizeof(struct ebur128_dq_entry));
-        CHECK_ERROR(!block, "malloc failed!\n", 1, free_buffer)
-        block->z = ebur128_loudness_shortterm(st);
-        LIST_INSERT_HEAD(&short_term_loudness_vector, block, entries);
+      if (calculate_lra) {
+        if (first_seconds != 2) {
+          ++first_seconds;
+        } else {
+          struct ebur128_dq_entry* block;
+          block = malloc(sizeof(struct ebur128_dq_entry));
+          CHECK_ERROR(!block, "malloc failed!\n", 1, free_buffer)
+          block->z = ebur128_loudness_shortterm(st);
+          LIST_INSERT_HEAD(&short_term_loudness_vector, block, entries);
+        }
       }
     }
     if (file && (size_t) file_info.frames != nr_frames_read_all) {
@@ -281,11 +289,13 @@ int main(int ac, char* const av[]) {
     mh = NULL;
   }
 
-  printf("LRA: %f\n", calculate_loudness_range(&short_term_loudness_vector));
-  while (short_term_loudness_vector.lh_first != NULL) {
-    it = short_term_loudness_vector.lh_first;
-    LIST_REMOVE(short_term_loudness_vector.lh_first, entries);
-    free(it);
+  if (calculate_lra) {
+    printf("LRA: %f\n", calculate_loudness_range(&short_term_loudness_vector));
+    while (short_term_loudness_vector.lh_first != NULL) {
+      it = short_term_loudness_vector.lh_first;
+      LIST_REMOVE(short_term_loudness_vector.lh_first, entries);
+      free(it);
+    }
   }
 
   if (rgtag_exe) {
