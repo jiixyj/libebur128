@@ -27,12 +27,12 @@ enum channels {
   EBUR128_RIGHT_SURROUND
 };
 
-/* Use these values in ebur128_init */
+/* Use these values in ebur128_init (xor'ed) */
 enum mode {
-  EBUR128_MODE_M_I,
-  EBUR128_MODE_M_S_I,
-  EBUR128_MODE_M,
-  EBUR128_MODE_M_S
+  EBUR128_MODE_M         =  1, /* can call ebur128_loudness_momentary */
+  EBUR128_MODE_S         =  3, /* can call ebur128_loudness_shortterm */
+  EBUR128_MODE_I         =  5, /* can call ebur128_gated_loudness_*   */
+  EBUR128_MODE_LRA       = 11  /* can call ebur128_loudness_range     */
 };
 
 typedef struct {
@@ -48,6 +48,8 @@ typedef struct {
   double* b;
   double** v;
   struct ebur128_double_queue block_list;
+  struct ebur128_double_queue short_term_block_list;
+  size_t short_term_frame_counter;
   size_t block_counter;
 } ebur128_state;
 
@@ -82,6 +84,8 @@ double ebur128_loudness_momentary(ebur128_state* st);
 /* Get short-term loudness (last 3s). Will return NaN if mode is not
  * EBUR128_MODE_M_S_I or EBUR128_MODE_M_S. */
 double ebur128_loudness_shortterm(ebur128_state* st);
+
+double ebur128_loudness_range(ebur128_state* st);
 
 #ifdef __cplusplus
 }

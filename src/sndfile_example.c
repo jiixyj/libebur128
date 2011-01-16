@@ -18,65 +18,6 @@
     goto goto_point;                                                           \
   }
 
-static int double_cmp(const void *p1, const void *p2) {
-  const double* d1 = (const double*) p1;
-  const double* d2 = (const double*) p2;
-  return *d1 > *d2;
-}
-
-/* EBU - TECH 3342 */
-double calculate_loudness_range(struct ebur128_double_queue*
-                                       short_term_loudness_vector) {
-  size_t i;
-  struct ebur128_dq_entry* it;
-  double* stl_vector;
-  size_t stl_size = 0;
-  double* stl_abs_gated;
-  size_t stl_abs_gated_size;
-  double* stl_relgated;
-  size_t stl_relgated_size;
-  double stl_power = 0.0, stl_integrated;
-
-  for (it = short_term_loudness_vector->lh_first; it != NULL;
-       it = it->entries.le_next) {
-    ++stl_size;
-  }
-  stl_vector = calloc(stl_size, sizeof(double));
-  i = 0;
-  for (it = short_term_loudness_vector->lh_first; it != NULL;
-       it = it->entries.le_next) {
-    stl_vector[i] = it->z;
-    ++i;
-  }
-  qsort(stl_vector, stl_size, sizeof(double), double_cmp);
-  stl_abs_gated = stl_vector;
-  stl_abs_gated_size = stl_size;
-  while (stl_abs_gated_size > 0 && *stl_abs_gated < -70.0) {
-    ++stl_abs_gated;
-    --stl_abs_gated_size;
-  }
-  for (i = 0; i < stl_abs_gated_size; ++i) {
-    stl_power += pow(10.0, stl_abs_gated[i] / 10.0);
-  }
-  stl_power /= (double) stl_abs_gated_size;
-  stl_integrated = 10 * (log(stl_power) / log(10.0));
-
-  stl_relgated = stl_abs_gated;
-  stl_relgated_size = stl_abs_gated_size;
-  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated - 20.0) {
-    ++stl_relgated;
-    --stl_relgated_size;
-  }
-  /*
-  for (i = 0; i < stl_relgated_size; ++i) {
-    printf("%f\n", stl_relgated[i]);
-  }
-  */
-  free(stl_vector);
-  return stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)]
-       - stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
-}
-
 int main(int ac, char* const av[]) {
   SF_INFO file_info;
   SNDFILE* file;
@@ -87,9 +28,6 @@ int main(int ac, char* const av[]) {
 
   int channels, samplerate;
   size_t nr_frames_read, nr_frames_read_all;
-  struct ebur128_double_queue short_term_loudness_vector;
-  struct ebur128_dq_entry* it;
-  int first_seconds = 0;
 
   ebur128_state* st = NULL;
   float* buffer;
@@ -129,7 +67,6 @@ int main(int ac, char* const av[]) {
 
   segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
   segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
-  LIST_INIT(&short_term_loudness_vector);
   for (i = optind; i < ac; ++i) {
     segment_loudness[i - optind] = DBL_MAX;
     memset(&file_info, '\0', sizeof(file_info));
@@ -167,7 +104,8 @@ int main(int ac, char* const av[]) {
     if (!st) {
       st = ebur128_init(channels,
                         samplerate,
-                        calculate_lra ? EBUR128_MODE_M_S_I : EBUR128_MODE_M_I);
+                        EBUR128_MODE_I |
+                        (calculate_lra ? EBUR128_MODE_LRA : 0));
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
 
       if (file) {
@@ -245,19 +183,6 @@ int main(int ac, char* const av[]) {
       nr_frames_read_all += nr_frames_read;
       result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
       CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
-
-
-      if (calculate_lra) {
-        if (first_seconds != 2) {
-          ++first_seconds;
-        } else {
-          struct ebur128_dq_entry* block;
-          block = malloc(sizeof(struct ebur128_dq_entry));
-          CHECK_ERROR(!block, "malloc failed!\n", 1, free_buffer)
-          block->z = ebur128_loudness_shortterm(st);
-          LIST_INSERT_HEAD(&short_term_loudness_vector, block, entries);
-        }
-      }
     }
     if (file && (size_t) file_info.frames != nr_frames_read_all) {
       fprintf(stderr, "Warning: Could not read full file"
@@ -289,16 +214,11 @@ int main(int ac, char* const av[]) {
     mh = NULL;
   }
 
-  if (calculate_lra) {
-    printf("LRA: %f\n", calculate_loudness_range(&short_term_loudness_vector));
-    while (short_term_loudness_vector.lh_first != NULL) {
-      it = short_term_loudness_vector.lh_first;
-      LIST_REMOVE(short_term_loudness_vector.lh_first, entries);
-      free(it);
-    }
+  if (st && calculate_lra) {
+    printf("LRA: %f\n", ebur128_loudness_range(st));
   }
 
-  if (rgtag_exe) {
+  if (st && rgtag_exe) {
     char command[1024];
     double global_peak = 0.0;
     /* Get global peak */

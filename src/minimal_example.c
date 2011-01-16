@@ -27,7 +27,7 @@ int main(int ac, const char* av[]) {
 
   st = ebur128_init(file_info.channels,
                     file_info.samplerate,
-                    EBUR128_MODE_M_I);
+                    EBUR128_MODE_I);
 
   /* example: set channel map (note: see ebur128.h for the default map) */
   if (file_info.channels == 5) {

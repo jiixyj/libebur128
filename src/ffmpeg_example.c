@@ -88,7 +88,7 @@ int main(int ac, const char* av[]) {
     if (!st) {
       st = ebur128_init(codec_context->channels,
                         codec_context->sample_rate,
-                        EBUR128_MODE_M_I);
+                        EBUR128_MODE_I);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_codec)
 
       if (codec_context->channel_layout) {

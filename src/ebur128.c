@@ -137,12 +137,12 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
   state->samplerate = (size_t) samplerate;
   state->mode = mode;
-  if (mode == EBUR128_MODE_M_S_I || mode == EBUR128_MODE_M_S) {
+  if ((mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
     state->audio_data_frames = state->samplerate * 3;
-  } else if (mode == EBUR128_MODE_M_I || mode == EBUR128_MODE_M) {
+  } else if ((mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
     state->audio_data_frames = state->samplerate * 2 / 5;
   } else {
-    goto free_state;
+    return NULL;
   }
   state->audio_data = (double*) calloc(state->audio_data_frames
                                      * state->channels,
@@ -154,6 +154,8 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   CHECK_ERROR(errcode, "Could not initialize filter!\n", 0, free_v)
 
   LIST_INIT(&state->block_list);
+  LIST_INIT(&state->short_term_block_list);
+  state->short_term_frame_counter = 0;
   state->block_counter = 0;
 
   /* the first block needs 400ms of audio data */
@@ -185,6 +187,11 @@ int ebur128_destroy(ebur128_state** st) {
   while ((*st)->block_list.lh_first != NULL) {
     entry = (*st)->block_list.lh_first;
     LIST_REMOVE((*st)->block_list.lh_first, entries);
+    free(entry);
+  }
+  while ((*st)->short_term_block_list.lh_first != NULL) {
+    entry = (*st)->short_term_block_list.lh_first;
+    LIST_REMOVE((*st)->short_term_block_list.lh_first, entries);
     free(entry);
   }
 
@@ -292,10 +299,22 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       frames -= st->needed_frames;                                             \
       st->audio_data_index += st->needed_frames * st->channels;                \
       /* calculate the new gating block */                                     \
-      if (st->mode == EBUR128_MODE_M_I || st->mode == EBUR128_MODE_M_S_I) {    \
+      if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                     \
         errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5, NULL); \
         if (errcode == -1) return 1;                                           \
         else if (errcode == 0) ++st->block_counter;                            \
+      }                                                                        \
+      if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
+        st->short_term_frame_counter += st->needed_frames;                     \
+        if (st->short_term_frame_counter == st->samplerate * 3) {              \
+          double st_loudness = ebur128_loudness_shortterm(st);                 \
+          struct ebur128_dq_entry* block;                                      \
+          block = malloc(sizeof(struct ebur128_dq_entry));                     \
+          if (!block) return 1;                                                \
+          block->z = st_loudness;                                              \
+          LIST_INSERT_HEAD(&st->short_term_block_list, block, entries);        \
+          st->short_term_frame_counter = st->samplerate * 2;                   \
+        }                                                                      \
       }                                                                        \
       /* 200ms are needed for all blocks besides the first one */              \
       st->needed_frames = st->samplerate / 5;                                  \
@@ -344,8 +363,7 @@ double ebur128_gated_loudness(ebur128_state* st,
   struct ebur128_dq_entry* it;
   double gated_loudness = 0.0;
   int above_thresh_counter = 0;
-  if (!(st->mode == EBUR128_MODE_M_I ||
-        st->mode == EBUR128_MODE_M_S_I)) return 0.0 / 0.0;
+  if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return 0.0 / 0.0;
   for (it = st->block_list.lh_first; it != NULL;
        it = it->entries.le_next) {
     if (it->z >= relative_threshold) {
@@ -388,4 +406,65 @@ double ebur128_loudness_momentary(ebur128_state* st) {
 
 double ebur128_loudness_shortterm(ebur128_state* st) {
   return ebur128_loudness_in_interval(st, st->samplerate * 3);
+}
+
+static int ebur128_double_cmp(const void *p1, const void *p2) {
+  const double* d1 = (const double*) p1;
+  const double* d2 = (const double*) p2;
+  return *d1 > *d2;
+}
+
+/* EBU - TECH 3342 */
+double ebur128_loudness_range(ebur128_state* st) {
+  size_t i;
+  struct ebur128_dq_entry* it;
+  double* stl_vector;
+  size_t stl_size = 0;
+  double* stl_abs_gated;
+  size_t stl_abs_gated_size;
+  double* stl_relgated;
+  size_t stl_relgated_size;
+  double stl_power = 0.0, stl_integrated;
+  double lra;
+
+  for (it = st->short_term_block_list.lh_first; it != NULL;
+       it = it->entries.le_next) {
+    ++stl_size;
+  }
+  if (!stl_size) return 0.0;
+  stl_vector = calloc(stl_size, sizeof(double));
+  i = 0;
+  for (it = st->short_term_block_list.lh_first; it != NULL;
+       it = it->entries.le_next) {
+    stl_vector[i] = it->z;
+    ++i;
+  }
+  qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
+  stl_abs_gated = stl_vector;
+  stl_abs_gated_size = stl_size;
+  while (stl_abs_gated_size > 0 && *stl_abs_gated < -70.0) {
+    ++stl_abs_gated;
+    --stl_abs_gated_size;
+  }
+  for (i = 0; i < stl_abs_gated_size; ++i) {
+    stl_power += pow(10.0, stl_abs_gated[i] / 10.0);
+  }
+  stl_power /= (double) stl_abs_gated_size;
+  stl_integrated = 10 * (log(stl_power) / log(10.0));
+
+  stl_relgated = stl_abs_gated;
+  stl_relgated_size = stl_abs_gated_size;
+  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated - 20.0) {
+    ++stl_relgated;
+    --stl_relgated_size;
+  }
+  /*
+  for (i = 0; i < stl_relgated_size; ++i) {
+    printf("%f\n", stl_relgated[i]);
+  }
+  */
+  lra = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)]
+      - stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
+  free(stl_vector);
+  return lra;
 }
