@@ -230,48 +230,47 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
                               double* optional_output) {
   size_t i, c;
   double threshold = 1.1724653045822964e-7 * (double) (frames_per_block);
-  struct ebur128_dq_entry* block;
-  block = malloc(sizeof(struct ebur128_dq_entry));
-  if (!block) return -1;
-  block->z = 0.0;
+  double sum = 0.0;
   for (c = 0; c < st->channels; ++c) {
-    double sum = 0.0;
+    double channel_sum = 0.0;
     if (st->channel_map[c] == EBUR128_UNUSED) continue;
     if (st->audio_data_index < frames_per_block * st->channels) {
       for (i = 0; i < st->audio_data_index / st->channels; ++i) {
-        sum += st->audio_data[i * st->channels + c] *
+        channel_sum += st->audio_data[i * st->channels + c] *
                st->audio_data[i * st->channels + c];
       }
       for (i = st->audio_data_frames -
               (frames_per_block -
                st->audio_data_index / st->channels);
            i < st->audio_data_frames; ++i) {
-        sum += st->audio_data[i * st->channels + c] *
+        channel_sum += st->audio_data[i * st->channels + c] *
                st->audio_data[i * st->channels + c];
       }
     } else {
       for (i = st->audio_data_index / st->channels - frames_per_block;
            i < st->audio_data_index / st->channels;
            ++i) {
-        sum += st->audio_data[i * st->channels + c] *
+        channel_sum += st->audio_data[i * st->channels + c] *
                st->audio_data[i * st->channels + c];
       }
     }
     if (st->channel_map[c] == EBUR128_LEFT_SURROUND ||
         st->channel_map[c] == EBUR128_RIGHT_SURROUND) {
-      sum *= 1.41;
+      channel_sum *= 1.41;
     }
-    block->z += sum;
+    sum += channel_sum;
   }
   if (optional_output) {
-    *optional_output = block->z;
-    free(block);
+    *optional_output = sum;
     return 0;
-  } else if (block->z >= threshold) {
+  } else if (sum >= threshold) {
+    struct ebur128_dq_entry* block;
+    block = malloc(sizeof(struct ebur128_dq_entry));
+    if (!block) return -1;
+    block->z = sum;
     LIST_INSERT_HEAD(&st->block_list, block, entries);
     return 0;
   } else {
-    free(block);
     return 1;
   }
 }
