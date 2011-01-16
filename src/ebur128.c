@@ -69,13 +69,13 @@ int ebur128_init_filter(ebur128_state* st) {
                      b1[0], b1[1], b1[2], a1[1], a1[2]); */
 
   {
-  f0 = 38.13547087602444;
-  Q  =  0.5003270373238773;
-
-  K = tan(PI * f0 / (double) st->samplerate);
-
   double b2[] = {1.0, -2.0, 1.0};
   double a2[] = {1.0, 0.0, 0.0};
+
+  f0 = 38.13547087602444;
+  Q  =  0.5003270373238773;
+  K = tan(PI * f0 / (double) st->samplerate);
+
   a2[1] =     2 * (K * K - 1) / (1 + K / Q + K * K);
   a2[2] = (1 - K / Q + K * K) / (1 + K / Q + K * K);
 
