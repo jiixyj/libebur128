@@ -73,6 +73,7 @@ set_target_properties(r128-ffmpeg PROPERTIES COMPILE_FLAGS "-std=c99")
 
 add_executable(r128-test-library src/tests.c)
 target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
+set_target_properties(r128-test-library PROPERTIES COMPILE_FLAGS "-Wno-float-equal")
 
 
 ######################################
