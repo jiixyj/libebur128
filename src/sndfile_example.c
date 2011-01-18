@@ -18,6 +18,7 @@
     goto goto_point;                                                           \
   }
 
+
 int main(int ac, char* const av[]) {
   SF_INFO file_info;
   SNDFILE* file;
@@ -191,13 +192,13 @@ int main(int ac, char* const av[]) {
 
     segment_loudness[i - optind] = ebur128_gated_loudness_segment(st);
     if (ac - optind != 1) {
-      fprintf(stderr, "segment %d: %.1f LUFS\n", i + 1 - optind,
+      fprintf(stderr, "segment %d: %.2f LUFS\n", i + 1 - optind,
                       segment_loudness[i - optind]);
       ebur128_start_new_segment(st);
     }
     if (i == ac - 1) {
       gated_loudness = ebur128_gated_loudness_global(st);
-      fprintf(stderr, "global loudness: %f LUFS\n", gated_loudness);
+      fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
     }
 
   free_buffer:
@@ -215,7 +216,7 @@ int main(int ac, char* const av[]) {
   }
 
   if (st && calculate_lra) {
-    printf("LRA: %f\n", ebur128_loudness_range(st));
+    printf("LRA: %.2f\n", ebur128_loudness_range(st));
   }
 
   if (st && rgtag_exe) {
