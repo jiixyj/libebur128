@@ -326,6 +326,9 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
     } else {                                                                   \
       ebur128_filter_##type(st, src + src_index, frames);                      \
       st->audio_data_index += frames * st->channels;                           \
+      if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
+        st->short_term_frame_counter += frames;                                \
+      }                                                                        \
       st->needed_frames -= frames;                                             \
       frames = 0;                                                              \
     }                                                                          \
