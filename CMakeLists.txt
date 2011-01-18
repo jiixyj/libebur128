@@ -70,6 +70,10 @@ target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES})
 add_executable(r128-mpg123 src/mpg123_example.c)
 target_link_libraries(r128-mpg123 ebur128 ${MPG123_LIBRARIES})
 
+add_executable(r128-mpcdec src/mpcdec_example.c)
+target_link_libraries(r128-mpcdec ebur128 mpcdec_static m)
+set_target_properties(r128-mpcdec PROPERTIES COMPILE_FLAGS "-std=c99")
+
 add_executable(r128-ffmpeg src/ffmpeg_example.c)
 target_link_libraries(r128-ffmpeg ebur128 ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
 set_target_properties(r128-ffmpeg PROPERTIES COMPILE_FLAGS "-std=c99")
