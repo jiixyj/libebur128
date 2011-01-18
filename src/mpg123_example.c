@@ -71,18 +71,23 @@ int main(int ac, char* const av[]) {
     mh = mpg123_new(NULL, &result);
     CHECK_ERROR(!mh, "Could not create mpg123 handler!\n", 1, close_file)
     result = mpg123_open(mh, av[i]);
-    CHECK_ERROR(result != MPG123_OK, "Could not open input file!\n", 1, close_file)
+    CHECK_ERROR(result != MPG123_OK, "Could not open input file!\n", 1,
+                                     close_file)
     result = mpg123_getformat(mh, &mh_rate, &mh_channels, &mh_encoding);
-    CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1, close_file)
+    CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1,
+                                     close_file)
     result = mpg123_format_none(mh);
-    CHECK_ERROR(result != MPG123_OK, "mpg123_format_none failed!\n", 1, close_file)
+    CHECK_ERROR(result != MPG123_OK, "mpg123_format_none failed!\n", 1,
+                                     close_file)
     result = mpg123_format(mh, mh_rate, mh_channels, MPG123_ENC_FLOAT_32);
     CHECK_ERROR(result != MPG123_OK, "mpg123_format failed!\n", 1, close_file)
     result = mpg123_close(mh);
     result = mpg123_open(mh, av[i]);
-    CHECK_ERROR(result != MPG123_OK, "Could not open input file!\n", 1, close_file)
+    CHECK_ERROR(result != MPG123_OK, "Could not open input file!\n", 1,
+                                     close_file)
     result = mpg123_getformat(mh, &mh_rate, &mh_channels, &mh_encoding);
-    CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1, close_file)
+    CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1,
+                                     close_file)
 
     channels = mh_channels;
     samplerate = (int) mh_rate;

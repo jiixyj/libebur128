@@ -169,9 +169,11 @@ int main(int ac, char* const av[]) {
 #if LIBAVCODEC_VERSION_MAJOR >= 52 &&  \
     LIBAVCODEC_VERSION_MINOR >= 26 &&  \
     LIBAVCODEC_VERSION_MICRO >= 0
-          int len = avcodec_decode_audio3(codec_context, (int16_t*) audio_buf, &data_size, &packet);
+          int len = avcodec_decode_audio3(codec_context, (int16_t*) audio_buf,
+                                          &data_size, &packet);
 #else
-          int len = avcodec_decode_audio2(codec_context, (int16_t*) audio_buf, &data_size, packet.data, packet.size);
+          int len = avcodec_decode_audio2(codec_context, (int16_t*) audio_buf,
+                                          &data_size, packet.data, packet.size);
 #endif
           if (len < 0) {
             packet.size = 0;
@@ -194,7 +196,8 @@ int main(int ac, char* const av[]) {
           size_t nr_frames_read;
           switch (codec_context->sample_fmt) {
             case SAMPLE_FMT_U8:
-              CHECK_ERROR(1, "8 bit audio not supported by libebur128!\n", 1, close_codec)
+              CHECK_ERROR(1, "8 bit audio not supported by libebur128!\n", 1,
+                             close_codec)
               break;
             case SAMPLE_FMT_S16:
               nr_frames_read = (size_t) data_size / sizeof(int16_t) /
@@ -221,7 +224,8 @@ int main(int ac, char* const av[]) {
               nr_frames_read = (size_t) data_size / sizeof(double) /
                                (size_t) codec_context->channels;
               CHECK_FOR_PEAKS(data_double, -1.0, 1.0)
-              result = ebur128_add_frames_double(st, data_double, nr_frames_read);
+              result = ebur128_add_frames_double(st, data_double,
+                                                     nr_frames_read);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_NONE:

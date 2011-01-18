@@ -147,7 +147,8 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   state->audio_data = (double*) calloc(state->audio_data_frames
                                      * state->channels,
                                        sizeof(double));
-  CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0, free_channel_map)
+  CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0,
+                                  free_channel_map)
   errcode = ebur128_init_multi_array(&(state->v), state->channels, 5);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
   errcode = ebur128_init_filter(state);
