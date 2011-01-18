@@ -1,8 +1,10 @@
 /* See LICENSE file for copyright and license details. */
+#define _POSIX_C_SOURCE 200112L
 #include <float.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -17,7 +19,7 @@
   }
 
 
-int main(int ac, const char* av[]) {
+int main(int ac, char* const av[]) {
   AVFormatContext* format_context;
   AVCodecContext* codec_context;
   AVCodec* codec;
@@ -25,28 +27,40 @@ int main(int ac, const char* av[]) {
 
   ebur128_state* st = NULL;
   double gated_loudness = DBL_MAX;
-  int errcode = 0;
+  int calculate_lra = 0;
 
-  int ac_offset = 1;
-  int rgtag_found = 0;
+  int errcode = 0;
+  int i;
+  char* rgtag_exe = NULL;
+  int c;
 
   int result;
 
-  CHECK_ERROR(ac < 2, "usage: r128-test [-t RGTAG_EXE] FILENAME(S) ...\n", 1, exit)
-
-  if (strcmp(av[1], "-t") == 0 && ac >= 3) {
-    ac_offset += 2;
-    rgtag_found = 1;
+  CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t RGTAG_EXE] FILENAME(S) ...\n\n"
+                      " -r: calculate loudness range in LRA\n"
+                      " -t: specify ReplayGain tagging script\n", 1, exit)
+  while ((c = getopt(ac, av, "t:r")) != -1) {
+    switch (c) {
+      case 't':
+        rgtag_exe = optarg;
+        break;
+      case 'r':
+        calculate_lra = 1;
+        break;
+      default:
+        return 1;
+        break;
+    }
   }
 
   // Register all formats and codecs
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
 
-  double* segment_loudness = calloc((size_t) (ac - ac_offset), sizeof(double));
-
-  for (int i = ac_offset; i < ac; ++i) {
-    segment_loudness[i - ac_offset] = DBL_MAX;
+  double* segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
+  double* segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
+  for (i = optind; i < ac; ++i) {
+    segment_loudness[i - optind] = DBL_MAX;
     if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
       fprintf(stderr, "Could not open input file!\n");
       continue;
@@ -88,7 +102,8 @@ int main(int ac, const char* av[]) {
     if (!st) {
       st = ebur128_init(codec_context->channels,
                         codec_context->sample_rate,
-                        EBUR128_MODE_I);
+                        EBUR128_MODE_I |
+                        (calculate_lra ? EBUR128_MODE_LRA : 0));
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_codec)
 
       if (codec_context->channel_layout) {
@@ -161,24 +176,51 @@ int main(int ac, const char* av[]) {
             packet.size = 0;
             break;
           }
+      #define CHECK_FOR_PEAKS(buffer, min_scale, max_scale)                    \
+          if (rgtag_exe) {                                                     \
+            double scale_factor = -min_scale > max_scale ? -min_scale          \
+                                                         : max_scale;          \
+            size_t j;                                                          \
+            double buffer_scaled;                                              \
+            for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {     \
+              buffer_scaled = buffer[j] / (scale_factor);                      \
+              if (buffer_scaled > segment_peaks[i - optind])                   \
+                segment_peaks[i - optind] = buffer_scaled;                     \
+              else if (-buffer_scaled > segment_peaks[i - optind])             \
+                segment_peaks[i - optind] = -buffer_scaled;                    \
+            }                                                                  \
+          }
+          size_t nr_frames_read;
           switch (codec_context->sample_fmt) {
             case SAMPLE_FMT_U8:
               CHECK_ERROR(1, "8 bit audio not supported by libebur128!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_S16:
-              result = ebur128_add_frames_short(st, data_short, (size_t) data_size / sizeof(int16_t) / (size_t) codec_context->channels);
+              nr_frames_read = (size_t) data_size / sizeof(int16_t) /
+                               (size_t) codec_context->channels;
+              CHECK_FOR_PEAKS(data_short, SHRT_MIN, SHRT_MAX)
+              result = ebur128_add_frames_short(st, data_short, nr_frames_read);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_S32:
-              result = ebur128_add_frames_int(st, data_int, (size_t) data_size / sizeof(int32_t) / (size_t) codec_context->channels);
+              nr_frames_read = (size_t) data_size / sizeof(int32_t) /
+                               (size_t) codec_context->channels;
+              CHECK_FOR_PEAKS(data_int, (long) INT_MIN, (long) INT_MAX)
+              result = ebur128_add_frames_int(st, data_int, nr_frames_read);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_FLT:
-              result = ebur128_add_frames_float(st, data_float, (size_t) data_size / sizeof(float) / (size_t) codec_context->channels);
+              nr_frames_read = (size_t) data_size / sizeof(float) /
+                               (size_t) codec_context->channels;
+              CHECK_FOR_PEAKS(data_float, -1.0f, 1.0f)
+              result = ebur128_add_frames_float(st, data_float, nr_frames_read);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_DBL:
-              result = ebur128_add_frames_double(st, data_double, (size_t) data_size / sizeof(double) / (size_t) codec_context->channels);
+              nr_frames_read = (size_t) data_size / sizeof(double) /
+                               (size_t) codec_context->channels;
+              CHECK_FOR_PEAKS(data_double, -1.0, 1.0)
+              result = ebur128_add_frames_double(st, data_double, nr_frames_read);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
             case SAMPLE_FMT_NONE:
@@ -195,15 +237,15 @@ int main(int ac, const char* av[]) {
       av_free_packet(&packet);
     }
 
-    segment_loudness[i - ac_offset] = ebur128_gated_loudness_segment(st);
+    segment_loudness[i - optind] = ebur128_gated_loudness_segment(st);
     if (ac != 2) {
-      fprintf(stderr, "segment %d: %.1f LUFS\n", i + 1 - ac_offset,
-                      segment_loudness[i - ac_offset]);
+      fprintf(stderr, "segment %d: %.2f LUFS\n", i + 1 - optind,
+                      segment_loudness[i - optind]);
       ebur128_start_new_segment(st);
     }
     if (i == ac - 1) {
       gated_loudness = ebur128_gated_loudness_global(st);
-      fprintf(stderr, "global loudness: %f LUFS\n", gated_loudness);
+      fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
     }
 
   close_codec:
@@ -213,14 +255,27 @@ int main(int ac, const char* av[]) {
     av_close_input_file(format_context);
   }
 
-  if (rgtag_found) {
+  if (st && calculate_lra) {
+    printf("LRA: %.2f\n", ebur128_loudness_range(st));
+  }
+
+  if (st && rgtag_exe) {
     char command[1024];
-    for (int i = ac_offset; i < ac; ++i) {
-      if (segment_loudness[i - ac_offset] < DBL_MAX &&
+    double global_peak = 0.0;
+    /* Get global peak */
+    for (i = 0; i < ac - optind; ++i) {
+      if (segment_peaks[i] > global_peak) {
+        global_peak = segment_peaks[i];
+      }
+    }
+    for (i = optind; i < ac; ++i) {
+      if (segment_loudness[i - optind] < DBL_MAX &&
           gated_loudness < DBL_MAX) {
-        snprintf(command, 1024, "%s \"%s\" %f 1 %f 1", av[2], av[i],
-                                -18.0 - segment_loudness[i - ac_offset],
-                                -18.0 - gated_loudness);
+        snprintf(command, 1024, "%s \"%s\" %f %f %f %f", rgtag_exe, av[i],
+                                -18.0 - segment_loudness[i - optind],
+                                segment_peaks[i - optind],
+                                -18.0 - gated_loudness,
+                                global_peak);
         printf("%s\n", command);
         system(command);
       }
