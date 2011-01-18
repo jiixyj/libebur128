@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # See LICENSE file for copyright and license details.
 import sys
-tg = '{:.2f}'.format(float(sys.argv[2])) + " dB"
-tp = '{:.8f}'.format(float(sys.argv[3]))
-ag = '{:.2f}'.format(float(sys.argv[4])) + " dB"
-ap = '{:.8f}'.format(float(sys.argv[5]))
+tg = "%.2f dB" % float(sys.argv[2])
+tp = "%.8f"    % float(sys.argv[3])
+ag = "%.2f dB" % float(sys.argv[4])
+ap = "%.8f"    % float(sys.argv[5])
 
 if sys.argv[1][-5:].find(".flac") == 0:
   from mutagen.flac import FLAC
