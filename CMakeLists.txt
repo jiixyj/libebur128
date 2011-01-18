@@ -115,13 +115,25 @@ set_target_properties(r128-test-library PROPERTIES COMPILE_FLAGS "-Wno-float-equ
 install(TARGETS r128-sndfile r128-ffmpeg r128-mpg123 r128-musepack
         RUNTIME DESTINATION .
         ARCHIVE DESTINATION lib)
-install(FILES LICENSE DESTINATION .)
+install(FILES LICENSE README.md DESTINATION .)
 install(PROGRAMS src/rgtag.py DESTINATION .)
 install(DIRECTORY doc/license DESTINATION .)
-if(CMAKE_C_COMPILER MATCHES ".*w64.*")
-  install(FILES lib64/libsndfile-1.dll DESTINATION .)
+if(WIN32 AND CMAKE_C_COMPILER MATCHES ".*w64.*")
+  install(FILES
+          lib64/avcodec-52.dll
+          lib64/avformat-52.dll
+          lib64/avutil-50.dll
+          lib64/libmpg123-0.dll
+          lib64/libsndfile-1.dll
+          DESTINATION .)
 elseif(WIN32)
-  install(FILES lib/libsndfile-1.dll DESTINATION .)
+  install(FILES
+          lib/avcodec-52.dll
+          lib/avformat-52.dll
+          lib/avutil-50.dll
+          lib/libmpg123-0.dll
+          lib/libsndfile-1.dll
+          DESTINATION .)
 endif()
 
 set(CPACK_PACKAGE_VERSION_MAJOR "0")
@@ -131,7 +143,7 @@ set(CPACK_PACKAGE_VERSION_PATCH "4")
 set(CPACK_BINARY_ZIP ON)
 set(CPACK_BINARY_NSIS OFF)
 set(CPACK_SOURCE_ZIP ON)
-set(CPACK_SOURCE_IGNORE_FILES "build/;.git/;.gitignore;lib/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
+set(CPACK_SOURCE_IGNORE_FILES "build/;.git/;.gitignore;include/mpc/;lib/;lib64/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
 if(CMAKE_C_COMPILER MATCHES ".*w64.*")
   set(CPACK_SYSTEM_NAME "win64")
