@@ -340,53 +340,47 @@ void ebur128_start_new_segment(ebur128_state* st) {
   st->block_counter = 0;
 }
 
-double ebur128_relative_threshold(ebur128_state* st,
-                                  size_t block_count) {
+double ebur128_gated_loudness(ebur128_state* st,
+                              size_t block_count,
+                              size_t frames_per_block) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
-  int above_thresh_counter = 0;
-  for (it = st->block_list.lh_first; it != NULL;
+  double gated_loudness = 0.0;
+  size_t above_thresh_counter = 0;
+  if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return 0.0 / 0.0;
+  if (!st->block_list.lh_first) return -1.0 / 0.0;
+
+  for (it = st->block_list.lh_first;
+       it != NULL && above_thresh_counter < block_count;
        it = it->entries.le_next) {
     ++above_thresh_counter;
     relative_threshold += it->z;
-    --block_count;
-    if (!block_count) break;
   }
-  relative_threshold /= above_thresh_counter;
-  return 0.1584893192461113 * relative_threshold;
-}
-
-double ebur128_gated_loudness(ebur128_state* st,
-                              size_t block_count,
-                              size_t frames_per_block,
-                              double relative_threshold) {
-  struct ebur128_dq_entry* it;
-  double gated_loudness = 0.0;
-  int above_thresh_counter = 0;
-  if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return 0.0 / 0.0;
-  for (it = st->block_list.lh_first; it != NULL;
+  relative_threshold /= (double) above_thresh_counter;
+  relative_threshold *= 0.1584893192461113;
+  above_thresh_counter = 0;
+  for (it = st->block_list.lh_first;
+       it != NULL && block_count;
        it = it->entries.le_next) {
     if (it->z >= relative_threshold) {
       ++above_thresh_counter;
       gated_loudness += it->z;
     }
     --block_count;
-    if (!block_count) break;
   }
-  gated_loudness /= above_thresh_counter * (double) (frames_per_block);
+  if (!above_thresh_counter) return -1.0 / 0.0;
+  gated_loudness /= (double) (above_thresh_counter * frames_per_block);
   gated_loudness = 10 * (log(gated_loudness) / log(10.0));
   gated_loudness -= 0.691;
   return gated_loudness;
 }
 
 double ebur128_gated_loudness_global(ebur128_state* st) {
-  double relative_threshold = ebur128_relative_threshold(st, 0);
-  return ebur128_gated_loudness(st, 0, st->samplerate * 2 / 5, relative_threshold);
+  return ebur128_gated_loudness(st, (size_t) -1, st->samplerate * 2 / 5);
 }
 
 double ebur128_gated_loudness_segment(ebur128_state* st) {
-  double relative_threshold = ebur128_relative_threshold(st, st->block_counter);
-  return ebur128_gated_loudness(st, st->block_counter, st->samplerate * 2 / 5, relative_threshold);
+  return ebur128_gated_loudness(st, st->block_counter, st->samplerate * 2 / 5);
 }
 
 double ebur128_loudness_in_interval(ebur128_state* st, size_t interval_frames) {
