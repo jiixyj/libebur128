@@ -47,6 +47,25 @@ else()
   set(MPG123_LIBRARIES mpg123-0)
 endif()
 
+##### mpddec
+if(WIN32)
+  list(REVERSE CMAKE_FIND_LIBRARY_PREFIXES)
+endif()
+if(IS_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include/mpc)
+  find_library(MPCDEC_LIBRARY mpcdec_static
+               PATHS ${${PROJECT_NAME}_SOURCE_DIR}/lib
+               CMAKE_FIND_ROOT_PATH_BOTH)
+  if(MPCDEC_LIBRARY)
+    set(MPCDEC_FOUND TRUE)
+  else()
+    set(MPCDEC_FOUND FALSE)
+    message(STATUS "Could not find the mpcdec library! Will not build mpcdec example.")
+  endif()
+else()
+  set(MPCDEC_FOUND FALSE)
+  message(STATUS "Could not find mpc include dir! Will not build mpcdec example.")
+endif()
+
 
 ######################################
 ##### Compiler setup             #####
@@ -60,6 +79,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -ansi ${VALID_FLAGS}")
 ##### Add libraries/executables  #####
 ######################################
 add_library(ebur128 src/ebur128.c)
+if(NOT WIN32)
+  target_link_libraries(ebur128 m)
+endif()
 
 add_executable(r128-minimal-example src/minimal_example.c)
 target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
@@ -70,9 +92,11 @@ target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES})
 add_executable(r128-mpg123 src/mpg123_example.c)
 target_link_libraries(r128-mpg123 ebur128 ${MPG123_LIBRARIES})
 
-add_executable(r128-mpcdec src/mpcdec_example.c)
-target_link_libraries(r128-mpcdec ebur128 mpcdec_static m)
-set_target_properties(r128-mpcdec PROPERTIES COMPILE_FLAGS "-std=c99")
+if(MPCDEC_FOUND)
+  add_executable(r128-musepack src/mpcdec_example.c)
+  target_link_libraries(r128-musepack ${MPCDEC_LIBRARY} ebur128)
+  set_target_properties(r128-musepack PROPERTIES COMPILE_FLAGS "-std=c99")
+endif()
 
 add_executable(r128-ffmpeg src/ffmpeg_example.c)
 target_link_libraries(r128-ffmpeg ebur128 ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
@@ -86,7 +110,7 @@ set_target_properties(r128-test-library PROPERTIES COMPILE_FLAGS "-Wno-float-equ
 ######################################
 ##### Install                    #####
 ######################################
-install(TARGETS r128-sndfile r128-ffmpeg
+install(TARGETS r128-sndfile r128-ffmpeg r128-mpg123 r128-musepack
         RUNTIME DESTINATION .
         ARCHIVE DESTINATION lib)
 install(FILES LICENSE DESTINATION .)
