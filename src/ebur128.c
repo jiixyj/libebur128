@@ -203,9 +203,10 @@ int ebur128_destroy(ebur128_state** st) {
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
 int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
+  static double scaling_factor = -((double) min_scale) > (double) max_scale ?  \
+                                 -((double) min_scale) : (double) max_scale;   \
   double* audio_data = st->audio_data + st->audio_data_index;                  \
   size_t i, c;                                                                 \
-  double scaling_factor = -min_scale > max_scale ? -min_scale : max_scale;     \
   for (c = 0; c < st->channels; ++c) {                                         \
     if (st->channel_map[c] == EBUR128_UNUSED) continue;                        \
     for (i = 0; i < frames; ++i) {                                             \
@@ -229,7 +230,7 @@ int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
   return 0;                                                                    \
 }
 EBUR128_FILTER(short, SHRT_MIN, SHRT_MAX)
-EBUR128_FILTER(int, (long) INT_MIN, (long) INT_MAX)
+EBUR128_FILTER(int, INT_MIN, INT_MAX)
 EBUR128_FILTER(float, -1.0f, 1.0f)
 EBUR128_FILTER(double, -1.0, 1.0)
 
