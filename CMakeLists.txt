@@ -61,11 +61,14 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -ansi ${VALID_FLAGS}")
 ######################################
 add_library(ebur128 src/ebur128.c)
 
-add_executable(r128-sndfile src/sndfile_example.c)
-target_link_libraries(r128-sndfile ebur128 ${MPG123_LIBRARIES} ${SNDFILE_LIBRARIES})
-
 add_executable(r128-minimal-example src/minimal_example.c)
 target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
+
+add_executable(r128-sndfile src/sndfile_example.c)
+target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES})
+
+add_executable(r128-mpg123 src/mpg123_example.c)
+target_link_libraries(r128-mpg123 ebur128 ${MPG123_LIBRARIES})
 
 add_executable(r128-ffmpeg src/ffmpeg_example.c)
 target_link_libraries(r128-ffmpeg ebur128 ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
