@@ -116,7 +116,7 @@ install(TARGETS r128-sndfile r128-ffmpeg r128-mpg123 r128-musepack
         RUNTIME DESTINATION .
         ARCHIVE DESTINATION lib)
 install(FILES LICENSE DESTINATION .)
-install(FILES src/rgtag.py DESTINATION .)
+install(PROGRAMS src/rgtag.py DESTINATION .)
 install(DIRECTORY doc/license DESTINATION .)
 if(CMAKE_C_COMPILER MATCHES ".*w64.*")
   install(FILES lib64/libsndfile-1.dll DESTINATION .)
