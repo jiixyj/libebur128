@@ -118,7 +118,9 @@ install(TARGETS r128-sndfile r128-ffmpeg r128-mpg123 r128-musepack
 install(FILES LICENSE DESTINATION .)
 install(FILES src/rgtag.py DESTINATION .)
 install(DIRECTORY doc/license DESTINATION .)
-if(WIN32)
+if(CMAKE_C_COMPILER MATCHES ".*w64.*")
+  install(FILES lib64/libsndfile-1.dll DESTINATION .)
+elseif(WIN32)
   install(FILES lib/libsndfile-1.dll DESTINATION .)
 endif()
 
@@ -130,5 +132,9 @@ set(CPACK_BINARY_ZIP ON)
 set(CPACK_BINARY_NSIS OFF)
 set(CPACK_SOURCE_ZIP ON)
 set(CPACK_SOURCE_IGNORE_FILES "build/;.git/;.gitignore;lib/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
+
+if(CMAKE_C_COMPILER MATCHES ".*w64.*")
+  set(CPACK_SYSTEM_NAME "win64")
+endif()
 
 include(CPack)
