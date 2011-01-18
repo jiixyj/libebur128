@@ -427,6 +427,7 @@ double ebur128_loudness_range(ebur128_state* st) {
   }
   if (!stl_size) return 0.0;
   stl_vector = calloc(stl_size, sizeof(double));
+  if (!stl_vector) return 0.0 / 0.0;
   i = 0;
   for (it = st->short_term_block_list.lh_first; it != NULL;
        it = it->entries.le_next) {
