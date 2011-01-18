@@ -238,9 +238,10 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
   size_t i, c;
   double threshold = 1.1724653045822964e-7 * (double) (frames_per_block);
   double sum = 0.0;
+  double channel_sum;
   for (c = 0; c < st->channels; ++c) {
-    double channel_sum = 0.0;
     if (st->channel_map[c] == EBUR128_UNUSED) continue;
+    channel_sum = 0.0;
     if (st->audio_data_index < frames_per_block * st->channels) {
       for (i = 0; i < st->audio_data_index / st->channels; ++i) {
         channel_sum += st->audio_data[i * st->channels + c] *
