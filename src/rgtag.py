@@ -14,7 +14,7 @@ if sys.argv[1][-5:].find(".flac") == 0:
   audio["replaygain_album_gain"] = ag
   audio["replaygain_album_peak"] = ap
   audio.save()
-elif sys.argv[1][-4:].find(".ogg") == 0:
+elif sys.argv[1][-4:].find(".ogg") == 0 or sys.argv[1][-4:].find(".oga") == 0:
   from mutagen.oggvorbis import OggVorbis
   audio = OggVorbis(sys.argv[1])
   audio["replaygain_track_gain"] = tg
@@ -38,3 +38,14 @@ elif sys.argv[1][-4:].find(".mp3") == 0:
   frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_album_peak", text=ap)
   audio.add(frame)
   audio.save()
+elif sys.argv[1][-4:].find(".mpc") == 0:
+  from mutagen.apev2 import APEv2, APENoHeaderError
+  try:
+    audio = APEv2(sys.argv[1])
+  except APENoHeaderError:
+    audio = APEv2()
+  audio["replaygain_track_gain"] = tg
+  audio["replaygain_track_peak"] = tp
+  audio["replaygain_album_gain"] = ag
+  audio["replaygain_album_peak"] = ap
+  audio.save(sys.argv[1])
