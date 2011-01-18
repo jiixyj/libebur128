@@ -134,7 +134,7 @@ int main() {
   fprintf(stderr, "%s\n",
                   "Note: the tests do not have to pass with EXACT_PASSED.\n"
                   "Passing these tests does not mean that the library is "
-                  "100\% EBU R 128 compliant!\n");
+                  "100%% EBU R 128 compliant!\n");
 
 #define TEST_GLOBAL_LOUDNESS(filename, i)                                      \
   result = test_global_loudness(filename);                                     \
