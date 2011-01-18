@@ -20,7 +20,7 @@ Requirements
 ------------
 
 The library itself has no requirements besides ANSI C.
-The scanner needs libsndfile, libmpg123, ffmpeg or libmpcdec.
+The scanner needs libsndfile, libmpg123, FFmpeg or libmpcdec.
 You need Python and Mutagen for the ReplayGain tagging support.
 
 
@@ -71,7 +71,7 @@ run the scanner like this:
     r128-sndfile -t rgtag.py FILENAME(S)...
 
 and rgtag.py will tag your files. Peak measurement is supported by all scanners.
-Please note that ffmpeg will clip decoded output, so the maximum peak value from
+Please note that FFmpeg will clip decoded output, so the maximum peak value from
 r128-ffmpeg is 1.0.
 The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
@@ -80,3 +80,34 @@ option "-r".
 
 For examples how to use the library, see ebur128.h, minimal-example.c,
 sndfile-example.c, mpg123-example, mpcdec-example.c and ffmpeg-example.c.
+
+
+
+
+Used libraries / compile options
+--------------------------------
+
+FFmpeg (0.6.1 - win64):
+./configure --enable-memalign-hack --target-os=mingw32 --arch=x86_64 \
+            --cross-prefix=x86_64-w64-mingw32- --enable-shared --disable-dxva2 \
+            --disable-zlib --disable-bzlib
+
+FFmpeg (0.6.1 - win32):
+./configure --enable-memalign-hack --arch=x86 --target-os=mingw32 \
+            --cross-prefix=i486-mingw32- --enable-shared \
+            --disable-zlib --disable-bzlib
+
+libmpcdec (r435 - win64):
+cmake .. -DCMAKE_TOOLCHAIN_FILE=x86_64-w64-mingw32.cmake \
+         -DCMAKE_BUILD_TYPE=Release
+
+libmpcdec (r435 - win32):
+cmake .. -DCMAKE_TOOLCHAIN_FILE=i486-mingw32.cmake \
+         -DCMAKE_BUILD_TYPE=Release
+
+libmpcdec (r435 - linux):
+cmake .. -DCMAKE_BUILD_TYPE=Release
+
+mpg123 (1.13.1 - win32/win64): precompiled binaries
+
+libsndfile (1.0.23 - win32/win64): precompiled binaries
