@@ -276,6 +276,7 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
     if (!block) return -1;
     block->z = sum;
     LIST_INSERT_HEAD(&st->block_list, block, entries);
+    ++st->block_counter;
     return 0;
   } else {
     return 1;
@@ -302,7 +303,6 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                     \
         errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5, NULL); \
         if (errcode == -1) return 1;                                           \
-        else if (errcode == 0) ++st->block_counter;                            \
       }                                                                        \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->short_term_frame_counter += st->needed_frames;                     \
