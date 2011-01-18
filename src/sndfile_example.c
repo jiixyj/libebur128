@@ -30,8 +30,9 @@ int main(int ac, char* const av[]) {
   int channels, samplerate;
   size_t nr_frames_read, nr_frames_read_all;
 
-  ebur128_state* st = NULL;
   float* buffer;
+
+  ebur128_state* st = NULL;
   double gated_loudness = DBL_MAX;
   double* segment_loudness;
   double* segment_peaks;

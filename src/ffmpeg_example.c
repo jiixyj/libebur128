@@ -27,14 +27,15 @@ int main(int ac, char* const av[]) {
 
   ebur128_state* st = NULL;
   double gated_loudness = DBL_MAX;
+  double* segment_loudness;
+  double* segment_peaks;
   int calculate_lra = 0;
 
   int errcode = 0;
+  int result;
   int i;
   char* rgtag_exe = NULL;
   int c;
-
-  int result;
 
   CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t RGTAG_EXE] FILENAME(S) ...\n\n"
                       " -r: calculate loudness range in LRA\n"
@@ -57,8 +58,8 @@ int main(int ac, char* const av[]) {
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
 
-  double* segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
-  double* segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
+  segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
+  segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
   for (i = optind; i < ac; ++i) {
     segment_loudness[i - optind] = DBL_MAX;
     if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
@@ -238,7 +239,7 @@ int main(int ac, char* const av[]) {
     }
 
     segment_loudness[i - optind] = ebur128_gated_loudness_segment(st);
-    if (ac != 2) {
+    if (ac - optind != 1) {
       fprintf(stderr, "segment %d: %.2f LUFS\n", i + 1 - optind,
                       segment_loudness[i - optind]);
       ebur128_start_new_segment(st);
@@ -286,6 +287,8 @@ int main(int ac, char* const av[]) {
     ebur128_destroy(&st);
   if (segment_loudness)
     free(segment_loudness);
+  if (segment_peaks)
+    free(segment_peaks);
 
 exit:
   return errcode;
