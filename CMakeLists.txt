@@ -6,11 +6,15 @@ cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_MODULE_PATH ${${PROJECT_NAME}_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
 
+set(FFMPEG_VERSION "0.6.1" CACHE STRING "FFmpeg version to link to")
+
 if(NOT WIN32)
   if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     list(APPEND LINK_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/lib64)
+    list(APPEND LINK_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/lib64/ffmpeg-${FFMPEG_VERSION})
   elseif(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
     list(APPEND LINK_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/lib)
+    list(APPEND LINK_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/lib/ffmpeg-${FFMPEG_VERSION})
   endif()
 else()
   if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
@@ -23,6 +27,7 @@ link_directories(${LINK_DIRECTORIES})
 
 if(IS_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include)
   list(APPEND INCLUDE_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/include)
+  list(APPEND INCLUDE_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/include/ffmpeg-${FFMPEG_VERSION})
 endif()
 if(WIN32 AND IS_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/mingw-include)
   list(APPEND INCLUDE_DIRECTORIES ${${PROJECT_NAME}_SOURCE_DIR}/mingw-include)
@@ -149,9 +154,14 @@ if(MPCDEC_FOUND)
 endif()
 
 if(FFMPEG_FOUND)
-  add_executable(r128-ffmpeg src/ffmpeg_example.c)
-  target_link_libraries(r128-ffmpeg ebur128 ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
-  set_target_properties(r128-ffmpeg PROPERTIES COMPILE_FLAGS "-std=c99")
+  if(LSB_COMPILER_FOUND)
+    set(R128_FFMPEG r128-ffmpeg-${FFMPEG_VERSION})
+  else()
+    set(R128_FFMPEG r128-ffmpeg)
+  endif()
+  add_executable(${R128_FFMPEG} src/ffmpeg_example.c)
+  target_link_libraries(${R128_FFMPEG} ebur128 ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
+  set_target_properties(${R128_FFMPEG} PROPERTIES COMPILE_FLAGS "-std=c99")
 endif()
 
 
@@ -159,10 +169,14 @@ endif()
 ##### Install                    #####
 ######################################
 if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
-  install(TARGETS r128-sndfile r128-ffmpeg r128-mpg123 r128-musepack
+  install(TARGETS r128-sndfile ${R128_FFMPEG} r128-mpg123 r128-musepack
           RUNTIME DESTINATION .
           ARCHIVE DESTINATION lib)
   install(FILES LICENSE README.md DESTINATION .)
+  if(LSB_COMPILER_FOUND)
+    install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/r128-ffmpeg-0.5.3
+                     ${EXECUTABLE_OUTPUT_PATH}/r128-ffmpeg-0.6.1 DESTINATION .)
+  endif()
   install(PROGRAMS src/rgtag.py DESTINATION .)
   install(DIRECTORY doc/license DESTINATION .)
   if(WIN32 AND CMAKE_C_COMPILER MATCHES ".*w64.*")
