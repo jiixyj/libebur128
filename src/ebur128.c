@@ -440,47 +440,42 @@ double ebur128_loudness_range(ebur128_state* st) {
   double* stl_relgated;
   size_t stl_relgated_size;
   double stl_power = 0.0, stl_integrated;
-  double lra;
+  /* High and low percentile energy */
+  double h_en, l_en;
 
-  for (it = st->short_term_block_list.lh_first; it != NULL;
-       it = it->entries.le_next) {
+  SLIST_FOREACH(it, &st->short_term_block_list, entries) {
     ++stl_size;
   }
   if (!stl_size) return 0.0;
   stl_vector = calloc(stl_size, sizeof(double));
   if (!stl_vector) return 0.0 / 0.0;
   i = 0;
-  for (it = st->short_term_block_list.lh_first; it != NULL;
-       it = it->entries.le_next) {
+  SLIST_FOREACH(it, &st->short_term_block_list, entries) {
     stl_vector[i] = it->z;
     ++i;
   }
   qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
   stl_abs_gated = stl_vector;
   stl_abs_gated_size = stl_size;
-  while (stl_abs_gated_size > 0 && *stl_abs_gated < -70.0) {
+  while (stl_abs_gated_size > 0 && *stl_abs_gated < abs_threshold_energy) {
     ++stl_abs_gated;
     --stl_abs_gated_size;
   }
   for (i = 0; i < stl_abs_gated_size; ++i) {
-    stl_power += pow(10.0, stl_abs_gated[i] / 10.0);
+    stl_power += stl_abs_gated[i];
   }
   stl_power /= (double) stl_abs_gated_size;
-  stl_integrated = 10 * (log(stl_power) / log(10.0));
+  stl_integrated = minus_twenty_decibels * stl_power;
 
   stl_relgated = stl_abs_gated;
   stl_relgated_size = stl_abs_gated_size;
-  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated - 20.0) {
+  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated) {
     ++stl_relgated;
     --stl_relgated_size;
   }
-  /*
-  for (i = 0; i < stl_relgated_size; ++i) {
-    printf("%f\n", stl_relgated[i]);
-  }
-  */
-  lra = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)]
-      - stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
+
+  h_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)];
+  l_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
   free(stl_vector);
-  return lra;
+  return ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
 }
