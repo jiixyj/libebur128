@@ -66,7 +66,7 @@ for root, dirs, files in os.walk(sys.argv[1]):
   files_mp3.sort()
   files_snd.sort()
   files_mpc.sort()
-  r128_scanner = 'r128-ffmpeg'
+  r128_scanner = ''
   r128_files = []
   if len(files_mp3) != 0 and len(files_snd) == 0 and len(files_mpc) == 0:
     r128_scanner = 'r128-mpg123'
@@ -78,7 +78,7 @@ for root, dirs, files in os.walk(sys.argv[1]):
     r128_scanner = 'r128-musepack'
     r128_files += files_mpc
   else:
-    r128_files += files_mp3 + files_snd + files_mpc
+    continue
 
   if len(r128_files) == 0:
     continue
