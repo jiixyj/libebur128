@@ -35,7 +35,7 @@ In the root folder, type:
     make
 
 
-It is also possible to compile the scanner directly with gcc:
+It is also possible to compile the scanners directly with gcc:
 
     gcc -O3 -I../include sndfile-example.c ebur128.c -o r128-test -lm -lsndfile
 
@@ -65,14 +65,14 @@ The output will look like this:
 
 
 If you have Python and Mutagen (a tagging library) installed, the scanners also
-supports ReplayGain tagging with a little helper script called "rgtag". Just
-run the scanner like this:
+support ReplayGain tagging with a little helper script called "r128-tag". Just
+run the script like this:
 
-    r128-sndfile -t rgtag.py FILENAME(S)...
+    r128-tag.py <directory>
 
-and rgtag.py will tag your files. Peak measurement is supported by all scanners.
-Please note that FFmpeg will clip decoded output, so the maximum peak value from
-r128-ffmpeg is 1.0.
+and it will scan the directory recursively for music files and tag them as one
+album per subfolder.
+
 The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
 All scanners support loudness range measurement with the command line
@@ -80,6 +80,8 @@ option "-r".
 
 For examples how to use the library, see ebur128.h, minimal-example.c,
 sndfile-example.c, mpg123-example, mpcdec-example.c and ffmpeg-example.c.
+
+
 
 
 
@@ -157,7 +159,8 @@ mpg123 (1.13.1 - lsb 4.0 64 bit):
 CC="lsbrun /opt/lsb/bin/lsbcc --lsb-besteffort" ./configure
 
 mpg123 (1.13.1 - lsb 4.0 32 bit):
-CC="lsbrun32 /opt/lsb/bin/lsbcc --lsb-besteffort -m32" ./configure --with-cpu=generic_fpu
+CC="lsbrun32 /opt/lsb/bin/lsbcc --lsb-besteffort -m32" ./configure \
+--with-cpu=generic_fpu
 
 libsndfile (1.0.23 - win32/win64): precompiled binaries
 
