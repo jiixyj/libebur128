@@ -177,7 +177,7 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
     install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/r128-ffmpeg-0.5.3
                      ${EXECUTABLE_OUTPUT_PATH}/r128-ffmpeg-0.6.1 DESTINATION .)
   endif()
-  install(PROGRAMS src/rgtag.py DESTINATION .)
+  install(PROGRAMS src/rgtag.py src/r128-tag.py DESTINATION .)
   install(DIRECTORY doc/license DESTINATION .)
   if(WIN32 AND CMAKE_C_COMPILER MATCHES ".*w64.*")
     install(FILES
@@ -208,6 +208,8 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
 
   if(CMAKE_C_COMPILER MATCHES ".*w64.*")
     set(CPACK_SYSTEM_NAME "win64")
+  elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+    set(CPACK_SYSTEM_NAME "Linux64")
   endif()
 
   include(CPack)
