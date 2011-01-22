@@ -30,20 +30,20 @@ int main(int ac, char* const av[]) {
   double* segment_loudness;
   double* segment_peaks;
   int calculate_lra = 0;
+  int rgtag_info = 0;
 
   int errcode = 0;
   int result;
   int i;
-  char* rgtag_exe = NULL;
   int c;
 
-  CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t RGTAG_EXE] FILENAME(S) ...\n\n"
+  CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t] FILENAME(S) ...\n\n"
                       " -r: calculate loudness range in LRA\n"
-                      " -t: specify ReplayGain tagging script\n", 1, exit)
-  while ((c = getopt(ac, av, "t:r")) != -1) {
+                      " -t: output ReplayGain tagging info\n", 1, exit)
+  while ((c = getopt(ac, av, "tr")) != -1) {
     switch (c) {
       case 't':
-        rgtag_exe = optarg;
+        rgtag_info = 1;
         break;
       case 'r':
         calculate_lra = 1;
@@ -180,7 +180,7 @@ int main(int ac, char* const av[]) {
             break;
           }
       #define CHECK_FOR_PEAKS(buffer, min_scale, max_scale)                    \
-          if (rgtag_exe) {                                                     \
+          if (rgtag_info) {                                                    \
             double scale_factor = -min_scale > max_scale ? -min_scale          \
                                                          : max_scale;          \
             size_t j;                                                          \
@@ -261,29 +261,21 @@ int main(int ac, char* const av[]) {
   }
 
   if (st && calculate_lra) {
-    printf("LRA: %.2f\n", ebur128_loudness_range(st));
+    fprintf(stderr, "LRA: %.2f\n", ebur128_loudness_range(st));
   }
 
-  if (st && rgtag_exe) {
-    char command[1024];
+  if (st && rgtag_info) {
     double global_peak = 0.0;
-    /* Get global peak */
     for (i = 0; i < ac - optind; ++i) {
       if (segment_peaks[i] > global_peak) {
         global_peak = segment_peaks[i];
       }
     }
     for (i = optind; i < ac; ++i) {
-      if (segment_loudness[i - optind] < DBL_MAX &&
-          gated_loudness < DBL_MAX) {
-        snprintf(command, 1024, "%s \"%s\" %f %f %f %f", rgtag_exe, av[i],
-                                -18.0 - segment_loudness[i - optind],
-                                segment_peaks[i - optind],
-                                -18.0 - gated_loudness,
-                                global_peak);
-        printf("%s\n", command);
-        system(command);
-      }
+      printf("%.8f %.8f %.8f %.8f\n", -18.0 - segment_loudness[i - optind],
+                                      segment_peaks[i - optind],
+                                      -18.0 - gated_loudness,
+                                      global_peak);
     }
   }
 

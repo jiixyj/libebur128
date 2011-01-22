@@ -1,51 +1,56 @@
 #!/usr/bin/env python
 # See LICENSE file for copyright and license details.
 import sys
-tg = "%.2f dB" % float(sys.argv[2])
-tp = "%.8f"    % float(sys.argv[3])
-ag = "%.2f dB" % float(sys.argv[4])
-ap = "%.8f"    % float(sys.argv[5])
 
-if sys.argv[1][-5:].find(".flac") == 0:
-  from mutagen.flac import FLAC
-  audio = FLAC(sys.argv[1])
-  audio["replaygain_track_gain"] = tg
-  audio["replaygain_track_peak"] = tp
-  audio["replaygain_album_gain"] = ag
-  audio["replaygain_album_peak"] = ap
-  audio.save()
-elif sys.argv[1][-4:].find(".ogg") == 0 or sys.argv[1][-4:].find(".oga") == 0:
-  from mutagen.oggvorbis import OggVorbis
-  audio = OggVorbis(sys.argv[1])
-  audio["replaygain_track_gain"] = tg
-  audio["replaygain_track_peak"] = tp
-  audio["replaygain_album_gain"] = ag
-  audio["replaygain_album_peak"] = ap
-  audio.save()
-elif sys.argv[1][-4:].find(".mp3") == 0:
-  import mutagen, mutagen.id3
-  audio = mutagen.id3.ID3(sys.argv[1])
-  frame = mutagen.id3.Frames["RVA2"](desc="track", channel=1, gain=float(sys.argv[2]), peak=float(sys.argv[3]))
-  audio.add(frame)
-  frame = mutagen.id3.Frames["RVA2"](desc="album", channel=1, gain=float(sys.argv[4]), peak=float(sys.argv[5]))
-  audio.add(frame)
-  frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_track_gain", text=tg)
-  audio.add(frame)
-  frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_track_peak", text=tp)
-  audio.add(frame)
-  frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_album_gain", text=ag)
-  audio.add(frame)
-  frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_album_peak", text=ap)
-  audio.add(frame)
-  audio.save()
-elif sys.argv[1][-4:].find(".mpc") == 0:
-  from mutagen.apev2 import APEv2, APENoHeaderError
-  try:
-    audio = APEv2(sys.argv[1])
-  except APENoHeaderError:
-    audio = APEv2()
-  audio["replaygain_track_gain"] = tg
-  audio["replaygain_track_peak"] = tp
-  audio["replaygain_album_gain"] = ag
-  audio["replaygain_album_peak"] = ap
-  audio.save(sys.argv[1])
+def rgtag(filename, trackgain, trackpeak, albumgain, albumpeak):
+  tg = "%.2f dB" % trackgain
+  tp = "%.8f"    % trackpeak
+  ag = "%.2f dB" % albumgain
+  ap = "%.8f"    % albumpeak
+  if filename[-5:].find(".flac") == 0:
+    from mutagen.flac import FLAC
+    audio = FLAC(filename)
+    audio["replaygain_track_gain"] = tg
+    audio["replaygain_track_peak"] = tp
+    audio["replaygain_album_gain"] = ag
+    audio["replaygain_album_peak"] = ap
+    audio.save()
+  elif filename[-4:].find(".ogg") == 0 or filename[-4:].find(".oga") == 0:
+    from mutagen.oggvorbis import OggVorbis
+    audio = OggVorbis(filename)
+    audio["replaygain_track_gain"] = tg
+    audio["replaygain_track_peak"] = tp
+    audio["replaygain_album_gain"] = ag
+    audio["replaygain_album_peak"] = ap
+    audio.save()
+  elif filename[-4:].find(".mp3") == 0:
+    import mutagen, mutagen.id3
+    audio = mutagen.id3.ID3(filename)
+    frame = mutagen.id3.Frames["RVA2"](desc="track", channel=1, gain=trackgain, peak=trackpeak)
+    audio.add(frame)
+    frame = mutagen.id3.Frames["RVA2"](desc="album", channel=1, gain=albumgain, peak=albumpeak)
+    audio.add(frame)
+    frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_track_gain", text=tg)
+    audio.add(frame)
+    frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_track_peak", text=tp)
+    audio.add(frame)
+    frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_album_gain", text=ag)
+    audio.add(frame)
+    frame = mutagen.id3.Frames["TXXX"](encoding=3, desc="replaygain_album_peak", text=ap)
+    audio.add(frame)
+    audio.save()
+  elif filename[-4:].find(".mpc") == 0:
+    from mutagen.apev2 import APEv2, APENoHeaderError
+    try:
+      audio = APEv2(filename)
+    except APENoHeaderError:
+      audio = APEv2()
+    audio["replaygain_track_gain"] = tg
+    audio["replaygain_track_peak"] = tp
+    audio["replaygain_album_gain"] = ag
+    audio["replaygain_album_peak"] = ap
+    audio.save(filename)
+
+if __name__ == "__main__":
+  import sys
+  rgtag(sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]))
