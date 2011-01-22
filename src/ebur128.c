@@ -16,6 +16,11 @@
     goto goto_point;                                                           \
   }
 
+/* Those will be calculated when initializing the library */
+static double minus_eight_decibels;
+static double minus_twenty_decibels;
+static double abs_threshold_energy;
+
 int ebur128_init_multi_array(double*** v, size_t channels, size_t filter_size) {
   size_t i;
   int errcode = 0;
@@ -164,6 +169,11 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   /* start at the beginning of the buffer */
   state->audio_data_index = 0;
 
+  /* initialize static constants */
+  minus_eight_decibels = pow(10, -8.0 / 10.0);
+  minus_twenty_decibels = pow(10, -20.0 / 10.0);
+  abs_threshold_energy = pow(10.0, (-70.0 + 0.691) / 10.0);
+
   return state;
 
 free_v:
@@ -238,7 +248,7 @@ EBUR128_FILTER(double, -1.0, 1.0)
 int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
                               double* optional_output) {
   size_t i, c;
-  double threshold = 1.1724653045822964e-7 * (double) (frames_per_block);
+  double threshold = abs_threshold_energy * (double) (frames_per_block);
   double sum = 0.0;
   double channel_sum;
   for (c = 0; c < st->channels; ++c) {
@@ -363,7 +373,7 @@ double ebur128_gated_loudness(ebur128_state* st,
     relative_threshold += it->z;
   }
   relative_threshold /= (double) above_thresh_counter;
-  relative_threshold *= 0.1584893192461113;
+  relative_threshold *= minus_eight_decibels;
   above_thresh_counter = 0;
   for (it = st->block_list.lh_first;
        it != NULL && block_count;
