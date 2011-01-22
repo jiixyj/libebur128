@@ -4,30 +4,39 @@ import sys
 import os
 import subprocess
 import threading
-import Queue
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 import signal
 import string
 
 import rgtag
+
+if len(sys.argv) == 1:
+  print("usage: r128-tag <directory>\n"
+        "  r128-tag will scan a directory recursively and tag all\n"
+        "  music files with ReplayGain compatible tags.")
+  sys.exit(1)
 
 def worker():
   while True:
     item = q.get()
     item.wait()
     stdoutdata, stderrdata = item.communicate()
-    rginfo = string.split(stdoutdata, "\n")
+    rginfo = stdoutdata.decode('ascii').splitlines()
     q.task_done()
     witem = w.get()
     try:
       for i, name in enumerate(witem[1:]):
-        print name
-        rgdata = string.split(rginfo[i], " ")
-        print rgdata
+        print(name)
+        rgdata = rginfo[i].split(" ")
+        print(rgdata)
         rgtag.rgtag(os.path.join(witem[0], name), float(rgdata[0]),
                                                   float(rgdata[1]),
                                                   float(rgdata[2]),
                                                   float(rgdata[3]))
-    except ValueError:
+    except:
       pass
     w.task_done()
 
@@ -40,8 +49,8 @@ try:
 except (ImportError,NotImplementedError):
   pass
 
-w = Queue.Queue(number_threads)
-q = Queue.Queue(number_threads)
+w = queue.Queue(number_threads)
+q = queue.Queue(number_threads)
 
 t = threading.Thread(target=worker)
 t.daemon = True
