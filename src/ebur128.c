@@ -159,8 +159,8 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   errcode = ebur128_init_filter(state);
   CHECK_ERROR(errcode, "Could not initialize filter!\n", 0, free_v)
 
-  LIST_INIT(&state->block_list);
-  LIST_INIT(&state->short_term_block_list);
+  SLIST_INIT(&state->block_list);
+  SLIST_INIT(&state->short_term_block_list);
   state->short_term_frame_counter = 0;
   state->block_counter = 0;
 
@@ -195,14 +195,14 @@ int ebur128_destroy(ebur128_state** st) {
   ebur128_release_multi_array(&(*st)->v, (*st)->channels);
   free((*st)->a);
   free((*st)->b);
-  while ((*st)->block_list.lh_first != NULL) {
-    entry = (*st)->block_list.lh_first;
-    LIST_REMOVE((*st)->block_list.lh_first, entries);
+  while (!SLIST_EMPTY(&(*st)->block_list)) {
+    entry = SLIST_FIRST(&(*st)->block_list);
+    SLIST_REMOVE_HEAD(&(*st)->block_list, entries);
     free(entry);
   }
-  while ((*st)->short_term_block_list.lh_first != NULL) {
-    entry = (*st)->short_term_block_list.lh_first;
-    LIST_REMOVE((*st)->short_term_block_list.lh_first, entries);
+  while (!SLIST_EMPTY(&(*st)->short_term_block_list)) {
+    entry = SLIST_FIRST(&(*st)->short_term_block_list);
+    SLIST_REMOVE_HEAD(&(*st)->short_term_block_list, entries);
     free(entry);
   }
 
@@ -288,7 +288,7 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
     block = malloc(sizeof(struct ebur128_dq_entry));
     if (!block) return -1;
     block->z = sum;
-    LIST_INSERT_HEAD(&st->block_list, block, entries);
+    SLIST_INSERT_HEAD(&st->block_list, block, entries);
     ++st->block_counter;
     return 0;
   } else {
@@ -301,6 +301,7 @@ void ebur128_set_channel_map(ebur128_state* st,
   memcpy(st->channel_map, channel_map, st->channels * sizeof(int));
 }
 
+double ebur128_energy_shortterm(ebur128_state* st);
 #define EBUR128_ADD_FRAMES(type)                                               \
 int ebur128_add_frames_##type(ebur128_state* st,                               \
                               const type* src, size_t frames) {                \
@@ -320,12 +321,12 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->short_term_frame_counter += st->needed_frames;                     \
         if (st->short_term_frame_counter == st->samplerate * 3) {              \
-          double st_loudness = ebur128_loudness_shortterm(st);                 \
+          double st_energy = ebur128_energy_shortterm(st);                     \
           struct ebur128_dq_entry* block;                                      \
           block = malloc(sizeof(struct ebur128_dq_entry));                     \
           if (!block) return 1;                                                \
-          block->z = st_loudness;                                              \
-          LIST_INSERT_HEAD(&st->short_term_block_list, block, entries);        \
+          block->z = st_energy;                                                \
+          SLIST_INSERT_HEAD(&st->short_term_block_list, block, entries);       \
           st->short_term_frame_counter = st->samplerate * 2;                   \
         }                                                                      \
       }                                                                        \
@@ -356,6 +357,10 @@ void ebur128_start_new_segment(ebur128_state* st) {
   st->block_counter = 0;
 }
 
+double ebur128_energy_to_loudness(double energy) {
+  return 10 * (log(energy) / log(10.0)) - 0.691;
+}
+
 double ebur128_gated_loudness(ebur128_state* st,
                               size_t block_count,
                               size_t frames_per_block) {
@@ -364,20 +369,18 @@ double ebur128_gated_loudness(ebur128_state* st,
   double gated_loudness = 0.0;
   size_t above_thresh_counter = 0;
   if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return 0.0 / 0.0;
-  if (!st->block_list.lh_first) return -1.0 / 0.0;
+  if (SLIST_EMPTY(&st->block_list)) return -1.0 / 0.0;
 
-  for (it = st->block_list.lh_first;
-       it != NULL && above_thresh_counter < block_count;
-       it = it->entries.le_next) {
+  SLIST_FOREACH(it, &st->block_list, entries) {
+    if (above_thresh_counter >= block_count) break;
     ++above_thresh_counter;
     relative_threshold += it->z;
   }
   relative_threshold /= (double) above_thresh_counter;
   relative_threshold *= minus_eight_decibels;
   above_thresh_counter = 0;
-  for (it = st->block_list.lh_first;
-       it != NULL && block_count;
-       it = it->entries.le_next) {
+  SLIST_FOREACH(it, &st->block_list, entries) {
+    if (block_count == 0) break;
     if (it->z >= relative_threshold) {
       ++above_thresh_counter;
       gated_loudness += it->z;
@@ -386,9 +389,7 @@ double ebur128_gated_loudness(ebur128_state* st,
   }
   if (!above_thresh_counter) return -1.0 / 0.0;
   gated_loudness /= (double) (above_thresh_counter * frames_per_block);
-  gated_loudness = 10 * (log(gated_loudness) / log(10.0));
-  gated_loudness -= 0.691;
-  return gated_loudness;
+  return ebur128_energy_to_loudness(gated_loudness);
 }
 
 double ebur128_gated_loudness_global(ebur128_state* st) {
@@ -399,23 +400,27 @@ double ebur128_gated_loudness_segment(ebur128_state* st) {
   return ebur128_gated_loudness(st, st->block_counter, st->samplerate * 2 / 5);
 }
 
-double ebur128_loudness_in_interval(ebur128_state* st, size_t interval_frames) {
+double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
   double loudness;
 
   if (interval_frames > st->audio_data_frames) return 0.0 / 0.0;
   ebur128_calc_gating_block(st, interval_frames, &loudness);
   loudness /= (double) (interval_frames);
-  loudness = 10 * (log(loudness) / log(10.0));
-  loudness -= 0.691;
   return loudness;
 }
 
 double ebur128_loudness_momentary(ebur128_state* st) {
-  return ebur128_loudness_in_interval(st, st->samplerate * 2 / 5);
+  double energy = ebur128_energy_in_interval(st, st->samplerate * 2 / 5);
+  return ebur128_energy_to_loudness(energy);
+}
+
+double ebur128_energy_shortterm(ebur128_state* st) {
+  return ebur128_energy_in_interval(st, st->samplerate * 3);
 }
 
 double ebur128_loudness_shortterm(ebur128_state* st) {
-  return ebur128_loudness_in_interval(st, st->samplerate * 3);
+  double energy = ebur128_energy_shortterm(st);
+  return ebur128_energy_to_loudness(energy);
 }
 
 static int ebur128_double_cmp(const void *p1, const void *p2) {

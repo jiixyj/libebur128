@@ -11,10 +11,10 @@ extern "C" {
 /* This can be replaced by any BSD-like queue implementation */
 #include "queue.h"
 
-LIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
+SLIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {
   double z;
-  LIST_ENTRY(ebur128_dq_entry) entries;
+  SLIST_ENTRY(ebur128_dq_entry) entries;
 };
 
 /* Use these values when setting the channel map */
