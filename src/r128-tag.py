@@ -18,27 +18,26 @@ def usage():
         "  If more than one directory is given, all available cores will be"
          " used.")
 
-recursive = False
-
-try:
-  opts, args = getopt.getopt(sys.argv[1:], "hr")
-except getopt.GetoptError:
-  usage()
-  sys.exit(1)
-for opt, arg in opts:
-  if opt in ("-h"):
+def get_options(argv):
+  recursive = False
+  try:
+    opts, args = getopt.getopt(argv, "hr")
+  except getopt.GetoptError:
     usage()
     sys.exit(1)
-  elif opt in ("-r"):
-    recursive = True
+  for opt, arg in opts:
+    if opt in ("-h"):
+      usage()
+      sys.exit(1)
+    elif opt in ("-r"):
+      recursive = True
+  if len(args) == 0:
+    usage()
+    sys.exit(1)
+  return args, recursive
 
-if len(args) == 0:
-  usage()
-  sys.exit(1)
 
-topdir = os.path.abspath(os.path.dirname(sys.argv[0]))
-
-def process_dir(root, files):
+def process_dir(topdir, root, files):
   files_mp3 = [elem for elem in files if elem[-4:].find(".mp3") == 0]
   files_snd = [elem for elem in files if elem[-4:].find(".ogg") == 0 or
                                          elem[-4:].find(".oga") == 0 or
@@ -86,51 +85,53 @@ def process_dir(root, files):
   except OSError:
     print("Error starting scanner " + r128_scanner + "!")
     sys.exit(1)
-
   return True
 
-
-# Process either directories _or_ files
-all_files = True
-all_directory = True
-for filename in args:
-  if os.path.isdir(filename):
-    all_files = False
-  elif os.path.isfile(filename):
-    all_directory = False
-  else:
-    print("Error opening file!")
+if __name__ == '__main__':
+  args, recursive = get_options(sys.argv[1:])
+  topdir = os.path.abspath(os.path.dirname(sys.argv[0]))
+  # Process either directories _or_ files
+  all_files = True
+  all_directory = True
+  for filename in args:
+    if os.path.isdir(filename):
+      all_files = False
+    elif os.path.isfile(filename):
+      all_directory = False
+    else:
+      print("Error opening file!")
+      sys.exit(1)
+  if not all_files and not all_directory:
+    usage()
+    sys.exit(1)
+  if all_files and recursive:
+    usage()
     sys.exit(1)
 
-if not all_files and not all_directory:
-  usage()
-  sys.exit(1)
-if all_files and recursive:
-  usage()
-  sys.exit(1)
+  number_threads = multiprocessing.cpu_count()
+  pool = multiprocessing.Pool(processes=number_threads)
+  results = []
 
-number_threads = multiprocessing.cpu_count()
-pool = multiprocessing.Pool(processes=number_threads)
-results = []
-
-if all_directory:
-  for directory in args:
-    if recursive:
-      for root, dirs, files in os.walk(directory):
-        result = pool.apply_async(process_dir, (root, files,))
+  if all_directory:
+    for directory in args:
+      if recursive:
+        for root, dirs, files in os.walk(directory):
+          result = pool.apply_async(process_dir, (topdir, root, files,))
+          results.append(result)
+      else:
+        result = pool.apply_async(process_dir,
+                                  (topdir, directory, os.listdir(directory),));
         results.append(result)
-    else:
-      result = pool.apply_async(process_dir,
-                                (directory, os.listdir(directory),));
-      results.append(result)
-else:
-  process_dir(os.getcwd(), args)
+  else:
+    print(topdir, os.getcwd(), args)
+    sys.exit(1)
+    process_dir(os.getcwd(), args)
 
-try:
-  for result in results:
-    val = result.get(99999999)
-    if not val:
-      print("No files to scan!")
-except KeyboardInterrupt:
-  pool.terminate()
-  pool.close()
+  try:
+    for result in results:
+      val = result.get(99999999)
+      if not val:
+        print("No files to scan!")
+  except KeyboardInterrupt:
+    pool.terminate()
+    pool.close()
