@@ -183,19 +183,19 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   install(DIRECTORY doc/license DESTINATION .)
   if(WIN32 AND CMAKE_C_COMPILER MATCHES ".*w64.*")
     install(FILES
-            lib64/avcodec-52.dll
-            lib64/avformat-52.dll
-            lib64/avutil-50.dll
-            lib64/libmpg123-0.dll
-            lib64/libsndfile-1.dll
+            mingw-lib64/avcodec-52.dll
+            mingw-lib64/avformat-52.dll
+            mingw-lib64/avutil-50.dll
+            mingw-lib64/libmpg123-0.dll
+            mingw-lib64/libsndfile-1.dll
             DESTINATION .)
   elseif(WIN32)
     install(FILES
-            lib/avcodec-52.dll
-            lib/avformat-52.dll
-            lib/avutil-50.dll
-            lib/libmpg123-0.dll
-            lib/libsndfile-1.dll
+            mingw-lib/avcodec-52.dll
+            mingw-lib/avformat-52.dll
+            mingw-lib/avutil-50.dll
+            mingw-lib/libmpg123-0.dll
+            mingw-lib/libsndfile-1.dll
             DESTINATION .)
   endif()
 
@@ -206,7 +206,8 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   set(CPACK_BINARY_ZIP ON)
   set(CPACK_BINARY_NSIS OFF)
   set(CPACK_SOURCE_ZIP ON)
-  set(CPACK_SOURCE_IGNORE_FILES "build/;build32/;.git/;.gitignore;include/mpc/;lib/;lib64/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
+  set(INCLUDE_BLACKLIST "include/mpc/;include/ffmpeg-0.5.3/;include/ffmpeg-0.6.1/;include/mpg123.h;include/sndfile.h")
+  set(CPACK_SOURCE_IGNORE_FILES "build/;build32/;.git/;.gitignore;${INCLUDE_BLACKLIST};lib/;lib64/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
   if(CMAKE_C_COMPILER MATCHES ".*w64.*")
     set(CPACK_SYSTEM_NAME "win64")
