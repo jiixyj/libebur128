@@ -2,23 +2,11 @@
 # See LICENSE file for copyright and license details.
 import sys
 import os
-import subprocess
-import threading
-try:
-  import queue
-except ImportError:
-  import Queue as queue
-import signal
-import string
 import getopt
-import time
+import subprocess
+import multiprocessing
 
 import rgtag
-
-def signal_handler(signal, frame):
-  print('\nExiting!')
-  sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)
 
 def usage():
   print("usage: r128-tag [-r] <directory(ies)> ...\n"
@@ -48,33 +36,7 @@ if len(args) == 0:
   usage()
   sys.exit(1)
 
-def worker():
-  while True:
-    item = q.get()
-    item.wait()
-    if item.returncode != 0:
-      q.task_done()
-      w.get()
-      w.task_done()
-      return
-    stdoutdata, stderrdata = item.communicate()
-    rginfo = stdoutdata.decode('ascii').splitlines()
-    q.task_done()
-    witem = w.get()
-    try:
-      for i, name in enumerate(witem[1:]):
-        print(name)
-        rgdata = rginfo[i].split(" ")
-        print(rgdata)
-        rgtag.rgtag(os.path.join(witem[0], name), float(rgdata[0]),
-                                                  float(rgdata[1]),
-                                                  float(rgdata[2]),
-                                                  float(rgdata[3]))
-    except:
-      print("Tagging error!")
-      w.task_done()
-      return
-    w.task_done()
+topdir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 def process_dir(root, files):
   files_mp3 = [elem for elem in files if elem[-4:].find(".mp3") == 0]
@@ -101,30 +63,32 @@ def process_dir(root, files):
 
   if len(r128_files) == 0:
     return False
-  w.put([root] + r128_files)
   try:
-    pipe = subprocess.Popen([os.path.join(topdir, r128_scanner), '-t'] +
-                                                                     r128_files,
+    pipe = subprocess.Popen([os.path.join(topdir, r128_scanner), '-t']
+                                                                + r128_files,
                             stdout=subprocess.PIPE,
                             cwd=root)
+    pipe.wait()
+    stdoutdata, stderrdata = pipe.communicate()
+    rginfo = stdoutdata.decode('ascii').splitlines()
+    try:
+      for i, name in enumerate(r128_files):
+        print(name)
+        rgdata = rginfo[i].split(" ")
+        print(rgdata)
+        rgtag.rgtag(os.path.join(root, name), float(rgdata[0]),
+                                              float(rgdata[1]),
+                                              float(rgdata[2]),
+                                              float(rgdata[3]))
+    except:
+      print("Tagging error!")
+      return
   except OSError:
     print("Error starting scanner " + r128_scanner + "!")
     sys.exit(1)
 
-  q.put(pipe)
   return True
 
-
-
-
-topdir = os.path.abspath(os.path.dirname(sys.argv[0]))
-
-number_threads = 1
-try:
-  import multiprocessing
-  number_threads = multiprocessing.cpu_count()
-except (ImportError,NotImplementedError):
-  pass
 
 # Process either directories _or_ files
 all_files = True
@@ -145,25 +109,28 @@ if all_files and recursive:
   usage()
   sys.exit(1)
 
-
-w = queue.Queue(number_threads)
-q = queue.Queue(number_threads)
-
-t = threading.Thread(target=worker)
-t.daemon = True
-t.start()
+number_threads = multiprocessing.cpu_count()
+pool = multiprocessing.Pool(processes=number_threads)
+results = []
 
 if all_directory:
   for directory in args:
     if recursive:
-      for root, dirs, files in os.walk(args[0]):
-        process_dir(root, files)
+      for root, dirs, files in os.walk(directory):
+        result = pool.apply_async(process_dir, (root, files,))
+        results.append(result)
     else:
-      if not process_dir(args[0], os.listdir(args[0])):
-        print("No files to scan!")
+      result = pool.apply_async(process_dir,
+                                (directory, os.listdir(directory),));
+      results.append(result)
 else:
   process_dir(os.getcwd(), args)
 
-
-w.join()
-q.join()
+try:
+  for result in results:
+    val = result.get(99999999)
+    if not val:
+      print("No files to scan!")
+except KeyboardInterrupt:
+  pool.terminate()
+  pool.close()
