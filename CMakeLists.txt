@@ -120,8 +120,10 @@ endif()
 ##### Compiler setup             #####
 ######################################
 include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
-set(CMAKE_C_FLAGS_OLD "${CMAKE_C_FLAGS}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_OLD} -ansi ${VALID_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi ${VALID_FLAGS}")
+if (${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2 -mfpmath=sse")
+endif()
 
 
 ######################################
