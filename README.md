@@ -13,7 +13,7 @@ Features
 * Implements M, S and I modes
 * Implements loudness range measurement (EBU - TECH 3342)
 * Supports all samplerates by recalculation of the filter coefficients
-* ReplayGain-compatible tagging support for MP3, OGG, Musepack and FLAC
+* ReplayGain compatible tagging support for MP3, OGG, Musepack and FLAC
 
 
 Requirements
@@ -21,7 +21,7 @@ Requirements
 
 The library itself has no requirements besides ANSI C.
 The scanner needs libsndfile, libmpg123, FFmpeg or libmpcdec.
-You need Python and Mutagen for the ReplayGain tagging support.
+You need at least Python 2.6 and Mutagen for the ReplayGain tagging support.
 
 
 Installation
@@ -70,8 +70,9 @@ run the script like this:
 
     r128-tag.py <directory>
 
-and it will scan the directory recursively for music files and tag them as one
-album per subfolder.
+and it will scan the directory as one album. Use the option "-r" to search
+recursively for music files and tag them as one album per subfolder. The tagger
+also supports file input; then all files are treated as one album.
 
 The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
