@@ -114,9 +114,17 @@ int main(int ac, char* const av[]) {
       result = mpg123_read(mh, (unsigned char*) buffer,
                                st->samplerate * st->channels * sizeof(float),
                                &nr_frames_read);
-      CHECK_ERROR(result != MPG123_OK &&
-                  result != MPG123_DONE,
-                  "Internal MPG123 error!\n", 1, free_buffer)
+      if (result != MPG123_OK && result != MPG123_DONE) {
+        if (result == MPG123_ERR && mpg123_errcode(mh) == MPG123_RESYNC_FAIL) {
+          fprintf(stderr, "%s\n", mpg123_strerror(mh));
+          fprintf(stderr, "Maybe your file has an APEv2 tag?\n");
+          break;
+        } else {
+          fprintf(stderr, "Internal MPG123 error!\n");
+          errcode = 1;
+          goto free_buffer;
+        }
+      }
       nr_frames_read /= st->channels * sizeof(float);
       if (!nr_frames_read) break;
       if (rgtag_info) {
