@@ -4,7 +4,11 @@ import sys
 import os
 import getopt
 import subprocess
-import multiprocessing
+try:
+  import multiprocessing
+  multiprocessing_loaded = True
+except ImportError:
+  multiprocessing_loaded = False
 
 import rgtag
 
@@ -108,30 +112,39 @@ if __name__ == '__main__':
     usage()
     sys.exit(1)
 
-  number_threads = multiprocessing.cpu_count()
-  pool = multiprocessing.Pool(processes=number_threads)
-  results = []
+  if multiprocessing_loaded:
+    number_threads = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(processes=number_threads)
+    results = []
 
   if all_directory:
     for directory in args:
       if recursive:
         for root, dirs, files in os.walk(directory):
-          result = pool.apply_async(process_dir, (topdir, root, files,))
-          results.append(result)
+          if multiprocessing_loaded:
+            result = pool.apply_async(process_dir, (topdir, root, files,))
+            results.append(result)
+          else:
+            if not process_dir(topdir, root, files):
+              print("No files to scan!")
       else:
-        result = pool.apply_async(process_dir,
+        if multiprocessing_loaded:
+          result = pool.apply_async(process_dir,
                                   (topdir, directory, os.listdir(directory),));
-        results.append(result)
+          results.append(result)
+        else:
+          if not process_dir(topdir, directory, os.listdir(directory)):
+            print("No files to scan!")
   else:
-    print(topdir, os.getcwd(), args)
-    sys.exit(1)
-    process_dir(os.getcwd(), args)
+    if not process_dir(topdir, os.getcwd(), args):
+      print("No files to scan!")
 
-  try:
-    for result in results:
-      val = result.get(99999999)
-      if not val:
-        print("No files to scan!")
-  except KeyboardInterrupt:
-    pool.terminate()
-    pool.close()
+  if multiprocessing_loaded:
+    try:
+      for result in results:
+        val = result.get(99999999)
+        if not val:
+          print("No files to scan!")
+    except KeyboardInterrupt:
+      pool.terminate()
+      pool.close()
