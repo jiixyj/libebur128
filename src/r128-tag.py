@@ -83,7 +83,8 @@ def process_dir(topdir, root, files):
                                               float(rgdata[1]),
                                               float(rgdata[2]),
                                               float(rgdata[3]))
-    except:
+    except Exception as inst:
+      print(type(inst), inst.args, inst)
       print("Tagging error!")
       return
   except OSError:
