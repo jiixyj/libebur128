@@ -115,7 +115,12 @@ if __name__ == '__main__':
 
   if multiprocessing_loaded:
     number_threads = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(processes=number_threads)
+    try:
+      pool = multiprocessing.Pool(processes=number_threads)
+    except ImportError as e:
+      print(e.args[0])
+      print('Disabling multiprocessor support!')
+      multiprocessing_loaded = False
     results = []
 
   if all_directory:
