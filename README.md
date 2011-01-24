@@ -3,6 +3,7 @@ libebur128
 
 libebur128 is a library that implements the EBU R 128 standard for loudness
 normalisation.
+
 There are also several scanners using different libraries for audio input.
 It is redistributed under the MIT license. See LICENSE file for details.
 
@@ -20,8 +21,21 @@ Requirements
 ------------
 
 The library itself has no requirements besides ANSI C.
+
 The scanner needs libsndfile, libmpg123, FFmpeg or libmpcdec.
-You need at least Python 2.6 and Mutagen for the ReplayGain tagging support.
+
+You need at least Python 2.4 and Mutagen for the ReplayGain tagging support.
+
+
+Download
+--------
+
+* [Source (tar.gz)](libebur128-0.1.7-Source.tar.gz)
+* [Source (zip)](libebur128-0.1.7-Source.zip)
+* [Win32 build (zip)](libebur128-0.1.7-win32.zip)
+* [Win64 build (zip)](libebur128-0.1.7-win64.zip)
+* [Linux32 build (tar.gz)](libebur128-0.1.7-Linux.tar.gz)
+* [Linux64 build (tar.gz)](libebur128-0.1.7-Linux64.tar.gz)
 
 
 Installation
@@ -45,6 +59,7 @@ Usage
 
 Run r128-sndfile, r128-ffmpeg, r128-mpg123 or r128-musepack with the files you
 want to scan as arguments.
+
 The output will look like this:
 
     segment 1: -9.8 LUFS
@@ -76,6 +91,7 @@ also supports file input; then all files are treated as one album.
 
 The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
+
 All scanners support loudness range measurement with the command line
 option "-r".
 
