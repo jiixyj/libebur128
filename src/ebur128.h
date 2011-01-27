@@ -65,10 +65,18 @@ int ebur128_destroy(ebur128_state** st);
  *                  EBUR128_RIGHT_SURROUND} */
 void ebur128_set_channel_map(ebur128_state* st, int* channel_map);
 
-int ebur128_add_frames_short(ebur128_state* st, const short* src, size_t frames);
-int ebur128_add_frames_int(ebur128_state* st, const int* src, size_t frames);
-int ebur128_add_frames_float(ebur128_state* st, const float* src, size_t frames);
-int ebur128_add_frames_double(ebur128_state* st, const double* src, size_t frames);
+int ebur128_add_frames_short(ebur128_state* st,
+                             const short* src,
+                             size_t frames);
+int ebur128_add_frames_int(ebur128_state* st,
+                             const int* src,
+                             size_t frames);
+int ebur128_add_frames_float(ebur128_state* st,
+                             const float* src,
+                             size_t frames);
+int ebur128_add_frames_double(ebur128_state* st,
+                             const double* src,
+                             size_t frames);
 
 void ebur128_start_new_segment(ebur128_state* st);
 
@@ -81,10 +89,12 @@ double ebur128_loudness_segment(ebur128_state* st);
 double ebur128_loudness_global(ebur128_state* st);
 /* Get momentary loudness (last 400ms) */
 double ebur128_loudness_momentary(ebur128_state* st);
-/* Get short-term loudness (last 3s). Will return NaN if mode is not
- * EBUR128_MODE_M_S_I or EBUR128_MODE_M_S. */
+/* Get short-term loudness (last 3s). Will return NaN if mode does not contain
+ * EBUR128_MODE_S or EBUR128_MODE_S. */
 double ebur128_loudness_shortterm(ebur128_state* st);
 
+/* Returns LRA according to EBU 3342. Will return NaN if memory allocation
+ * fails or if mode does not contain EBUR128_MODE_LRA. */
 double ebur128_loudness_range(ebur128_state* st);
 
 #ifdef __cplusplus
