@@ -38,7 +38,7 @@ double test_global_loudness(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
   }
 
-  gated_loudness = ebur128_gated_loudness_global(st);
+  gated_loudness = ebur128_loudness_global(st);
 
   /* clean up */
   ebur128_destroy(&st);

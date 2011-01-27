@@ -50,7 +50,7 @@ int main(int ac, const char* av[]) {
                             " or determine right length!\n");
   }
 
-  gated_loudness = ebur128_gated_loudness_global(st);
+  gated_loudness = ebur128_loudness_global(st);
   fprintf(stderr, "global loudness: %.1f LUFS\n", gated_loudness);
 
 

@@ -242,14 +242,14 @@ int main(int ac, char* const av[]) {
       av_free_packet(&packet);
     }
 
-    segment_loudness[i - optind] = ebur128_gated_loudness_segment(st);
+    segment_loudness[i - optind] = ebur128_loudness_segment(st);
     if (ac - optind != 1) {
       fprintf(stderr, "segment %d: %.2f LUFS\n", i + 1 - optind,
                       segment_loudness[i - optind]);
       ebur128_start_new_segment(st);
     }
     if (i == ac - 1) {
-      gated_loudness = ebur128_gated_loudness_global(st);
+      gated_loudness = ebur128_loudness_global(st);
       fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
     }
 

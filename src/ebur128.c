@@ -392,11 +392,11 @@ double ebur128_gated_loudness(ebur128_state* st,
   return ebur128_energy_to_loudness(gated_loudness);
 }
 
-double ebur128_gated_loudness_global(ebur128_state* st) {
+double ebur128_loudness_global(ebur128_state* st) {
   return ebur128_gated_loudness(st, (size_t) -1, st->samplerate * 2 / 5);
 }
 
-double ebur128_gated_loudness_segment(ebur128_state* st) {
+double ebur128_loudness_segment(ebur128_state* st) {
   return ebur128_gated_loudness(st, st->block_counter, st->samplerate * 2 / 5);
 }
 
