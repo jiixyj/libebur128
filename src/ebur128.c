@@ -449,6 +449,8 @@ double ebur128_loudness_range(ebur128_state* st) {
   /* High and low percentile energy */
   double h_en, l_en;
 
+  if ((st->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) return 0.0 / 0.0;
+
   SLIST_FOREACH(it, &st->short_term_block_list, entries) {
     ++stl_size;
   }
