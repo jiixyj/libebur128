@@ -88,6 +88,7 @@ int ebur128_add_frames_double(ebur128_state* st,
                              const double* src,
                              size_t frames);
 
+/* Note: The current unfinished block will be lost. */
 void ebur128_start_new_segment(ebur128_state* st);
 
 /* Get integrated loudness of the last segment/track. After this you should

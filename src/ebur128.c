@@ -431,6 +431,9 @@ void ebur128_start_new_segment(ebur128_state* st) {
   st->needed_frames = st->samplerate * 2 / 5;
   /* start at the beginning of the buffer */
   st->audio_data_index = 0;
+  memset(st->audio_data, '\0', st->audio_data_frames *
+                               st->channels *
+                               sizeof(double));
   /* reset short term frame counter */
   st->short_term_frame_counter = 0;
 }
