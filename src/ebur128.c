@@ -483,15 +483,18 @@ double ebur128_gated_loudness_global_multiple(ebur128_state** sts, size_t size) 
   double gated_loudness = 0.0;
   size_t above_thresh_counter = 0;
   size_t i;
-  const size_t frames_per_block = sts[0]->samplerate * 2 / 5;
 
-  for (i = 0; i < size; i++)
-	if ((sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return std::numeric_limits<double>::quiet_NaN();
-  for (i = 0; i < size; i++)
-    if (!SLIST_EMPTY(&sts[i]->block_list)) above_thresh_counter++;
-  if (!above_thresh_counter) return std::numeric_limits<double>::infinity();
-  for (i = 1; i < size; i++)
-    if (sts[i]->samplerate != sts[i-1]->samplerate) return std::numeric_limits<double>::quiet_NaN();
+  for (i = 0; i < size; i++) {
+    if ((sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) {
+      return 0.0 / 0.0;
+    }
+  }
+  for (i = 0; i < size; i++) {
+    if (!SLIST_EMPTY(&sts[i]->block_list)) {
+      above_thresh_counter++;
+    }
+  }
+  if (!above_thresh_counter) return -1.0 / 0.0;
 
   above_thresh_counter = 0;
   for (i = 0; i < size; i++) {
@@ -511,8 +514,8 @@ double ebur128_gated_loudness_global_multiple(ebur128_state** sts, size_t size) 
       }
     }
   }
-  if (!above_thresh_counter) return std::numeric_limits<double>::infinity();
-  gated_loudness /= (double) (above_thresh_counter * frames_per_block);
+  if (!above_thresh_counter) return -1.0 / 0.0;
+  gated_loudness /= (double) above_thresh_counter;
   return ebur128_energy_to_loudness(gated_loudness);
 }
 
