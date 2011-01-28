@@ -301,6 +301,14 @@ void ebur128_set_channel_map(ebur128_state* st,
   memcpy(st->channel_map, channel_map, st->channels * sizeof(int));
 }
 
+int ebur128_set_channel(ebur128_state* st, int channel_number, int value) {
+  if (channel_number < 0 || (size_t) channel_number >= st->channels) {
+    return 1;
+  }
+  st->channel_map[channel_number] = value;
+  return 0;
+}
+
 double ebur128_energy_shortterm(ebur128_state* st);
 #define EBUR128_ADD_FRAMES(type)                                               \
 int ebur128_add_frames_##type(ebur128_state* st,                               \

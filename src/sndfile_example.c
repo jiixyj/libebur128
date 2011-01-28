@@ -81,38 +81,38 @@ int main(int ac, char* const av[]) {
       result = sf_command(file, SFC_GET_CHANNEL_MAP_INFO,
                                 (void*) st->channel_map,
                                 channels * (int) sizeof(int));
-      /* If sndfile found a channel map, set it directly to st->channel_map */
+      /* If sndfile found a channel map, set it with
+       * ebur128_set_channel_map */
       if (result == SF_TRUE) {
-        size_t j;
-        for (j = 0; j < st->channels; ++j) {
+        int j;
+        for (j = 0; j < (int) st->channels; ++j) {
           switch (st->channel_map[j]) {
             case SF_CHANNEL_MAP_INVALID:
-              st->channel_map[j] = EBUR128_UNUSED;         break;
+              ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
             case SF_CHANNEL_MAP_MONO:
-              st->channel_map[j] = EBUR128_CENTER;         break;
+              ebur128_set_channel(st, j, EBUR128_CENTER);         break;
             case SF_CHANNEL_MAP_LEFT:
-              st->channel_map[j] = EBUR128_LEFT;           break;
+              ebur128_set_channel(st, j, EBUR128_LEFT);           break;
             case SF_CHANNEL_MAP_RIGHT:
-              st->channel_map[j] = EBUR128_RIGHT;          break;
+              ebur128_set_channel(st, j, EBUR128_RIGHT);          break;
             case SF_CHANNEL_MAP_CENTER:
-              st->channel_map[j] = EBUR128_CENTER;         break;
+              ebur128_set_channel(st, j, EBUR128_CENTER);         break;
             case SF_CHANNEL_MAP_REAR_LEFT:
-              st->channel_map[j] = EBUR128_LEFT_SURROUND;  break;
+              ebur128_set_channel(st, j, EBUR128_LEFT_SURROUND);  break;
             case SF_CHANNEL_MAP_REAR_RIGHT:
-              st->channel_map[j] = EBUR128_RIGHT_SURROUND; break;
+              ebur128_set_channel(st, j, EBUR128_RIGHT_SURROUND); break;
             default:
-              st->channel_map[j] = EBUR128_UNUSED; break;
+              ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
           }
         }
       /* Special case seq-3341-6-5channels-16bit.wav.
-       * Set channel map with function ebur128_set_channel_map. */
+       * Set channel map with function ebur128_set_channel. */
       } else if (channels == 5) {
-        int channel_map_five[] = {EBUR128_LEFT,
-                                  EBUR128_RIGHT,
-                                  EBUR128_CENTER,
-                                  EBUR128_LEFT_SURROUND,
-                                  EBUR128_RIGHT_SURROUND};
-        ebur128_set_channel_map(st, channel_map_five);
+        ebur128_set_channel(st, 0, EBUR128_LEFT);
+        ebur128_set_channel(st, 1, EBUR128_RIGHT);
+        ebur128_set_channel(st, 2, EBUR128_CENTER);
+        ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
+        ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
       }
     } else {
       CHECK_ERROR(st->channels != (size_t) channels ||
