@@ -309,6 +309,59 @@ int ebur128_set_channel(ebur128_state* st, int channel_number, int value) {
   return 0;
 }
 
+/* Note that the channel map will be reset when setting a different number of
+ * channels. */
+int ebur128_change_parameters(ebur128_state* st,
+                              int channels,
+                              int samplerate) {
+  int errcode;
+  if ((size_t) channels == st->channels &&
+      (size_t) samplerate == st->samplerate) {
+    return 2;
+  }
+  if ((size_t) channels != st->channels) {
+    free(st->channel_map);
+    st->channels = (size_t) channels;
+    errcode = ebur128_init_channel_map(st);
+    CHECK_ERROR(errcode, "Could not initialize channel map!\n", 1, exit)
+  }
+  if ((size_t) samplerate != st->channels) {
+    st->samplerate = (size_t) samplerate;
+  }
+  if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
+    st->audio_data_frames = st->samplerate * 3;
+  } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
+    st->audio_data_frames = st->samplerate * 2 / 5;
+  } else {
+    return 1;
+  }
+  st->audio_data = (double*) calloc(st->audio_data_frames *
+                                    st->channels,
+                                    sizeof(double));
+  CHECK_ERROR(!st->audio_data, "Could not allocate memory!\n", 1,
+                               free_channel_map)
+  errcode = ebur128_init_multi_array(&(st->v), st->channels, 5);
+  CHECK_ERROR(errcode, "Could not allocate memory!\n", 1, free_audio_data)
+  errcode = ebur128_init_filter(st);
+  CHECK_ERROR(errcode, "Could not initialize filter!\n", 1, free_v)
+  /* the first block needs 400ms of audio data */
+  st->needed_frames = st->samplerate * 2 / 5;
+  /* start at the beginning of the buffer */
+  st->audio_data_index = 0;
+
+  return 0;
+
+free_v:
+  ebur128_release_multi_array(&(st->v), st->channels);
+free_audio_data:
+  free(st->audio_data);
+free_channel_map:
+  free(st->channel_map);
+exit:
+  return 1;
+}
+
+
 double ebur128_energy_shortterm(ebur128_state* st);
 #define EBUR128_ADD_FRAMES(type)                                               \
 int ebur128_add_frames_##type(ebur128_state* st,                               \

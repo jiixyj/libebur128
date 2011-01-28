@@ -67,6 +67,9 @@ void ebur128_set_channel_map(ebur128_state* st, int* channel_map);
 /* Set channel "channel_number" (zero based index) to value, where value is
  * from the "channels" enum. Returns 1 if channel_number is invalid. */
 int ebur128_set_channel(ebur128_state* st, int channel_number, int value);
+int ebur128_change_parameters(ebur128_state* st,
+                              int channels,
+                              int samplerate);
 
 int ebur128_add_frames_short(ebur128_state* st,
                              const short* src,
