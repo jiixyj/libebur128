@@ -477,6 +477,45 @@ double ebur128_loudness_segment(ebur128_state* st) {
   return ebur128_gated_loudness(st, st->block_counter);
 }
 
+double ebur128_gated_loudness_global_multiple(ebur128_state** sts, size_t size) {
+  struct ebur128_dq_entry* it;
+  double relative_threshold = 0.0;
+  double gated_loudness = 0.0;
+  size_t above_thresh_counter = 0;
+  size_t i;
+  const size_t frames_per_block = sts[0]->samplerate * 2 / 5;
+
+  for (i = 0; i < size; i++)
+	if ((sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return std::numeric_limits<double>::quiet_NaN();
+  for (i = 0; i < size; i++)
+    if (!SLIST_EMPTY(&sts[i]->block_list)) above_thresh_counter++;
+  if (!above_thresh_counter) return std::numeric_limits<double>::infinity();
+  for (i = 1; i < size; i++)
+    if (sts[i]->samplerate != sts[i-1]->samplerate) return std::numeric_limits<double>::quiet_NaN();
+
+  above_thresh_counter = 0;
+  for (i = 0; i < size; i++) {
+    SLIST_FOREACH(it, &sts[i]->block_list, entries) {
+      ++above_thresh_counter;
+      relative_threshold += it->z;
+    }
+  }
+  relative_threshold /= (double) above_thresh_counter;
+  relative_threshold *= minus_eight_decibels;
+  above_thresh_counter = 0;
+  for (i = 0; i < size; i++) {
+    SLIST_FOREACH(it, &sts[i]->block_list, entries) {
+      if (it->z >= relative_threshold) {
+        ++above_thresh_counter;
+        gated_loudness += it->z;
+      }
+    }
+  }
+  if (!above_thresh_counter) return std::numeric_limits<double>::infinity();
+  gated_loudness /= (double) (above_thresh_counter * frames_per_block);
+  return ebur128_energy_to_loudness(gated_loudness);
+}
+
 double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
   double loudness;
 
