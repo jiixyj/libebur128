@@ -489,20 +489,14 @@ double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
       return 0.0 / 0.0;
     }
   }
-  for (i = 0; i < size; i++) {
-    if (!SLIST_EMPTY(&sts[i]->block_list)) {
-      above_thresh_counter++;
-    }
-  }
-  if (!above_thresh_counter) return -1.0 / 0.0;
 
-  above_thresh_counter = 0;
   for (i = 0; i < size; i++) {
     SLIST_FOREACH(it, &sts[i]->block_list, entries) {
       ++above_thresh_counter;
       relative_threshold += it->z;
     }
   }
+  if (!above_thresh_counter) return -1.0 / 0.0;
   relative_threshold /= (double) above_thresh_counter;
   relative_threshold *= minus_eight_decibels;
   above_thresh_counter = 0;
