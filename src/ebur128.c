@@ -285,7 +285,7 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
     return 0;
   } else if (sum >= abs_threshold_energy) {
     struct ebur128_dq_entry* block;
-    block = malloc(sizeof(struct ebur128_dq_entry));
+    block = (struct ebur128_dq_entry*) malloc(sizeof(struct ebur128_dq_entry));
     if (!block) return -1;
     block->z = sum;
     SLIST_INSERT_HEAD(&st->block_list, block, entries);
@@ -395,7 +395,8 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
         if (st->short_term_frame_counter == st->samplerate * 3) {              \
           double st_energy = ebur128_energy_shortterm(st);                     \
           struct ebur128_dq_entry* block;                                      \
-          block = malloc(sizeof(struct ebur128_dq_entry));                     \
+          block = (struct ebur128_dq_entry*)                                   \
+                  malloc(sizeof(struct ebur128_dq_entry));                     \
           if (!block) return 1;                                                \
           block->z = st_energy;                                                \
           SLIST_INSERT_HEAD(&st->short_term_block_list, block, entries);       \
@@ -564,7 +565,7 @@ double ebur128_loudness_range(ebur128_state* st) {
     ++stl_size;
   }
   if (!stl_size) return 0.0;
-  stl_vector = calloc(stl_size, sizeof(double));
+  stl_vector = (double*) calloc(stl_size, sizeof(double));
   if (!stl_vector) return 0.0 / 0.0;
   i = 0;
   SLIST_FOREACH(it, &st->short_term_block_list, entries) {
