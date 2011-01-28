@@ -177,8 +177,8 @@ int main(int ac, char* const av[]) {
           }
       #define CHECK_FOR_PEAKS(buffer, min_scale, max_scale)                    \
           if (rgtag_info) {                                                    \
-            double scale_factor = -min_scale > max_scale ? -min_scale          \
-                                                         : max_scale;          \
+            double scale_factor = -((double) min_scale) > (double) max_scale ? \
+                                  -((double) min_scale) : (double) max_scale;  \
             size_t j;                                                          \
             double buffer_scaled;                                              \
             for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {     \
@@ -205,7 +205,7 @@ int main(int ac, char* const av[]) {
             case SAMPLE_FMT_S32:
               nr_frames_read = (size_t) data_size / sizeof(int32_t) /
                                (size_t) codec_context->channels;
-              CHECK_FOR_PEAKS(data_int, (long) INT_MIN, (long) INT_MAX)
+              CHECK_FOR_PEAKS(data_int, INT_MIN, INT_MAX)
               result = ebur128_add_frames_int(st, data_int, nr_frames_read);
               CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
               break;
