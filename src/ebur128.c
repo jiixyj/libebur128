@@ -477,7 +477,7 @@ double ebur128_loudness_segment(ebur128_state* st) {
   return ebur128_gated_loudness(st, st->block_counter);
 }
 
-double ebur128_gated_loudness_global_multiple(ebur128_state** sts, size_t size) {
+double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   double gated_loudness = 0.0;
