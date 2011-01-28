@@ -309,8 +309,6 @@ int ebur128_set_channel(ebur128_state* st, int channel_number, int value) {
   return 0;
 }
 
-/* Note that the channel map will be reset when setting a different number of
- * channels. The current unfinished block will be lost. */
 int ebur128_change_parameters(ebur128_state* st,
                               int channels,
                               int samplerate) {
