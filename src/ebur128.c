@@ -149,8 +149,8 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   } else {
     return NULL;
   }
-  state->audio_data = (double*) calloc(state->audio_data_frames
-                                     * state->channels,
+  state->audio_data = (double*) calloc(state->audio_data_frames *
+                                       state->channels,
                                        sizeof(double));
   CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0,
                                   free_channel_map)
@@ -256,21 +256,21 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
     if (st->audio_data_index < frames_per_block * st->channels) {
       for (i = 0; i < st->audio_data_index / st->channels; ++i) {
         channel_sum += st->audio_data[i * st->channels + c] *
-               st->audio_data[i * st->channels + c];
+                       st->audio_data[i * st->channels + c];
       }
       for (i = st->audio_data_frames -
               (frames_per_block -
                st->audio_data_index / st->channels);
            i < st->audio_data_frames; ++i) {
         channel_sum += st->audio_data[i * st->channels + c] *
-               st->audio_data[i * st->channels + c];
+                       st->audio_data[i * st->channels + c];
       }
     } else {
       for (i = st->audio_data_index / st->channels - frames_per_block;
            i < st->audio_data_index / st->channels;
            ++i) {
         channel_sum += st->audio_data[i * st->channels + c] *
-               st->audio_data[i * st->channels + c];
+                       st->audio_data[i * st->channels + c];
       }
     }
     if (st->channel_map[c] == EBUR128_LEFT_SURROUND ||
