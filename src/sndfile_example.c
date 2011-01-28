@@ -78,7 +78,8 @@ int main(int ac, char* const av[]) {
                         (calculate_lra ? EBUR128_MODE_LRA : 0));
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
     } else {
-      ebur128_change_parameters(st, channels, samplerate);
+      result = ebur128_change_parameters(st, channels, samplerate);
+      CHECK_ERROR(result == 1, "Changing parameters failed!\n", 1, close_file)
     }
     result = sf_command(file, SFC_GET_CHANNEL_MAP_INFO,
                               (void*) st->channel_map,
