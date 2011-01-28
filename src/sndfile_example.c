@@ -19,25 +19,16 @@
 
 
 int main(int ac, char* const av[]) {
-  SF_INFO file_info;
-  SNDFILE* file;
+  ebur128_state** library_states;
 
-  int channels, samplerate;
-  size_t nr_frames_read, nr_frames_read_all;
-
-  float* buffer;
-
-  ebur128_state* st = NULL;
-  double gated_loudness = DBL_MAX;
   double* segment_loudness;
   double* segment_peaks;
   int calculate_lra = 0;
   int rgtag_info = 0;
 
-  int errcode = 0;
   int result;
-  int i;
-  int c;
+  int i, c;
+  int errcode = 0;
 
   CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t] FILENAME(S) ...\n\n"
                       " -r: calculate loudness range in LRA\n"
@@ -58,7 +49,16 @@ int main(int ac, char* const av[]) {
 
   segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
   segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
+  library_states = calloc((size_t) (ac - optind), sizeof(ebur128_state*));
+  #pragma omp parallel for private(result, errcode)
   for (i = optind; i < ac; ++i) {
+    SF_INFO file_info;
+    SNDFILE* file;
+    float* buffer;
+    ebur128_state* st = NULL;
+    int channels, samplerate;
+    size_t nr_frames_read, nr_frames_read_all;
+
     segment_loudness[i - optind] = DBL_MAX;
     memset(&file_info, '\0', sizeof(file_info));
     if (av[i][0] == '-' && av[1][1] == '\0') {
@@ -71,16 +71,13 @@ int main(int ac, char* const av[]) {
     samplerate = file_info.samplerate;
     nr_frames_read_all = 0;
 
-    if (!st) {
-      st = ebur128_init(channels,
-                        samplerate,
-                        EBUR128_MODE_I |
-                        (calculate_lra ? EBUR128_MODE_LRA : 0));
-      CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
-    } else {
-      result = ebur128_change_parameters(st, channels, samplerate);
-      CHECK_ERROR(result == 1, "Changing parameters failed!\n", 1, close_file)
-    }
+    st = ebur128_init(channels,
+                      samplerate,
+                      EBUR128_MODE_I |
+                      (calculate_lra ? EBUR128_MODE_LRA : 0));
+    CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
+    library_states[i - optind] = st;
+
     result = sf_command(file, SFC_GET_CHANNEL_MAP_INFO,
                               (void*) st->channel_map,
                               channels * (int) sizeof(int));
@@ -143,15 +140,10 @@ int main(int ac, char* const av[]) {
                               " or determine right length!\n");
     }
 
-    segment_loudness[i - optind] = ebur128_loudness_segment(st);
+    segment_loudness[i - optind] = ebur128_loudness_global(st);
     if (ac - optind != 1) {
       fprintf(stderr, "segment %d: %.2f LUFS\n", i + 1 - optind,
                       segment_loudness[i - optind]);
-      ebur128_start_new_segment(st);
-    }
-    if (i == ac - 1) {
-      gated_loudness = ebur128_loudness_global(st);
-      fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
     }
 
   free_buffer:
@@ -167,31 +159,49 @@ int main(int ac, char* const av[]) {
   endloop: ;
   }
 
-  if (st && calculate_lra) {
-    fprintf(stderr, "LRA: %.2f\n", ebur128_loudness_range(st));
+  result = 1;
+  for (i = 0; i < ac - optind; ++i) {
+    if (!library_states[i]) {
+      result = 0;
+    }
   }
 
-  if (st && rgtag_info) {
-    double global_peak = 0.0;
-    for (i = 0; i < ac - optind; ++i) {
-      if (segment_peaks[i] > global_peak) {
-        global_peak = segment_peaks[i];
+  if (result) {
+    double gated_loudness;
+    gated_loudness = ebur128_loudness_global_multiple(library_states,
+                                                      (size_t) (ac - optind));
+    fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
+
+    /*
+    if (calculate_lra) {
+      fprintf(stderr, "LRA: %.2f\n", ebur128_loudness_range(st));
+    }
+    */
+
+    if (rgtag_info) {
+      double global_peak = 0.0;
+      for (i = 0; i < ac - optind; ++i) {
+        if (segment_peaks[i] > global_peak) {
+          global_peak = segment_peaks[i];
+        }
+      }
+      for (i = optind; i < ac; ++i) {
+        printf("%.8f %.8f %.8f %.8f\n", -18.0 - segment_loudness[i - optind],
+                                        segment_peaks[i - optind],
+                                        -18.0 - gated_loudness,
+                                        global_peak);
       }
     }
-    for (i = optind; i < ac; ++i) {
-      printf("%.8f %.8f %.8f %.8f\n", -18.0 - segment_loudness[i - optind],
-                                      segment_peaks[i - optind],
-                                      -18.0 - gated_loudness,
-                                      global_peak);
-    }
   }
 
-  if (st)
-    ebur128_destroy(&st);
-  if (segment_loudness)
-    free(segment_loudness);
-  if (segment_peaks)
-    free(segment_peaks);
+  for (i = 0; i < ac - optind; ++i) {
+    if (library_states[i]) {
+      ebur128_destroy(&library_states[i]);
+    }
+  }
+  free(library_states);
+  free(segment_loudness);
+  free(segment_peaks);
 
 exit:
   return errcode;

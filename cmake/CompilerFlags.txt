@@ -70,6 +70,7 @@ list(APPEND FLAGS "-Wswitch-enum")
 # list(APPEND FLAGS "-Wno-pmf-conversions")
 
 list(APPEND FLAGS "-fPIC")
+list(APPEND FLAGS "-fopenmp")
 
 
 if(WIN32)
