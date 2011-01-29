@@ -149,11 +149,14 @@ if(NOT WIN32)
 endif()
 
 if(SNDFILE_FOUND)
+  add_library(sndfile_input src/sndfile.c)
+  target_link_libraries(sndfile_input ${SNDFILE_LIBRARIES})
+
   add_executable(r128-minimal-example src/minimal_example.c)
   target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
-  add_executable(r128-sndfile src/sndfile_example.c)
-  target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+  add_executable(r128-sndfile src/scanner.c)
+  target_link_libraries(r128-sndfile ebur128 sndfile_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 
   add_executable(r128-test-library src/tests.c)
   target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
@@ -161,8 +164,11 @@ if(SNDFILE_FOUND)
 endif()
 
 if(MPG123_FOUND)
-  add_executable(r128-mpg123 src/mpg123_example.c)
-  target_link_libraries(r128-mpg123 ebur128 ${MPG123_LIBRARIES})
+  add_library(mpg123_input src/mpg123.c)
+  target_link_libraries(mpg123_input ${MPG123_LIBRARIES})
+
+  add_executable(r128-mpg123 src/scanner.c)
+  target_link_libraries(r128-mpg123 ebur128 mpg123_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 endif()
 
 if(MPCDEC_FOUND)
