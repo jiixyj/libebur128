@@ -149,7 +149,7 @@ if(NOT WIN32)
 endif()
 
 if(SNDFILE_FOUND)
-  add_library(sndfile_input src/sndfile.c)
+  add_library(sndfile_input src/input_sndfile.c)
   target_link_libraries(sndfile_input ${SNDFILE_LIBRARIES})
 
   add_executable(r128-minimal-example src/minimal_example.c)
@@ -164,7 +164,7 @@ if(SNDFILE_FOUND)
 endif()
 
 if(MPG123_FOUND)
-  add_library(mpg123_input src/mpg123.c)
+  add_library(mpg123_input src/input_mpg123.c)
   target_link_libraries(mpg123_input ${MPG123_LIBRARIES})
 
   add_executable(r128-mpg123 src/scanner.c)
@@ -172,7 +172,7 @@ if(MPG123_FOUND)
 endif()
 
 if(MPCDEC_FOUND)
-  add_library(musepack_input src/mpcdec.c)
+  add_library(musepack_input src/input_mpcdec.c)
   target_link_libraries(musepack_input ${MPCDEC_LIBRARY})
   set_target_properties(musepack_input PROPERTIES COMPILE_FLAGS "-std=c99")
 
@@ -188,7 +188,7 @@ if(FFMPEG_FOUND)
     set(R128_FFMPEG r128-ffmpeg)
     set(FFMPEG_INPUT ffmpeg_input)
   endif()
-  add_library(${FFMPEG_INPUT} src/ffmpeg.c)
+  add_library(${FFMPEG_INPUT} src/input_ffmpeg.c)
   target_link_libraries(${FFMPEG_INPUT} ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
   set_target_properties(${FFMPEG_INPUT} PROPERTIES COMPILE_FLAGS "-std=c99")
 
