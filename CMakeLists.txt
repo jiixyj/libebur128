@@ -46,6 +46,16 @@ if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
   set(LSB_COMPILER_FOUND TRUE)
 endif()
 
+##### glib
+if(NOT WIN32)
+  pkg_check_modules(GLIB glib-2.0)
+  pkg_check_modules(GTHREAD gthread-2.0)
+  include_directories(SYSTEM ${GLIB_INCLUDEDIR})
+  include_directories(SYSTEM ${GTHREAD_INCLUDEDIR})
+  link_directories(${GLIB_LIBRARY_DIRS})
+  link_directories(${GTHREAD_LIBRARY_DIRS})
+endif()
+
 ##### libsndfile
 if(NOT WIN32 AND NOT LSB_COMPILER_FOUND)
   pkg_check_modules(SNDFILE sndfile>=1.0.21)
@@ -143,7 +153,7 @@ if(SNDFILE_FOUND)
   target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
   add_executable(r128-sndfile src/sndfile_example.c)
-  target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES})
+  target_link_libraries(r128-sndfile ebur128 ${SNDFILE_LIBRARIES} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 
   add_executable(r128-test-library src/tests.c)
   target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
