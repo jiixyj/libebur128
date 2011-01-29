@@ -524,8 +524,8 @@ static int ebur128_double_cmp(const void *p1, const void *p2) {
 }
 
 /* EBU - TECH 3342 */
-double ebur128_loudness_range(ebur128_state* st) {
-  size_t i;
+double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
+  size_t i, j;
   struct ebur128_dq_entry* it;
   double* stl_vector;
   size_t stl_size = 0;
@@ -537,18 +537,26 @@ double ebur128_loudness_range(ebur128_state* st) {
   /* High and low percentile energy */
   double h_en, l_en;
 
-  if ((st->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) return 0.0 / 0.0;
+  for (i = 0; i < size; ++i) {
+    if ((sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
+      return 0.0 / 0.0;
+    }
+  }
 
-  SLIST_FOREACH(it, &st->short_term_block_list, entries) {
-    ++stl_size;
+  for (i = 0; i < size; ++i) {
+    SLIST_FOREACH(it, &sts[i]->short_term_block_list, entries) {
+      ++stl_size;
+    }
   }
   if (!stl_size) return 0.0;
   stl_vector = (double*) calloc(stl_size, sizeof(double));
   if (!stl_vector) return 0.0 / 0.0;
-  i = 0;
-  SLIST_FOREACH(it, &st->short_term_block_list, entries) {
-    stl_vector[i] = it->z;
-    ++i;
+  j = 0;
+  for (i = 0; i < size; ++i) {
+    SLIST_FOREACH(it, &sts[i]->short_term_block_list, entries) {
+      stl_vector[j] = it->z;
+      ++j;
+    }
   }
   qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
   stl_abs_gated = stl_vector;
@@ -574,4 +582,8 @@ double ebur128_loudness_range(ebur128_state* st) {
   l_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
   free(stl_vector);
   return ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+}
+
+double ebur128_loudness_range(ebur128_state* st) {
+  return ebur128_loudness_range_multiple(&st, 1);
 }

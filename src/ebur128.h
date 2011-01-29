@@ -110,6 +110,10 @@ double ebur128_loudness_shortterm(ebur128_state* st);
 /* Returns LRA according to EBU 3342. Will return NaN if memory allocation
  * fails or if mode does not contain EBUR128_MODE_LRA. */
 double ebur128_loudness_range(ebur128_state* st);
+/* Get LRA of the whole programme across multiple instances.
+ * Returns NaN if memory allocation fails or mode does not contain
+ * EBUR128_MODE_LRA. */
+double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size);
 
 #ifdef __cplusplus
 }

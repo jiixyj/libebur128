@@ -205,11 +205,13 @@ int main(int ac, char* const av[]) {
                                                       (size_t) (ac - optind));
     fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
 
-    /*
-    if (calculate_lra) {
-      fprintf(stderr, "LRA: %.2f\n", ebur128_loudness_range(st));
+
+    if (gd.calculate_lra) {
+      fprintf(stderr, "LRA: %.2f\n", ebur128_loudness_range_multiple
+                                                     (gd.library_states,
+                                                      (size_t) (ac - optind)));
     }
-    */
+
 
     if (gd.tag_rg) {
       double global_peak = 0.0;
