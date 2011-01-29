@@ -326,7 +326,7 @@ int ebur128_change_parameters(ebur128_state* st,
     errcode = ebur128_init_channel_map(st);
     CHECK_ERROR(errcode, "Could not initialize channel map!\n", 1, exit)
   }
-  if ((size_t) samplerate != st->channels) {
+  if ((size_t) samplerate != st->samplerate) {
     st->samplerate = (size_t) samplerate;
     free(st->a);
     free(st->b);
