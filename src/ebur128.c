@@ -443,45 +443,8 @@ double ebur128_energy_to_loudness(double energy) {
   return 10 * (log(energy) / log(10.0)) - 0.691;
 }
 
-double ebur128_gated_loudness(ebur128_state* st,
+double ebur128_gated_loudness(ebur128_state** sts, size_t size,
                               size_t block_count) {
-  struct ebur128_dq_entry* it;
-  double relative_threshold = 0.0;
-  double gated_loudness = 0.0;
-  size_t above_thresh_counter = 0;
-  if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I) return 0.0 / 0.0;
-  if (SLIST_EMPTY(&st->block_list)) return -1.0 / 0.0;
-
-  SLIST_FOREACH(it, &st->block_list, entries) {
-    if (above_thresh_counter >= block_count) break;
-    ++above_thresh_counter;
-    relative_threshold += it->z;
-  }
-  relative_threshold /= (double) above_thresh_counter;
-  relative_threshold *= minus_eight_decibels;
-  above_thresh_counter = 0;
-  SLIST_FOREACH(it, &st->block_list, entries) {
-    if (block_count == 0) break;
-    if (it->z >= relative_threshold) {
-      ++above_thresh_counter;
-      gated_loudness += it->z;
-    }
-    --block_count;
-  }
-  if (!above_thresh_counter) return -1.0 / 0.0;
-  gated_loudness /= (double) above_thresh_counter;
-  return ebur128_energy_to_loudness(gated_loudness);
-}
-
-double ebur128_loudness_global(ebur128_state* st) {
-  return ebur128_gated_loudness(st, (size_t) -1);
-}
-
-double ebur128_loudness_segment(ebur128_state* st) {
-  return ebur128_gated_loudness(st, st->block_counter);
-}
-
-double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   double gated_loudness = 0.0;
@@ -496,6 +459,7 @@ double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
 
   for (i = 0; i < size; i++) {
     SLIST_FOREACH(it, &sts[i]->block_list, entries) {
+      if (above_thresh_counter >= block_count) break;
       ++above_thresh_counter;
       relative_threshold += it->z;
     }
@@ -506,15 +470,29 @@ double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
   above_thresh_counter = 0;
   for (i = 0; i < size; i++) {
     SLIST_FOREACH(it, &sts[i]->block_list, entries) {
+      if (block_count == 0) break;
       if (it->z >= relative_threshold) {
         ++above_thresh_counter;
         gated_loudness += it->z;
       }
+      --block_count;
     }
   }
   if (!above_thresh_counter) return -1.0 / 0.0;
   gated_loudness /= (double) above_thresh_counter;
   return ebur128_energy_to_loudness(gated_loudness);
+}
+
+double ebur128_loudness_global(ebur128_state* st) {
+  return ebur128_gated_loudness(&st, 1, (size_t) -1);
+}
+
+double ebur128_loudness_segment(ebur128_state* st) {
+  return ebur128_gated_loudness(&st, 1, st->block_counter);
+}
+
+double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
+  return ebur128_gated_loudness(sts, size, (size_t) -1);
 }
 
 double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
