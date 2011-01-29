@@ -172,9 +172,12 @@ if(MPG123_FOUND)
 endif()
 
 if(MPCDEC_FOUND)
-  add_executable(r128-musepack src/mpcdec_example.c)
-  target_link_libraries(r128-musepack ${MPCDEC_LIBRARY} ebur128)
-  set_target_properties(r128-musepack PROPERTIES COMPILE_FLAGS "-std=c99")
+  add_library(musepack_input src/mpcdec.c)
+  target_link_libraries(musepack_input ${MPCDEC_LIBRARY})
+  set_target_properties(musepack_input PROPERTIES COMPILE_FLAGS "-std=c99")
+
+  add_executable(r128-musepack src/scanner.c)
+  target_link_libraries(r128-musepack ebur128 musepack_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 endif()
 
 if(FFMPEG_FOUND)
