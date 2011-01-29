@@ -26,8 +26,6 @@ void calculate_gain_of_file(void* user, void* user_data) {
   MPC_SAMPLE_FORMAT buffer[MPC_DECODER_BUFFER_LENGTH];
 
   ebur128_state* st = NULL;
-  int channels, samplerate;
-  size_t nr_frames_read, nr_frames_read_all;
 
   int errcode, result;
 
@@ -41,12 +39,8 @@ void calculate_gain_of_file(void* user, void* user_data) {
   CHECK_ERROR(!demux, "Could not initialize demuxer!\n", 1, reader_exit)
   mpc_demux_get_info(demux, &si);
 
-  channels = (int) si.channels;
-  samplerate = (int) si.sample_freq;
-  nr_frames_read_all = 0;
-
-  st = ebur128_init(channels,
-                    samplerate,
+  st = ebur128_init((int) si.channels,
+                    (int) si.sample_freq,
                     EBUR128_MODE_I |
                     (calculate_lra ? EBUR128_MODE_LRA : 0));
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, demux_exit)
@@ -59,22 +53,21 @@ void calculate_gain_of_file(void* user, void* user_data) {
     err = mpc_demux_decode(demux, &frame);
     if (frame.bits == -1) break;
 
-    nr_frames_read = frame.samples;
-    if (!nr_frames_read) break;
+    if (!frame.samples) break;
     if (tag_rg) {
       size_t j;
-      for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
+      for (j = 0; j < (size_t) frame.samples * st->channels; ++j) {
         if (buffer[j] > segment_peaks[i])
           segment_peaks[i] = buffer[j];
         else if (-buffer[j] > segment_peaks[i])
           segment_peaks[i] = -buffer[j];
       }
     }
-    result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
+    result = ebur128_add_frames_float(st, buffer, (size_t) frame.samples);
     CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, demux_exit)
   }
 
-  gd->segment_loudness[i] = ebur128_loudness_global(st);
+  segment_loudness[i] = ebur128_loudness_global(st);
   fprintf(stderr, "*");
 
 demux_exit:

@@ -22,13 +22,13 @@ void calculate_gain_of_file(void* user, void* user_data) {
   char* const* av = gd->file_names;
   double* segment_loudness = gd->segment_loudness;
   double* segment_peaks = gd->segment_peaks;
+  int calculate_lra = gd->calculate_lra, tag_rg = gd->tag_rg;
 
   mpg123_handle* mh = NULL;
   long mh_rate;
   int mh_channels, mh_encoding;
-  int channels, samplerate;
-  size_t nr_frames_read, nr_frames_read_all;
   float* buffer;
+
   ebur128_state* st = NULL;
 
   int errcode, result;
@@ -55,14 +55,10 @@ void calculate_gain_of_file(void* user, void* user_data) {
   CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1,
                                    close_file)
 
-  channels = mh_channels;
-  samplerate = (int) mh_rate;
-  nr_frames_read_all = 0;
-
-  st = ebur128_init(channels,
-                    samplerate,
+  st = ebur128_init(mh_channels,
+                    (int) mh_rate,
                     EBUR128_MODE_I |
-                    (gd->calculate_lra ? EBUR128_MODE_LRA : 0));
+                    (calculate_lra ? EBUR128_MODE_LRA : 0));
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
   gd->library_states[i] = st;
 
@@ -70,6 +66,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
   CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
   segment_peaks[i] = 0.0;
   for (;;) {
+    size_t nr_frames_read;
     result = mpg123_read(mh, (unsigned char*) buffer,
                              st->samplerate * st->channels * sizeof(float),
                              &nr_frames_read);
@@ -86,7 +83,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
     }
     nr_frames_read /= st->channels * sizeof(float);
     if (!nr_frames_read) break;
-    if (gd->tag_rg) {
+    if (tag_rg) {
       size_t j;
       for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
         if (buffer[j] > segment_peaks[i])
@@ -95,12 +92,11 @@ void calculate_gain_of_file(void* user, void* user_data) {
           segment_peaks[i] = -buffer[j];
       }
     }
-    nr_frames_read_all += nr_frames_read;
     result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
     CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
   }
 
-  gd->segment_loudness[i] = ebur128_loudness_global(st);
+  segment_loudness[i] = ebur128_loudness_global(st);
   fprintf(stderr, "*");
 
 free_buffer:

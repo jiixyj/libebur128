@@ -1,4 +1,5 @@
 #include <sndfile.h>
+#include <stdlib.h>
 
 #include "./ebur128.h"
 #include "./common.h"
@@ -15,34 +16,34 @@ void calculate_gain_of_file(void* user, void* user_data) {
   struct gain_data* gd = (struct gain_data*) user_data;
   size_t i = (size_t) (long) user - 1;
   char* const* av = gd->file_names;
+  double* segment_loudness = gd->segment_loudness;
+  double* segment_peaks = gd->segment_peaks;
+  int calculate_lra = gd->calculate_lra, tag_rg = gd->tag_rg;
 
   SF_INFO file_info;
   SNDFILE* file;
   float* buffer;
+  size_t nr_frames_read_all = 0;
+
   ebur128_state* st = NULL;
-  int channels, samplerate;
-  size_t nr_frames_read, nr_frames_read_all;
 
   int errcode, result;
 
-  gd->segment_loudness[i] = -1.0 / 0.0;
+  segment_loudness[i] = -1.0 / 0.0;
   memset(&file_info, '\0', sizeof(file_info));
   file = sf_open(av[i], SFM_READ, &file_info);
   CHECK_ERROR(!file, "Could not open file!\n", 1, endloop)
-  channels = file_info.channels;
-  samplerate = file_info.samplerate;
-  nr_frames_read_all = 0;
 
-  st = ebur128_init(channels,
-                    samplerate,
+  st = ebur128_init(file_info.channels,
+                    file_info.samplerate,
                     EBUR128_MODE_I |
-                    (gd->calculate_lra ? EBUR128_MODE_LRA : 0));
+                    (calculate_lra ? EBUR128_MODE_LRA : 0));
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
   gd->library_states[i] = st;
 
   result = sf_command(file, SFC_GET_CHANNEL_MAP_INFO,
                             (void*) st->channel_map,
-                            channels * (int) sizeof(int));
+                            (int) st->channels * (int) sizeof(int));
   /* If sndfile found a channel map, set it with
    * ebur128_set_channel_map */
   if (result == SF_TRUE) {
@@ -69,7 +70,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
     }
   /* Special case seq-3341-6-5channels-16bit.wav.
    * Set channel map with function ebur128_set_channel. */
-  } else if (channels == 5) {
+  } else if (st->channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
     ebur128_set_channel(st, 1, EBUR128_RIGHT);
     ebur128_set_channel(st, 2, EBUR128_CENTER);
@@ -79,18 +80,18 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   buffer = (float*) malloc(st->samplerate * st->channels * sizeof(float));
   CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
-  gd->segment_peaks[i] = 0.0;
+  segment_peaks[i] = 0.0;
   for (;;) {
-    nr_frames_read = (size_t) sf_readf_float(file, buffer,
-                                           (sf_count_t) st->samplerate);
+    size_t nr_frames_read = (size_t) sf_readf_float(file, buffer,
+                                                (sf_count_t) st->samplerate);
     if (!nr_frames_read) break;
-    if (gd->tag_rg) {
+    if (tag_rg) {
       size_t j;
       for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
-        if (buffer[j] > gd->segment_peaks[i])
-          gd->segment_peaks[i] = buffer[j];
-        else if (-buffer[j] > gd->segment_peaks[i])
-          gd->segment_peaks[i] = -buffer[j];
+        if (buffer[j] > segment_peaks[i])
+          segment_peaks[i] = buffer[j];
+        else if (-buffer[j] > segment_peaks[i])
+          segment_peaks[i] = -buffer[j];
       }
     }
     nr_frames_read_all += nr_frames_read;
@@ -102,7 +103,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
                             " or determine right length!\n");
   }
 
-  gd->segment_loudness[i] = ebur128_loudness_global(st);
+  segment_loudness[i] = ebur128_loudness_global(st);
   fprintf(stderr, "*");
 
 free_buffer:

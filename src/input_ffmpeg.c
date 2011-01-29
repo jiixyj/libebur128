@@ -29,8 +29,6 @@ void calculate_gain_of_file(void* user, void* user_data) {
   AVPacket packet;
 
   ebur128_state* st = NULL;
-  int channels, samplerate;
-  size_t nr_frames_read, nr_frames_read_all;
 
   int errcode, result;
 
