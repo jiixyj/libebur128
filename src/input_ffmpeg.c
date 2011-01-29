@@ -1,17 +1,22 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <glib-2.0/glib.h>
 
 #include "./ebur128.h"
 #include "./common.h"
+
+static GMutex* ffmpeg_mutex;
 
 int init_input_library() {
   // Register all formats and codecs
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
+  ffmpeg_mutex = g_mutex_new();
   return 0;
 }
 
 void exit_input_library() {
+  g_mutex_free(ffmpeg_mutex);
   return;
 }
 
@@ -33,6 +38,9 @@ void calculate_gain_of_file(void* user, void* user_data) {
   int errcode, result;
 
   segment_loudness[i] = -1.0 / 0.0;
+
+  g_mutex_lock(ffmpeg_mutex);
+
   if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
     fprintf(stderr, "Could not open input file!\n");
     return;
@@ -69,6 +77,8 @@ void calculate_gain_of_file(void* user, void* user_data) {
     fprintf(stderr, "Could not open the codec!\n");
     goto close_file;
   }
+
+  g_mutex_unlock(ffmpeg_mutex);
 
   st = ebur128_init(codec_context->channels,
                     codec_context->sample_rate,
@@ -208,8 +218,12 @@ void calculate_gain_of_file(void* user, void* user_data) {
   fprintf(stderr, "*");
 
 close_codec:
+  g_mutex_lock(ffmpeg_mutex);
   avcodec_close(codec_context);
+  g_mutex_unlock(ffmpeg_mutex);
 
 close_file:
+  g_mutex_lock(ffmpeg_mutex);
   av_close_input_file(format_context);
+  g_mutex_unlock(ffmpeg_mutex);
 }
