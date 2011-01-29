@@ -7,25 +7,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <glib-2.0/glib.h>
-#ifdef G_OS_WIN32
-  #include <windows.h>
-#endif
+#include <glib.h>
 
 #include "./ebur128.h"
 #include "./common.h"
 
-long nproc() {
-  long ret = 1;
-#if defined(G_OS_UNIX) && defined(_SC_NPROCESSORS_ONLN)
-  ret = sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(G_OS_WIN32)
-  SYSTEM_INFO sysinfo;
-  GetSystemInfo(&sysinfo);
-  ret = sysinfo.dwNumberOfProcessors;
-#endif
-  return ret;
-}
+extern long nproc();
 
 extern int init_input_library();
 extern void exit_input_library();
@@ -34,7 +21,7 @@ extern void calculate_gain_of_file(void* user, void* user_data);
 int main(int ac, char* const av[]) {
   int result;
   int i, c;
-  int errcode = 0;
+  int errcode;
 
   GThreadPool* pool;
   struct gain_data gd;

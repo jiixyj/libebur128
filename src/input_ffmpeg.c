@@ -1,8 +1,10 @@
+/* See LICENSE file for copyright and license details. */
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <glib-2.0/glib.h>
+#include <glib.h>
 
 #include "./ebur128.h"
+
 #include "./common.h"
 
 static GMutex* ffmpeg_mutex;
@@ -22,7 +24,7 @@ void exit_input_library() {
 
 void calculate_gain_of_file(void* user, void* user_data) {
   struct gain_data* gd = (struct gain_data*) user_data;
-  size_t i = (size_t) (long) user - 1;
+  size_t i = (size_t) user - 1;
   char* const* av = gd->file_names;
   double* segment_loudness = gd->segment_loudness;
   double* segment_peaks = gd->segment_peaks;
@@ -226,4 +228,6 @@ close_file:
   g_mutex_lock(ffmpeg_mutex);
   av_close_input_file(format_context);
   g_mutex_unlock(ffmpeg_mutex);
+
+  gd->errcode = errcode;
 }

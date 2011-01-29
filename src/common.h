@@ -1,3 +1,4 @@
+/* See LICENSE file for copyright and license details. */
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
@@ -10,7 +11,7 @@
 
 struct gain_data {
   char* const* file_names;
-  int calculate_lra, tag_rg;
+  int calculate_lra, tag_rg, errcode;
   ebur128_state** library_states;
   double* segment_loudness;
   double* segment_peaks;

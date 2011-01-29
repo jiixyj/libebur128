@@ -55,7 +55,7 @@ list(APPEND FLAGS "-Wmissing-noreturn")
 list(APPEND FLAGS "-Wunsafe-loop-optimizations")
 list(APPEND FLAGS "-Waggregate-return")
 list(APPEND FLAGS "-Wsign-conversion")
-list(APPEND FLAGS "-Wpadded")
+#list(APPEND FLAGS "-Wpadded")
 list(APPEND FLAGS "-Wswitch-enum")
 # C++ specific warning flags
 # list(APPEND FLAGS "-Wnon-virtual-dtor")
