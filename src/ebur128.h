@@ -104,7 +104,7 @@ double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size);
 /* Get momentary loudness (last 400ms) */
 double ebur128_loudness_momentary(ebur128_state* st);
 /* Get short-term loudness (last 3s). Will return NaN if mode does not contain
- * EBUR128_MODE_S or EBUR128_MODE_S. */
+ * EBUR128_MODE_S. */
 double ebur128_loudness_shortterm(ebur128_state* st);
 
 /* Returns LRA according to EBU 3342. Will return NaN if memory allocation
