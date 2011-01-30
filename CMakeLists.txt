@@ -48,7 +48,7 @@ if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
 endif()
 
 ##### glib
-if(NOT WIN32)
+if(NOT WIN32 AND NOT LSB_COMPILER_FOUND)
   pkg_check_modules(GLIB glib-2.0)
   pkg_check_modules(GTHREAD gthread-2.0)
   include_directories(SYSTEM ${GLIB_INCLUDEDIR})
@@ -57,7 +57,7 @@ if(NOT WIN32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -isystem${GLIB_INCLUDEDIR}/glib-2.0 -isystem${GTHREAD_INCLUDEDIR}/glib-2.0")
   link_directories(${GLIB_LIBRARY_DIRS})
   link_directories(${GTHREAD_LIBRARY_DIRS})
-else()
+elseif(WIN32)
   find_library(GLIB_LIBRARIES glib-2.0
                PATHS ${LINK_DIRECTORIES} CMAKE_FIND_ROOT_PATH_BOTH)
   find_library(GTHREAD_LIBRARIES gthread-2.0
@@ -65,6 +65,12 @@ else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -isystem${${PROJECT_NAME}_SOURCE_DIR}/mingw-include/glib-2.0")
   set(GLIB_FOUND ${GLIB_LIBRARIES})
   set(GTHREAD_FOUND ${GTHREAD_LIBRARIES})
+elseif(LSB_COMPILER_FOUND)
+  set(GLIB_LIBRARIES glib-2.0)
+  set(GTHREAD_LIBRARIES gthread-2.0)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -isystem/opt/lsb/include/glib-2.0")
+  set(GLIB_FOUND TRUE)
+  set(GTHREAD_FOUND TRUE)
 endif()
 
 ##### libsndfile
@@ -221,7 +227,7 @@ endif()
 ######################################
 ##### Install                    #####
 ######################################
-if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
+if(GLIB_FOUND AND GTHREAD_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   install(TARGETS r128-sndfile ${R128_FFMPEG} r128-mpg123 r128-musepack
           RUNTIME DESTINATION .
           ARCHIVE DESTINATION lib)
@@ -232,13 +238,16 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   endif()
   install(PROGRAMS src/rgtag.py src/r128-tag.py DESTINATION .)
   install(DIRECTORY doc/license DESTINATION .)
-  if(WIN32 AND CMAKE_C_COMPILER MATCHES ".*w64.*")
+  if(WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     install(FILES
             mingw-lib64/avcodec-52.dll
             mingw-lib64/avformat-52.dll
             mingw-lib64/avutil-50.dll
             mingw-lib64/libmpg123-0.dll
             mingw-lib64/libsndfile-1.dll
+            mingw-lib64/libintl-8.dll
+            mingw-lib64/libglib-2.0-0.dll
+            mingw-lib64/libgthread-2.0-0.dll
             DESTINATION .)
   elseif(WIN32)
     install(FILES
@@ -247,6 +256,9 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
             mingw-lib/avutil-50.dll
             mingw-lib/libmpg123-0.dll
             mingw-lib/libsndfile-1.dll
+            mingw-lib/intl.dll
+            mingw-lib/libglib-2.0-0.dll
+            mingw-lib/libgthread-2.0-0.dll
             DESTINATION .)
   endif()
 
@@ -261,7 +273,7 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   set(BUILDSCRIPT "build.sh")
   set(CPACK_SOURCE_IGNORE_FILES "${BUILDSCRIPT};build/;build32/;.git/;.gitignore;${INCLUDE_BLACKLIST};lib/;lib64/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
-  if(CMAKE_C_COMPILER MATCHES ".*w64.*")
+  if(WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(CPACK_SYSTEM_NAME "win64")
   elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(CPACK_SYSTEM_NAME "Linux64")
