@@ -31,7 +31,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode, result;
 
-  segment_loudness[i] = -1.0 / 0.0;
+  segment_loudness[i] = 0.0 / 0.0;
   err = mpc_reader_init_stdio(&reader, av[i]);
   if (err < 0) {
     fprintf(stderr, "Could not open file!\n");

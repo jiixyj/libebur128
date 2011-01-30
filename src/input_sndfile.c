@@ -31,7 +31,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode, result;
 
-  segment_loudness[i] = -1.0 / 0.0;
+  segment_loudness[i] = 0.0 / 0.0;
   memset(&file_info, '\0', sizeof(file_info));
   file = sf_open(av[i], SFM_READ, &file_info);
   CHECK_ERROR(!file, "Could not open file!\n", 1, endloop)

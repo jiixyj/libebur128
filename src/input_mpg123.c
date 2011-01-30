@@ -35,7 +35,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode, result;
 
-  segment_loudness[i] = -1.0 / 0.0;
+  segment_loudness[i] = 0.0 / 0.0;
   mh = mpg123_new(NULL, &result);
   CHECK_ERROR(!mh, "Could not create mpg123 handler!\n", 1, close_file)
   result = mpg123_open(mh, av[i]);

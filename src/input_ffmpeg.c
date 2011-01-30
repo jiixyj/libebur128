@@ -39,7 +39,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode, result;
 
-  segment_loudness[i] = -1.0 / 0.0;
+  segment_loudness[i] = 0.0 / 0.0;
 
   g_mutex_lock(ffmpeg_mutex);
 

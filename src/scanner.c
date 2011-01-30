@@ -62,10 +62,14 @@ int main(int ac, char* const av[]) {
     g_thread_pool_push(pool, GINT_TO_POINTER(i - optind + 1), NULL);
   }
   g_thread_pool_free(pool, FALSE, TRUE);
-  for (i = optind; i < ac; ++i) {
-    fprintf(stderr, "\r");
-    fprintf(stderr, "segment %d: %.2f LUFS\n", (int) i - optind + 1,
-                    gd.segment_loudness[i - optind]);
+  if (ac - optind > 1) {
+    for (i = optind; i < ac; ++i) {
+      if (!isnan(gd.segment_loudness[i - optind])) {
+        fprintf(stderr, "\r");
+        fprintf(stderr, "segment %d: %.2f LUFS\n", (int) i - optind + 1,
+                        gd.segment_loudness[i - optind]);
+      }
+    }
   }
 
   result = 1;
@@ -79,7 +83,7 @@ int main(int ac, char* const av[]) {
     double gated_loudness;
     gated_loudness = ebur128_loudness_global_multiple(gd.library_states,
                                                       (size_t) (ac - optind));
-    fprintf(stderr, "global loudness: %.2f LUFS\n", gated_loudness);
+    fprintf(stderr, "\rglobal loudness: %.2f LUFS\n", gated_loudness);
 
 
     if (gd.calculate_lra) {
