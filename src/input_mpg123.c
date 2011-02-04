@@ -4,9 +4,133 @@
 
 #include "./ebur128.h"
 
-#include "./common.h"
+struct input_handle {
+  mpg123_handle* mh;
+  long mh_rate;
+  int mh_channels, mh_encoding;
+  float* buffer;
+};
 
-int init_input_library() {
+int input_get_channels(struct input_handle* ih) {
+  return ih->mh_channels;
+}
+
+int input_get_samplerate(struct input_handle* ih) {
+  return (int) ih->mh_rate;
+}
+
+float* input_get_buffer(struct input_handle* ih) {
+  return ih->buffer;
+}
+
+struct input_handle* input_handle_init() {
+  struct input_handle* ret;
+  ret = malloc(sizeof(struct input_handle));
+  return ret;
+}
+
+void input_handle_destroy(struct input_handle** ih) {
+  free(*ih);
+  *ih = NULL;
+}
+
+int input_open_file(struct input_handle* ih, const char* filename) {
+  int result;
+  ih->mh = mpg123_new(NULL, &result);
+  if (!ih->mh) {
+    fprintf(stderr, "Could not create mpg123 handler!\n");
+    goto close_file;
+  }
+  result = mpg123_open(ih->mh, filename);
+  if (result != MPG123_OK) {
+    fprintf(stderr, "Could not open input file!\n");
+    goto close_file;
+  }
+  result = mpg123_getformat(ih->mh, &ih->mh_rate, &ih->mh_channels, &ih->mh_encoding);
+  if (result != MPG123_OK) {
+    fprintf(stderr, "mpg123_getformat failed!\n");
+    goto close_file;
+  }
+  result = mpg123_format_none(ih->mh);
+  if (result != MPG123_OK) {
+    fprintf(stderr, "mpg123_format_none failed!\n");
+    goto close_file;
+  }
+  result = mpg123_format(ih->mh, ih->mh_rate, ih->mh_channels, MPG123_ENC_FLOAT_32);
+  if (result != MPG123_OK) {
+    fprintf(stderr, "mpg123_format failed!\n");
+    goto close_file;
+  }
+  result = mpg123_close(ih->mh);
+  result = mpg123_open(ih->mh, filename);
+  if (result != MPG123_OK) {
+    fprintf(stderr, "Could not open input file!\n");
+    goto close_file;
+  }
+  result = mpg123_getformat(ih->mh, &ih->mh_rate, &ih->mh_channels, &ih->mh_encoding);
+  if (result != MPG123_OK) {
+    fprintf(stderr, "mpg123_getformat failed!\n");
+    goto close_file;
+  }
+  return 0;
+
+close_file:
+  mpg123_close(ih->mh);
+  mpg123_delete(ih->mh);
+  ih->mh = NULL;
+  return 1;
+}
+
+int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+  return 1;
+}
+
+int input_allocate_buffer(struct input_handle* ih) {
+  ih->buffer = (float*) malloc(ih->mh_rate *
+                               ih->mh_channels *
+                               sizeof(float));
+  if (ih->buffer) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+size_t input_read_frames(struct input_handle* ih) {
+  size_t nr_frames_read;
+  int result = mpg123_read(ih->mh, (unsigned char*) ih->buffer,
+                           ih->mh_rate * ih->mh_channels * sizeof(float),
+                           &nr_frames_read);
+  if (result != MPG123_OK && result != MPG123_DONE) {
+    if (result == MPG123_ERR && mpg123_errcode(ih->mh) == MPG123_RESYNC_FAIL) {
+      fprintf(stderr, "%s\n", mpg123_strerror(ih->mh));
+      fprintf(stderr, "Maybe your file has an APEv2 tag?\n");
+      return 0;
+    } else {
+      fprintf(stderr, "Internal MPG123 error!\n");
+      return 0;
+    }
+  }
+  nr_frames_read /= ih->mh_channels * sizeof(float);
+  return nr_frames_read;
+}
+
+int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+  return 0;
+}
+
+void input_free_buffer(struct input_handle* ih) {
+  free(ih->buffer);
+  ih->buffer = NULL;
+}
+
+void input_close_file(struct input_handle* ih) {
+  mpg123_close(ih->mh);
+  mpg123_delete(ih->mh);
+  ih->mh = NULL;
+}
+
+int input_init_library() {
   int result = mpg123_init();
   if (result != MPG123_OK) {
     return 1;
@@ -14,101 +138,6 @@ int init_input_library() {
   return 0;
 }
 
-void exit_input_library() {
+void input_exit_library() {
   mpg123_exit();
-}
-
-void calculate_gain_of_file(void* user, void* user_data) {
-  struct gain_data* gd = (struct gain_data*) user_data;
-  size_t i = (size_t) user - 1;
-  char* const* av = gd->file_names;
-  double* segment_loudness = gd->segment_loudness;
-  double* segment_peaks = gd->segment_peaks;
-  int calculate_lra = gd->calculate_lra, tag_rg = gd->tag_rg;
-
-  mpg123_handle* mh = NULL;
-  long mh_rate;
-  int mh_channels, mh_encoding;
-  float* buffer;
-
-  ebur128_state* st = NULL;
-
-  int errcode, result;
-
-  segment_loudness[i] = 0.0 / 0.0;
-  mh = mpg123_new(NULL, &result);
-  CHECK_ERROR(!mh, "Could not create mpg123 handler!\n", 1, close_file)
-  result = mpg123_open(mh, av[i]);
-  CHECK_ERROR(result != MPG123_OK, "Could not open input file!\n", 1,
-                                   close_file)
-  result = mpg123_getformat(mh, &mh_rate, &mh_channels, &mh_encoding);
-  CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1,
-                                   close_file)
-  result = mpg123_format_none(mh);
-  CHECK_ERROR(result != MPG123_OK, "mpg123_format_none failed!\n", 1,
-                                   close_file)
-  result = mpg123_format(mh, mh_rate, mh_channels, MPG123_ENC_FLOAT_32);
-  CHECK_ERROR(result != MPG123_OK, "mpg123_format failed!\n", 1, close_file)
-  result = mpg123_close(mh);
-  result = mpg123_open(mh, av[i]);
-  CHECK_ERROR(result != MPG123_OK, "Could not open input file!\n", 1,
-                                   close_file)
-  result = mpg123_getformat(mh, &mh_rate, &mh_channels, &mh_encoding);
-  CHECK_ERROR(result != MPG123_OK, "mpg123_getformat failed!\n", 1,
-                                   close_file)
-
-  st = ebur128_init(mh_channels,
-                    (int) mh_rate,
-                    EBUR128_MODE_I |
-                    (calculate_lra ? EBUR128_MODE_LRA : 0));
-  CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
-  gd->library_states[i] = st;
-
-  buffer = (float*) malloc(st->samplerate * st->channels * sizeof(float));
-  CHECK_ERROR(!buffer, "Could not allocate memory!\n", 1, close_file)
-  segment_peaks[i] = 0.0;
-  for (;;) {
-    size_t nr_frames_read;
-    result = mpg123_read(mh, (unsigned char*) buffer,
-                             st->samplerate * st->channels * sizeof(float),
-                             &nr_frames_read);
-    if (result != MPG123_OK && result != MPG123_DONE) {
-      if (result == MPG123_ERR && mpg123_errcode(mh) == MPG123_RESYNC_FAIL) {
-        fprintf(stderr, "%s\n", mpg123_strerror(mh));
-        fprintf(stderr, "Maybe your file has an APEv2 tag?\n");
-        break;
-      } else {
-        fprintf(stderr, "Internal MPG123 error!\n");
-        errcode = 1;
-        goto free_buffer;
-      }
-    }
-    nr_frames_read /= st->channels * sizeof(float);
-    if (!nr_frames_read) break;
-    if (tag_rg) {
-      size_t j;
-      for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
-        if (buffer[j] > segment_peaks[i])
-          segment_peaks[i] = buffer[j];
-        else if (-buffer[j] > segment_peaks[i])
-          segment_peaks[i] = -buffer[j];
-      }
-    }
-    result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
-    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
-  }
-
-  segment_loudness[i] = ebur128_loudness_global(st);
-  fprintf(stderr, "*");
-
-free_buffer:
-  free(buffer);
-  buffer = NULL;
-
-close_file:
-  mpg123_close(mh);
-  mpg123_delete(mh);
-  mh = NULL;
-
-  gd->errcode = errcode;
 }

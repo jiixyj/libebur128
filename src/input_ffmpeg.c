@@ -5,49 +5,51 @@
 
 #include "./ebur128.h"
 
-#include "./common.h"
-
 static GMutex* ffmpeg_mutex;
 
-int init_input_library() {
-  // Register all formats and codecs
-  av_register_all();
-  av_log_set_level(AV_LOG_ERROR);
-  ffmpeg_mutex = g_mutex_new();
-  return 0;
-}
-
-void exit_input_library() {
-  g_mutex_free(ffmpeg_mutex);
-  return;
-}
-
-void calculate_gain_of_file(void* user, void* user_data) {
-  struct gain_data* gd = (struct gain_data*) user_data;
-  size_t i = (size_t) user - 1;
-  char* const* av = gd->file_names;
-  double* segment_loudness = gd->segment_loudness;
-  double* segment_peaks = gd->segment_peaks;
-  int calculate_lra = gd->calculate_lra, tag_rg = gd->tag_rg;
-
+struct input_handle {
   AVFormatContext* format_context;
   AVCodecContext* codec_context;
   AVCodec* codec;
   AVPacket packet;
+  int need_new_frame;
+  int audio_stream;
+  uint8_t* old_data;
+  uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+  float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 4 + 1];
+};
 
-  ebur128_state* st = NULL;
+int input_get_channels(struct input_handle* ih) {
+  return ih->codec_context->channels;
+}
 
-  int errcode, result;
+int input_get_samplerate(struct input_handle* ih) {
+  return ih->codec_context->sample_rate;
+}
 
-  segment_loudness[i] = 0.0 / 0.0;
+float* input_get_buffer(struct input_handle* ih) {
+  return ih->buffer;
+}
 
+struct input_handle* input_handle_init() {
+  struct input_handle* ret;
+  ret = malloc(sizeof(struct input_handle));
+  return ret;
+}
+
+void input_handle_destroy(struct input_handle** ih) {
+  free(*ih);
+  *ih = NULL;
+}
+
+
+int input_open_file(struct input_handle* ih, const char* filename) {
   g_mutex_lock(ffmpeg_mutex);
-
-  if (av_open_input_file(&format_context, av[i], NULL, 0, NULL) != 0) {
+  if (av_open_input_file(&ih->format_context, filename, NULL, 0, NULL) != 0) {
     fprintf(stderr, "Could not open input file!\n");
     return;
   }
-  if (av_find_stream_info(format_context) < 0) {
+  if (av_find_stream_info(ih->format_context) < 0) {
     fprintf(stderr, "Could not find stream info!\n");
     goto close_file;
   }
@@ -55,45 +57,47 @@ void calculate_gain_of_file(void* user, void* user_data) {
   // dump_format(format_context, 0, av[1], 0);
 
   // Find the first audio stream
-  int audio_stream = -1;
-  for (int j = 0; (unsigned) j < format_context->nb_streams; ++j) {
-    if (format_context->streams[j]->codec->codec_type == CODEC_TYPE_AUDIO) {
-      audio_stream = j;
+  ih->audio_stream = -1;
+  for (int j = 0; (unsigned) j < ih->format_context->nb_streams; ++j) {
+    if (ih->format_context->streams[j]->codec->codec_type == CODEC_TYPE_AUDIO) {
+      ih->audio_stream = j;
       break;
     }
   }
-  if (audio_stream == -1) {
+  if (ih->audio_stream == -1) {
     fprintf(stderr, "Could not find an audio stream in file!\n");
     goto close_file;
   }
   // Get a pointer to the codec context for the audio stream
-  codec_context = format_context->streams[audio_stream]->codec;
+  ih->codec_context = ih->format_context->streams[ih->audio_stream]->codec;
   // Find the decoder for the video stream
-  codec = avcodec_find_decoder(codec_context->codec_id);
-  if (codec == NULL) {
+  ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
+  if (ih->codec == NULL) {
     fprintf(stderr, "Could not find a decoder for the audio format!\n");
     goto close_file;
   }
   // Open codec
-  if (avcodec_open(codec_context, codec) < 0) {
+  if (avcodec_open(ih->codec_context, ih->codec) < 0) {
     fprintf(stderr, "Could not open the codec!\n");
     goto close_file;
   }
-
   g_mutex_unlock(ffmpeg_mutex);
+  ih->need_new_frame = TRUE;
+  return 0;
 
-  st = ebur128_init(codec_context->channels,
-                    codec_context->sample_rate,
-                    EBUR128_MODE_I |
-                    (calculate_lra ? EBUR128_MODE_LRA : 0));
-  CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_codec)
-  gd->library_states[i] = st;
+close_file:
+  g_mutex_lock(ffmpeg_mutex);
+  av_close_input_file(ih->format_context);
+  g_mutex_unlock(ffmpeg_mutex);
+  return 1;
+}
 
-  if (codec_context->channel_layout) {
+int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+  if (ih->codec_context->channel_layout) {
     int channel_map_index = 0;
     int bit_counter = 0;
-    while (channel_map_index < codec_context->channels) {
-      if (codec_context->channel_layout & (1 << bit_counter)) {
+    while (channel_map_index < ih->codec_context->channels) {
+      if (ih->codec_context->channel_layout & (1 << bit_counter)) {
         switch (1 << bit_counter) {
           case CH_FRONT_LEFT:
             ebur128_set_channel(st, channel_map_index, EBUR128_LEFT);
@@ -118,116 +122,125 @@ void calculate_gain_of_file(void* user, void* user_data) {
       }
       ++bit_counter;
     }
-  } else if (codec_context->channels == 5) {
-    /* Special case seq-3341-6-5channels-16bit.wav.
-     * Set channel map with function ebur128_set_channel. */
-    ebur128_set_channel(st, 0, EBUR128_LEFT);
-    ebur128_set_channel(st, 1, EBUR128_RIGHT);
-    ebur128_set_channel(st, 2, EBUR128_CENTER);
-    ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
-    ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
+    return 0;
+  } else {
+    return 1;
   }
+}
 
+int input_allocate_buffer(struct input_handle* ih) {
+  return 0;
+}
 
-  while (av_read_frame(format_context, &packet) >= 0) {
-    if (packet.stream_index == audio_stream) {
-      uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE];
-      int16_t* data_short =  (int16_t*) audio_buf;
-      int32_t* data_int =    (int32_t*) audio_buf;
-      float*   data_float =  (float*)   audio_buf;
-      double*  data_double = (double*)  audio_buf;
+size_t input_read_frames(struct input_handle* ih) {
+  for (;;) {
+    if (ih->need_new_frame && av_read_frame(ih->format_context, &ih->packet) < 0) {
+      return 0;
+    }
+    ih->need_new_frame = FALSE;
+    if (ih->packet.stream_index == ih->audio_stream) {
+      int16_t* data_short =  (int16_t*) ih->audio_buf;
+      int32_t* data_int =    (int32_t*) ih->audio_buf;
+      float*   data_float =  (float*)   ih->audio_buf;
+      double*  data_double = (double*)  ih->audio_buf;
 
-      uint8_t* old_data = packet.data;
-      while (packet.size > 0) {
-        int data_size = sizeof(audio_buf);
+      if (!ih->old_data) {
+        ih->old_data = ih->packet.data;
+      }
+      while (ih->packet.size > 0) {
+        int data_size = sizeof(ih->audio_buf);
 #if LIBAVCODEC_VERSION_MAJOR >= 52 &&  \
     LIBAVCODEC_VERSION_MINOR >= 26 &&  \
     LIBAVCODEC_VERSION_MICRO >= 0
-        int len = avcodec_decode_audio3(codec_context, (int16_t*) audio_buf,
-                                        &data_size, &packet);
+        int len = avcodec_decode_audio3(ih->codec_context, (int16_t*) ih->audio_buf,
+                                        &data_size, &ih->packet);
 #else
-        int len = avcodec_decode_audio2(codec_context, (int16_t*) audio_buf,
-                                        &data_size, packet.data, packet.size);
+        int len = avcodec_decode_audio2(ih->codec_context, (int16_t*) ih->audio_buf,
+                                        &data_size, ih->packet.data, ih->packet.size);
 #endif
         if (len < 0) {
-          packet.size = 0;
+          ih->packet.size = 0;
           break;
         }
-    #define CHECK_FOR_PEAKS(buffer, min_scale, max_scale)                      \
-        if (tag_rg) {                                                          \
-          double scale_factor = -((double) min_scale) > (double) max_scale ?   \
-                                -((double) min_scale) : (double) max_scale;    \
-          size_t j;                                                            \
-          double buffer_scaled;                                                \
-          for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {       \
-            buffer_scaled = buffer[j] / (scale_factor);                        \
-            if (buffer_scaled > segment_peaks[i])                              \
-              segment_peaks[i] = buffer_scaled;                                \
-            else if (-buffer_scaled > segment_peaks[i])                        \
-              segment_peaks[i] = -buffer_scaled;                               \
-          }                                                                    \
-        }
         size_t nr_frames_read;
-        switch (codec_context->sample_fmt) {
+        switch (ih->codec_context->sample_fmt) {
           case SAMPLE_FMT_U8:
-            CHECK_ERROR(1, "8 bit audio not supported by libebur128!\n", 1,
-                           close_codec)
+            fprintf(stderr, "8 bit audio not supported by libebur128!\n");
+            return 0;
             break;
           case SAMPLE_FMT_S16:
             nr_frames_read = (size_t) data_size / sizeof(int16_t) /
-                             (size_t) codec_context->channels;
-            CHECK_FOR_PEAKS(data_short, SHRT_MIN, SHRT_MAX)
-            result = ebur128_add_frames_short(st, data_short, nr_frames_read);
-            CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
+                             (size_t) ih->codec_context->channels;
+            for (int i = 0; i < (size_t) data_size / sizeof(int16_t); ++i) {
+              ih->buffer[i] = ((float) data_short[i]) /
+                              MAX(-(float) SHRT_MIN, (float) SHRT_MAX);
+            }
             break;
           case SAMPLE_FMT_S32:
             nr_frames_read = (size_t) data_size / sizeof(int32_t) /
-                             (size_t) codec_context->channels;
-            CHECK_FOR_PEAKS(data_int, INT_MIN, INT_MAX)
-            result = ebur128_add_frames_int(st, data_int, nr_frames_read);
-            CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
+                             (size_t) ih->codec_context->channels;
+            for (int i = 0; i < (size_t) data_size / sizeof(int32_t); ++i) {
+              ih->buffer[i] = ((float) data_int[i]) /
+                              MAX(-(float) INT_MIN, (float) INT_MAX);
+            }
             break;
           case SAMPLE_FMT_FLT:
             nr_frames_read = (size_t) data_size / sizeof(float) /
-                             (size_t) codec_context->channels;
-            CHECK_FOR_PEAKS(data_float, -1.0f, 1.0f)
-            result = ebur128_add_frames_float(st, data_float, nr_frames_read);
-            CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
+                             (size_t) ih->codec_context->channels;
+            for (int i = 0; i < (size_t) data_size / sizeof(float); ++i) {
+              ih->buffer[i] = data_float[i];
+            }
             break;
           case SAMPLE_FMT_DBL:
             nr_frames_read = (size_t) data_size / sizeof(double) /
-                             (size_t) codec_context->channels;
-            CHECK_FOR_PEAKS(data_double, -1.0, 1.0)
-            result = ebur128_add_frames_double(st, data_double,
-                                                   nr_frames_read);
-            CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, close_codec)
+                             (size_t) ih->codec_context->channels;
+            for (int i = 0; i < (size_t) data_size / sizeof(double); ++i) {
+              ih->buffer[i] = (float) data_double[i];
+            }
             break;
           case SAMPLE_FMT_NONE:
           case SAMPLE_FMT_NB:
           default:
-            CHECK_ERROR(1, "Unknown sample format!\n", 1, close_codec)
+            fprintf(stderr, "Unknown sample format!\n");
+            return 0;
             break;
         }
-        packet.data += len;
-        packet.size -= len;
+        ih->packet.data += len;
+        ih->packet.size -= len;
+        return nr_frames_read;
       }
-      packet.data = old_data;
+      ih->packet.data = ih->old_data;
+      ih->old_data = NULL;
     }
-    av_free_packet(&packet);
+    av_free_packet(&ih->packet);
+    ih->need_new_frame = TRUE;
   }
+}
 
-  segment_loudness[i] = ebur128_loudness_global(st);
-  fprintf(stderr, "*");
+int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+  return 0;
+}
 
-close_codec:
+void input_free_buffer(struct input_handle* ih) {
+  return;
+}
+
+void input_close_file(struct input_handle* ih) {
   g_mutex_lock(ffmpeg_mutex);
-  avcodec_close(codec_context);
+  avcodec_close(ih->codec_context);
+  av_close_input_file(ih->format_context);
   g_mutex_unlock(ffmpeg_mutex);
+}
 
-close_file:
-  g_mutex_lock(ffmpeg_mutex);
-  av_close_input_file(format_context);
-  g_mutex_unlock(ffmpeg_mutex);
+int input_init_library() {
+  // Register all formats and codecs
+  av_register_all();
+  av_log_set_level(AV_LOG_ERROR);
+  ffmpeg_mutex = g_mutex_new();
+  return 0;
+}
 
-  gd->errcode = errcode;
+void input_exit_library() {
+  g_mutex_free(ffmpeg_mutex);
+  return;
 }

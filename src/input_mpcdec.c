@@ -3,79 +3,84 @@
 
 #include "./ebur128.h"
 
-#include "./common.h"
-
-int init_input_library() {
-  return 0;
-}
-
-void exit_input_library() {
-  return;
-}
-
-void calculate_gain_of_file(void* user, void* user_data) {
-  struct gain_data* gd = (struct gain_data*) user_data;
-  size_t i = (size_t) user - 1;
-  char* const* av = gd->file_names;
-  double* segment_loudness = gd->segment_loudness;
-  double* segment_peaks = gd->segment_peaks;
-  int calculate_lra = gd->calculate_lra, tag_rg = gd->tag_rg;
-
+struct input_handle {
   mpc_reader reader;
   mpc_demux* demux;
   mpc_streaminfo si;
   mpc_status err;
   MPC_SAMPLE_FORMAT buffer[MPC_DECODER_BUFFER_LENGTH];
+};
 
-  ebur128_state* st = NULL;
+int input_get_channels(struct input_handle* ih) {
+  return (int) ih->si.channels;
+}
 
-  int errcode, result;
+int input_get_samplerate(struct input_handle* ih) {
+  return (int) ih->si.sample_freq;
+}
 
-  segment_loudness[i] = 0.0 / 0.0;
-  err = mpc_reader_init_stdio(&reader, av[i]);
+float* input_get_buffer(struct input_handle* ih) {
+  return ih->buffer;
+}
+
+struct input_handle* input_handle_init() {
+  struct input_handle* ret;
+  ret = malloc(sizeof(struct input_handle));
+  return ret;
+}
+
+int input_open_file(struct input_handle* ih, const char* filename) {
+  int err = mpc_reader_init_stdio(&ih->reader, filename);
   if (err < 0) {
-    fprintf(stderr, "Could not open file!\n");
-    return;
+    return 1;
   }
-  demux = mpc_demux_init(&reader);
-  CHECK_ERROR(!demux, "Could not initialize demuxer!\n", 1, reader_exit)
-  mpc_demux_get_info(demux, &si);
-
-  st = ebur128_init((int) si.channels,
-                    (int) si.sample_freq,
-                    EBUR128_MODE_I |
-                    (calculate_lra ? EBUR128_MODE_LRA : 0));
-  CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, demux_exit)
-  gd->library_states[i] = st;
-
-  segment_peaks[i] = 0.0;
-  for (;;) {
-    mpc_frame_info frame;
-    frame.buffer = buffer;
-    err = mpc_demux_decode(demux, &frame);
-    if (frame.bits == -1) break;
-
-    if (!frame.samples) break;
-    if (tag_rg) {
-      size_t j;
-      for (j = 0; j < (size_t) frame.samples * st->channels; ++j) {
-        if (buffer[j] > segment_peaks[i])
-          segment_peaks[i] = buffer[j];
-        else if (-buffer[j] > segment_peaks[i])
-          segment_peaks[i] = -buffer[j];
-      }
-    }
-    result = ebur128_add_frames_float(st, buffer, (size_t) frame.samples);
-    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, demux_exit)
+  ih->demux = mpc_demux_init(&ih->reader);
+  if (!ih->demux) {
+    return 1;
   }
+  mpc_demux_get_info(ih->demux, &ih->si);
+  return 0;
+}
 
-  segment_loudness[i] = ebur128_loudness_global(st);
-  fprintf(stderr, "*");
+int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+  return 1;
+}
 
-demux_exit:
-  mpc_demux_exit(demux);
-reader_exit:
-  mpc_reader_exit_stdio(&reader);
+void input_handle_destroy(struct input_handle** ih) {
+  free(*ih);
+  *ih = NULL;
+}
 
-  gd->errcode = errcode;
+int input_allocate_buffer(struct input_handle* ih) {
+  return 0;
+}
+
+size_t input_read_frames(struct input_handle* ih) {
+  mpc_frame_info frame;
+  frame.buffer = ih->buffer;
+  mpc_demux_decode(ih->demux, &frame);
+  if (frame.bits == -1) return 0;
+
+  return frame.samples;
+}
+
+int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+  return 0;
+}
+
+void input_free_buffer(struct input_handle* ih) {
+  return;
+}
+
+void input_close_file(struct input_handle* ih) {
+  mpc_demux_exit(ih->demux);
+  mpc_reader_exit_stdio(&ih->reader);
+}
+
+int input_init_library() {
+  return 0;
+}
+
+void input_exit_library() {
+  return;
 }
