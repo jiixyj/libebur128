@@ -47,10 +47,12 @@ int input_open_file(struct input_handle* ih, const char* filename) {
   g_mutex_lock(ffmpeg_mutex);
   if (av_open_input_file(&ih->format_context, filename, NULL, 0, NULL) != 0) {
     fprintf(stderr, "Could not open input file!\n");
-    return;
+    g_mutex_unlock(ffmpeg_mutex);
+    return 1;
   }
   if (av_find_stream_info(ih->format_context) < 0) {
     fprintf(stderr, "Could not find stream info!\n");
+    g_mutex_unlock(ffmpeg_mutex);
     goto close_file;
   }
   // Dump information about file onto standard error
@@ -66,6 +68,7 @@ int input_open_file(struct input_handle* ih, const char* filename) {
   }
   if (ih->audio_stream == -1) {
     fprintf(stderr, "Could not find an audio stream in file!\n");
+    g_mutex_unlock(ffmpeg_mutex);
     goto close_file;
   }
   // Get a pointer to the codec context for the audio stream
@@ -74,15 +77,18 @@ int input_open_file(struct input_handle* ih, const char* filename) {
   ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
   if (ih->codec == NULL) {
     fprintf(stderr, "Could not find a decoder for the audio format!\n");
+    g_mutex_unlock(ffmpeg_mutex);
     goto close_file;
   }
   // Open codec
   if (avcodec_open(ih->codec_context, ih->codec) < 0) {
     fprintf(stderr, "Could not open the codec!\n");
+    g_mutex_unlock(ffmpeg_mutex);
     goto close_file;
   }
   g_mutex_unlock(ffmpeg_mutex);
   ih->need_new_frame = TRUE;
+  ih->old_data = NULL;
   return 0;
 
 close_file:
