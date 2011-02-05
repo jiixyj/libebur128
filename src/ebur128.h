@@ -70,7 +70,7 @@ int ebur128_set_channel(ebur128_state* st, int channel_number, int value);
 /* Note that the channel map will be reset when setting a different number of
  * channels. The current unfinished block will be lost.
  * Returns 1 on memory allocation error. The state will be invalid then.
- * Returns 2 if channels and samplerate where not changed. */
+ * Returns 2 if channels and samplerate were not changed. */
 int ebur128_change_parameters(ebur128_state* st,
                               int channels,
                               int samplerate);
