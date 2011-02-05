@@ -158,8 +158,12 @@ endif()
 ######################################
 include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi ${VALID_FLAGS}")
-if (${CMAKE_SIZEOF_VOID_P} EQUAL 4)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2 -mfpmath=sse")
+
+set(USE_SSE2 FALSE CACHE BOOL "Enable to build with SSE2")
+if(USE_SSE2)
+  if (${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2 -mfpmath=sse")
+  endif()
 endif()
 
 
@@ -276,6 +280,10 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FO
     set(CPACK_SYSTEM_NAME "win64")
   elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(CPACK_SYSTEM_NAME "Linux64")
+  elseif(WIN32 AND USE_SSE2)
+    set(CPACK_SYSTEM_NAME "win32-sse2")
+  elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND USE_SSE2)
+    set(CPACK_SYSTEM_NAME "Linux-sse2")
   endif()
 
   include(CPack)

@@ -33,8 +33,10 @@ Download
 * [Source (tar.gz)](libebur128-0.1.10-Source.tar.gz)
 * [Source (zip)](libebur128-0.1.10-Source.zip)
 * [Win32 build (zip)](libebur128-0.1.10-win32.zip)
+* [Win32 SSE2 build (zip)](libebur128-0.1.10-win32-sse2.zip)
 * [Win64 build (zip)](libebur128-0.1.10-win64.zip)
 * [Linux32 build (tar.gz)](libebur128-0.1.10-Linux.tar.gz)
+* [Linux32 SSE2 build (tar.gz)](libebur128-0.1.10-Linux-sse2.tar.gz)
 * [Linux64 build (tar.gz)](libebur128-0.1.10-Linux64.tar.gz)
 
 
