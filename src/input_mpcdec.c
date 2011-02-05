@@ -43,6 +43,8 @@ int input_open_file(struct input_handle* ih, const char* filename) {
 }
 
 int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+  (void) ih;
+  (void) st;
   return 1;
 }
 
@@ -52,6 +54,7 @@ void input_handle_destroy(struct input_handle** ih) {
 }
 
 int input_allocate_buffer(struct input_handle* ih) {
+  (void) ih;
   return 0;
 }
 
@@ -65,10 +68,13 @@ size_t input_read_frames(struct input_handle* ih) {
 }
 
 int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+  (void) ih;
+  (void) nr_frames_read_all;
   return 0;
 }
 
 void input_free_buffer(struct input_handle* ih) {
+  (void) ih;
   return;
 }
 

@@ -82,12 +82,14 @@ close_file:
 }
 
 int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+  (void) ih;
+  (void) st;
   return 1;
 }
 
 int input_allocate_buffer(struct input_handle* ih) {
-  ih->buffer = (float*) malloc(ih->mh_rate *
-                               ih->mh_channels *
+  ih->buffer = (float*) malloc((size_t) ih->mh_rate *
+                               (size_t) ih->mh_channels *
                                sizeof(float));
   if (ih->buffer) {
     return 0;
@@ -99,7 +101,8 @@ int input_allocate_buffer(struct input_handle* ih) {
 size_t input_read_frames(struct input_handle* ih) {
   size_t nr_frames_read;
   int result = mpg123_read(ih->mh, (unsigned char*) ih->buffer,
-                           ih->mh_rate * ih->mh_channels * sizeof(float),
+                           (size_t) ih->mh_rate *
+                           (size_t) ih->mh_channels * sizeof(float),
                            &nr_frames_read);
   if (result != MPG123_OK && result != MPG123_DONE) {
     if (result == MPG123_ERR && mpg123_errcode(ih->mh) == MPG123_RESYNC_FAIL) {
@@ -111,11 +114,13 @@ size_t input_read_frames(struct input_handle* ih) {
       return 0;
     }
   }
-  nr_frames_read /= ih->mh_channels * sizeof(float);
+  nr_frames_read /= (size_t) ih->mh_channels * sizeof(float);
   return nr_frames_read;
 }
 
 int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+  (void) ih;
+  (void) nr_frames_read_all;
   return 0;
 }
 

@@ -180,7 +180,7 @@ int interval_loudness(struct gain_data* gd, int no_files, int mode) {
   ebur128_state* st = NULL;
   float* buffer = NULL;
   size_t nr_frames_read;
-  size_t frames_counter, frames_needed;
+  size_t frames_counter = 0, frames_needed;
 
   CHECK_ERROR(input_init_library(),
               "Could not initialize input library!", 1, exit)
@@ -197,7 +197,6 @@ int interval_loudness(struct gain_data* gd, int no_files, int mode) {
                         input_get_samplerate(ih),
                         (size_t) mode);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
-      frames_counter = 0;
     } else {
       if (!ebur128_change_parameters(st, input_get_channels(ih),
                                          input_get_samplerate(ih))) {
@@ -216,9 +215,9 @@ int interval_loudness(struct gain_data* gd, int no_files, int mode) {
       ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
     }
 
-    frames_needed = ((mode == EBUR128_MODE_M) ? gd->momentary_interval
-                                              : gd->shortterm_interval) *
-                    st->samplerate;
+    frames_needed = (size_t) (((mode == EBUR128_MODE_M) ?
+                              gd->momentary_interval : gd->shortterm_interval) *
+                              (double) st->samplerate + 0.5);
 
     result = input_allocate_buffer(ih);
     CHECK_ERROR(result, "Could not allocate memory!\n", 1, close_file)

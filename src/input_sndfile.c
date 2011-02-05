@@ -78,8 +78,8 @@ int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
 }
 
 int input_allocate_buffer(struct input_handle* ih) {
-  ih->buffer = (float*) malloc(ih->file_info.samplerate *
-                               ih->file_info.channels *
+  ih->buffer = (float*) malloc((size_t) ih->file_info.samplerate *
+                               (size_t) ih->file_info.channels *
                                sizeof(float));
   if (ih->buffer) {
     return 0;
