@@ -97,5 +97,12 @@ of -23 LU).
 All scanners support loudness range measurement with the command line
 option "-r".
 
+Use the options "-s" and "-m" to print short-term (3s) or momentary (0.4s)
+loudness information to stdout. For example:
+
+    r128-sndfile -m 0.1 foo.wav
+
+to print the momentary loudness of foo.wav to stdout every 0.1s.
+
 For examples how to use the library, see ebur128.h, minimal-example.c,
 sndfile-example.c, mpg123-example, mpcdec-example.c and ffmpeg-example.c.
