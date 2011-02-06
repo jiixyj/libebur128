@@ -30,14 +30,14 @@ You need at least Python 2.4 and Mutagen for the ReplayGain tagging support.
 Download
 --------
 
-* [Source (tar.gz)](libebur128-0.1.11-Source.tar.gz)
-* [Source (zip)](libebur128-0.1.11-Source.zip)
-* [Win32 build (zip)](libebur128-0.1.11-win32.zip)
-* [Win32 SSE2 build (zip)](libebur128-0.1.11-win32-sse2.zip)
-* [Win64 build (zip)](libebur128-0.1.11-win64.zip)
-* [Linux32 build (tar.gz)](libebur128-0.1.11-Linux.tar.gz)
-* [Linux32 SSE2 build (tar.gz)](libebur128-0.1.11-Linux-sse2.tar.gz)
-* [Linux64 build (tar.gz)](libebur128-0.1.11-Linux64.tar.gz)
+* [Source (tar.gz)](libebur128-0.1.12-Source.tar.gz)
+* [Source (zip)](libebur128-0.1.12-Source.zip)
+* [Win32 build (zip)](libebur128-0.1.12-win32.zip)
+* [Win32 SSE2 build (zip)](libebur128-0.1.12-win32-sse2.zip)
+* [Win64 build (zip)](libebur128-0.1.12-win64.zip)
+* [Linux32 build (tar.gz)](libebur128-0.1.12-Linux.tar.gz)
+* [Linux32 SSE2 build (tar.gz)](libebur128-0.1.12-Linux-sse2.tar.gz)
+* [Linux64 build (tar.gz)](libebur128-0.1.12-Linux64.tar.gz)
 
 
 Installation
