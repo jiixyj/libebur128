@@ -520,7 +520,7 @@ double ebur128_loudness_shortterm(ebur128_state* st) {
 static int ebur128_double_cmp(const void *p1, const void *p2) {
   const double* d1 = (const double*) p1;
   const double* d2 = (const double*) p2;
-  return *d1 > *d2;
+  return (*d1 > *d2) - (*d1 < *d2);
 }
 
 /* EBU - TECH 3342 */
