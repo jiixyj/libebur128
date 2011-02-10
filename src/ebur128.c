@@ -133,57 +133,58 @@ int ebur128_init_channel_map(ebur128_state* st) {
 
 ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   int errcode;
-  ebur128_state* state;
+  ebur128_state* st;
 
-  state = (ebur128_state*) malloc(sizeof(ebur128_state));
-  CHECK_ERROR(!state, "Could not allocate memory!\n", 0, exit)
-  state->channels = (size_t) channels;
-  errcode = ebur128_init_channel_map(state);
+  st = (ebur128_state*) malloc(sizeof(ebur128_state));
+  CHECK_ERROR(!st, "Could not allocate memory!\n", 0, exit)
+  st->channels = (size_t) channels;
+  errcode = ebur128_init_channel_map(st);
   CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
-  state->samplerate = (size_t) samplerate;
-  state->mode = mode;
+  st->samplerate = (size_t) samplerate;
+  st->samples_in_200ms = (st->samplerate + 2) / 5;
+  st->mode = mode;
   if ((mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
-    state->audio_data_frames = state->samplerate * 3;
+    st->audio_data_frames = st->samples_in_200ms * 15;
   } else if ((mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
-    state->audio_data_frames = state->samplerate * 2 / 5;
+    st->audio_data_frames = st->samples_in_200ms * 2;
   } else {
     return NULL;
   }
-  state->audio_data = (double*) calloc(state->audio_data_frames *
-                                       state->channels,
+  st->audio_data = (double*) calloc(st->audio_data_frames *
+                                       st->channels,
                                        sizeof(double));
-  CHECK_ERROR(!state->audio_data, "Could not allocate memory!\n", 0,
+  CHECK_ERROR(!st->audio_data, "Could not allocate memory!\n", 0,
                                   free_channel_map)
-  errcode = ebur128_init_multi_array(&(state->v), state->channels, 5);
+  errcode = ebur128_init_multi_array(&(st->v), st->channels, 5);
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
-  errcode = ebur128_init_filter(state);
+  errcode = ebur128_init_filter(st);
   CHECK_ERROR(errcode, "Could not initialize filter!\n", 0, free_v)
 
-  SLIST_INIT(&state->block_list);
-  SLIST_INIT(&state->short_term_block_list);
-  state->short_term_frame_counter = 0;
-  state->block_counter = 0;
+  SLIST_INIT(&st->block_list);
+  SLIST_INIT(&st->short_term_block_list);
+  st->short_term_frame_counter = 0;
+  st->block_counter = 0;
 
   /* the first block needs 400ms of audio data */
-  state->needed_frames = state->samplerate * 2 / 5;
+  st->needed_frames = st->samples_in_200ms * 2;
   /* start at the beginning of the buffer */
-  state->audio_data_index = 0;
+  st->audio_data_index = 0;
 
   /* initialize static constants */
   minus_eight_decibels = pow(10, -8.0 / 10.0);
   minus_twenty_decibels = pow(10, -20.0 / 10.0);
   abs_threshold_energy = pow(10.0, (-70.0 + 0.691) / 10.0);
 
-  return state;
+  return st;
 
 free_v:
-  ebur128_release_multi_array(&(state->v), state->channels);
+  ebur128_release_multi_array(&(st->v), st->channels);
 free_audio_data:
-  free(state->audio_data);
+  free(st->audio_data);
 free_channel_map:
-  free(state->channel_map);
+  free(st->channel_map);
 free_state:
-  free(state);
+  free(st);
 exit:
   return NULL;
 }
@@ -334,9 +335,9 @@ int ebur128_change_parameters(ebur128_state* st,
     CHECK_ERROR(errcode, "Could not initialize filter!\n", 1, free_channel_map)
   }
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
-    st->audio_data_frames = st->samplerate * 3;
+    st->audio_data_frames = st->samples_in_200ms * 15;
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
-    st->audio_data_frames = st->samplerate * 2 / 5;
+    st->audio_data_frames = st->samples_in_200ms * 2;
   } else {
     return 1;
   }
@@ -349,7 +350,7 @@ int ebur128_change_parameters(ebur128_state* st,
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 1, free_audio_data)
 
   /* the first block needs 400ms of audio data */
-  st->needed_frames = st->samplerate * 2 / 5;
+  st->needed_frames = st->samples_in_200ms * 2;
   /* start at the beginning of the buffer */
   st->audio_data_index = 0;
   /* reset short term frame counter */
@@ -387,12 +388,13 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       st->audio_data_index += st->needed_frames * st->channels;                \
       /* calculate the new gating block */                                     \
       if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                     \
-        errcode = ebur128_calc_gating_block(st, st->samplerate * 2 / 5, NULL); \
+        errcode = ebur128_calc_gating_block(st,                                \
+                                            st->samples_in_200ms * 2, NULL);   \
         if (errcode == -1) return 1;                                           \
       }                                                                        \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->short_term_frame_counter += st->needed_frames;                     \
-        if (st->short_term_frame_counter == st->samplerate * 3) {              \
+        if (st->short_term_frame_counter == st->samples_in_200ms * 15) {       \
           double st_energy = ebur128_energy_shortterm(st);                     \
           struct ebur128_dq_entry* block;                                      \
           block = (struct ebur128_dq_entry*)                                   \
@@ -400,11 +402,11 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
           if (!block) return 1;                                                \
           block->z = st_energy;                                                \
           SLIST_INSERT_HEAD(&st->short_term_block_list, block, entries);       \
-          st->short_term_frame_counter = st->samplerate * 2;                   \
+          st->short_term_frame_counter = st->samples_in_200ms * 10;            \
         }                                                                      \
       }                                                                        \
       /* 200ms are needed for all blocks besides the first one */              \
-      st->needed_frames = st->samplerate / 5;                                  \
+      st->needed_frames = st->samples_in_200ms;                                \
       /* reset audio_data_index when buffer full */                            \
       if (st->audio_data_index == st->audio_data_frames * st->channels) {      \
         st->audio_data_index = 0;                                              \
@@ -429,7 +431,7 @@ EBUR128_ADD_FRAMES(double)
 void ebur128_start_new_segment(ebur128_state* st) {
   st->block_counter = 0;
   /* the first block needs 400ms of audio data */
-  st->needed_frames = st->samplerate * 2 / 5;
+  st->needed_frames = st->samples_in_200ms * 2;
   /* start at the beginning of the buffer */
   st->audio_data_index = 0;
   memset(st->audio_data, '\0', st->audio_data_frames *
@@ -504,12 +506,12 @@ double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
 }
 
 double ebur128_loudness_momentary(ebur128_state* st) {
-  double energy = ebur128_energy_in_interval(st, st->samplerate * 2 / 5);
+  double energy = ebur128_energy_in_interval(st, st->samples_in_200ms * 2);
   return ebur128_energy_to_loudness(energy);
 }
 
 double ebur128_energy_shortterm(ebur128_state* st) {
-  return ebur128_energy_in_interval(st, st->samplerate * 3);
+  return ebur128_energy_in_interval(st, st->samples_in_200ms * 15);
 }
 
 double ebur128_loudness_shortterm(ebur128_state* st) {

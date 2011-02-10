@@ -44,6 +44,7 @@ typedef struct {
   size_t channels;
   int* channel_map;
   size_t samplerate;
+  size_t samples_in_200ms;
   double* a;
   double* b;
   double** v;
