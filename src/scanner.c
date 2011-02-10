@@ -24,7 +24,8 @@ extern long nproc();
 struct gain_data {
   char* const* file_names;
   int calculate_lra, tag_rg, errcode;
-  double momentary_interval, shortterm_interval;
+  double interval;
+  int mode;
   ebur128_state** library_states;
   double* segment_loudness;
   double* segment_peaks;
@@ -175,7 +176,7 @@ exit:
   return errcode;
 }
 
-int interval_loudness(struct gain_data* gd, int no_files, int mode) {
+int interval_loudness(struct gain_data* gd, int no_files) {
   int errcode = 0, i, result;
   ebur128_state* st = NULL;
   float* buffer = NULL;
@@ -195,7 +196,7 @@ int interval_loudness(struct gain_data* gd, int no_files, int mode) {
     if (!st) {
       st = ebur128_init(input_get_channels(ih),
                         input_get_samplerate(ih),
-                        (size_t) mode);
+                        (size_t) gd->mode);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
     } else {
       if (!ebur128_change_parameters(st, input_get_channels(ih),
@@ -215,9 +216,7 @@ int interval_loudness(struct gain_data* gd, int no_files, int mode) {
       ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
     }
 
-    frames_needed = (size_t) (((mode == EBUR128_MODE_M) ?
-                              gd->momentary_interval : gd->shortterm_interval) *
-                              (double) st->samplerate + 0.5);
+    frames_needed = (size_t) (gd->interval * (double) st->samplerate + 0.5);
 
     result = input_allocate_buffer(ih);
     CHECK_ERROR(result, "Could not allocate memory!\n", 1, close_file)
@@ -232,9 +231,21 @@ int interval_loudness(struct gain_data* gd, int no_files, int mode) {
           tmp_buffer += (frames_needed - frames_counter) * st->channels;
           nr_frames_read -= frames_needed - frames_counter;
           frames_counter = 0;
-          printf("%f\n", (mode == EBUR128_MODE_M) ?
-                                        ebur128_loudness_momentary(st)
-                                      : ebur128_loudness_shortterm(st));
+          switch (gd->mode) {
+            case EBUR128_MODE_M:
+              printf("%f\n", ebur128_loudness_momentary(st));
+              break;
+            case EBUR128_MODE_S:
+              printf("%f\n", ebur128_loudness_shortterm(st));
+              break;
+            case EBUR128_MODE_I:
+              printf("%f\n", ebur128_loudness_global(st));
+              break;
+            default:
+              fprintf(stderr, "Invalid mode!\n");
+              goto free_buffer;
+              break;
+          }
         } else {
           result = ebur128_add_frames_float(st, tmp_buffer, nr_frames_read);
           CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
@@ -263,8 +274,8 @@ int main(int ac, char* const av[]) {
   struct gain_data gd;
   gd.calculate_lra = 0;
   gd.tag_rg = 0;
-  gd.momentary_interval = 0.0;
-  gd.shortterm_interval = 0.0;
+  gd.interval = 0.0;
+  gd.mode = 0;
 
   g_thread_init(NULL);
 
@@ -272,8 +283,9 @@ int main(int ac, char* const av[]) {
                       " -r: calculate loudness range in LRA\n"
                       " -m: display momentary loudness every INTERVAL seconds\n"
                       " -s: display shortterm loudness every INTERVAL seconds\n"
+                      " -i: display integrated loudness every INTERVAL seconds\n"
                       " -t: output ReplayGain tagging info\n", 1, exit)
-  while ((c = getopt(ac, av, "trm:s:")) != -1) {
+  while ((c = getopt(ac, av, "trm:s:i:")) != -1) {
     switch (c) {
       case 't':
         gd.tag_rg = 1;
@@ -282,23 +294,33 @@ int main(int ac, char* const av[]) {
         gd.calculate_lra = 1;
         break;
       case 'm':
-        gd.momentary_interval = atof(optarg);
-        if (gd.momentary_interval <= 0.0) {
+        gd.mode |= EBUR128_MODE_M;
+        gd.interval = atof(optarg);
+        if (gd.interval <= 0.0) {
           fprintf(stderr, "Invalid argument to -m!\n");
           return 1;
-        } else if (gd.momentary_interval > 0.4) {
+        } else if (gd.interval > 0.4) {
           fprintf(stderr, "Warning: you may lose samples when specifying "
                           "this interval!\n");
         }
         break;
       case 's':
-        gd.shortterm_interval = atof(optarg);
-        if (gd.shortterm_interval <= 0.0) {
+        gd.mode |= EBUR128_MODE_S;
+        gd.interval = atof(optarg);
+        if (gd.interval <= 0.0) {
           fprintf(stderr, "Invalid argument to -s!\n");
           return 1;
-        } else if (gd.shortterm_interval > 3.0) {
+        } else if (gd.interval > 3.0) {
           fprintf(stderr, "Warning: you may lose samples when specifying "
                           "this interval!\n");
+        }
+        break;
+      case 'i':
+        gd.mode |= EBUR128_MODE_I;
+        gd.interval = atof(optarg);
+        if (gd.interval <= 0.0) {
+          fprintf(stderr, "Invalid argument to -i!\n");
+          return 1;
         }
         break;
       default:
@@ -306,15 +328,15 @@ int main(int ac, char* const av[]) {
         break;
     }
   }
-  if (gd.momentary_interval > 0.0 && gd.shortterm_interval > 0.0) {
+  if (gd.mode != EBUR128_MODE_M && gd.mode != EBUR128_MODE_S &&
+      gd.mode != EBUR128_MODE_I && gd.mode != 0) {
     fprintf(stderr, "-m and -s can not be specified together!\n");
     return 1;
   }
 
   gd.file_names = &av[optind];
-  if (gd.momentary_interval > 0.0 || gd.shortterm_interval > 0.0) {
-    int mode = gd.momentary_interval > 0.0 ? EBUR128_MODE_M : EBUR128_MODE_S;
-    interval_loudness(&gd, ac - optind, mode);
+  if (gd.interval > 0.0) {
+    interval_loudness(&gd, ac - optind);
   } else {
     gd.segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
     gd.segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
