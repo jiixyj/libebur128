@@ -206,6 +206,14 @@ endif()
 ######################################
 ##### Install                    #####
 ######################################
+message(STATUS "'make package' status:")
+message(STATUS "glib-2.0:       ${GLIB_FOUND}")
+message(STATUS "gthread-2.0:    ${GTHREAD_FOUND}")
+message(STATUS "intl (gettext): ${INTL_FOUND}")
+message(STATUS "libsndfile:     ${SNDFILE_FOUND}")
+message(STATUS "libmpg123:      ${MPG123_FOUND}")
+message(STATUS "libmpcdec:      ${MPCDEC_FOUND}")
+message(STATUS "ffmpeg:         ${FFMPEG_FOUND}")
 if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   install(TARGETS r128-sndfile ${R128_FFMPEG} r128-mpg123 r128-musepack
           RUNTIME DESTINATION .
