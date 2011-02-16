@@ -242,9 +242,9 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND SNDFILE_FOUND AND MPG123_FOUN
   set(CPACK_PACKAGE_VERSION_MINOR "1")
   set(CPACK_PACKAGE_VERSION_PATCH "12")
 
-  set(CPACK_BINARY_ZIP ON)
-  set(CPACK_BINARY_NSIS OFF)
-  set(CPACK_SOURCE_ZIP ON)
+  set(CPACK_GENERATOR ZIP TGZ)
+  set(CPACK_SOURCE_GENERATOR ZIP TGZ)
+
   set(INCLUDE_BLACKLIST "include/mpc/;include/ffmpeg-0.5.3/;include/ffmpeg-0.6.1/;include/mpg123.h;include/sndfile.h")
   set(BUILDSCRIPT "build.sh")
   set(CPACK_SOURCE_IGNORE_FILES "${BUILDSCRIPT};build/;build32/;.git/;.gitignore;${INCLUDE_BLACKLIST};lib/;lib64/;mingw/;mingw64/;mingw-include/;lsb/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
