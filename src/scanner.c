@@ -9,6 +9,7 @@
 
 #include "./ebur128.h"
 #include "./input.h"
+#include "./rgtag.h"
 
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
@@ -160,6 +161,11 @@ int loudness_or_lra(struct gain_data* gd, int no_files) {
                                         gd->segment_peaks[i],
                                         -18.0 - gated_loudness,
                                         global_peak);
+        set_rg_info(gd->file_names[i], -18.0 - gd->segment_loudness[i],
+                                       gd->segment_peaks[i],
+                                       1,
+                                       -18.0 - gated_loudness,
+                                       global_peak);
       }
     }
   }
@@ -306,7 +312,7 @@ static gboolean parse_interval(const gchar *option_name,
 }
 
 static GOptionEntry entries[] = {
-  { "lra", 'r', 0, G_OPTION_ARG_NONE,
+  { "lra", 'l', 0, G_OPTION_ARG_NONE,
                  &gd.calculate_lra,
                  "calculate loudness range in LRA", NULL },
   { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK,
@@ -320,7 +326,7 @@ static GOptionEntry entries[] = {
                  "display integrated loudness every INTERVAL seconds", NULL },
   { "tagging", 't', 0, G_OPTION_ARG_NONE,
                  &gd.tag_rg,
-                 "output ReplayGain tagging info (for use in scripts)", NULL },
+                 "write ReplayGain tags to files", NULL },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &gd.file_names,
                  "<input>" , NULL},

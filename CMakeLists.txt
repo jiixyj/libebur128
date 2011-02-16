@@ -162,8 +162,13 @@ if(NOT WIN32)
   target_link_libraries(ebur128 m)
 endif()
 
-if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
+if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND TAGLIB_FOUND)
+  add_library(rgtag src/rgtag.cpp)
+  target_link_libraries(rgtag ${TAGLIB_LIBRARIES})
   add_library(nproc src/nproc.c)
+
+  set(SCANNER_LIBS ebur128 rgtag nproc)
+
   if(SNDFILE_FOUND)
     add_library(sndfile_input src/input_sndfile.c)
     target_link_libraries(sndfile_input ${SNDFILE_LIBRARIES})
@@ -172,7 +177,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
     add_executable(r128-sndfile src/scanner.c)
-    target_link_libraries(r128-sndfile ebur128 nproc sndfile_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+    target_link_libraries(r128-sndfile ${SCANNER_LIBS} sndfile_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 
     add_executable(r128-test-library src/tests.c)
     target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
@@ -183,7 +188,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     target_link_libraries(mpg123_input ${MPG123_LIBRARIES})
 
     add_executable(r128-mpg123 src/scanner.c)
-    target_link_libraries(r128-mpg123 ebur128 nproc mpg123_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+    target_link_libraries(r128-mpg123 ${SCANNER_LIBS} mpg123_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
   endif()
 
   if(MPCDEC_FOUND)
@@ -191,7 +196,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     target_link_libraries(musepack_input ${MPCDEC_LIBRARY})
 
     add_executable(r128-musepack src/scanner.c)
-    target_link_libraries(r128-musepack ebur128 nproc musepack_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+    target_link_libraries(r128-musepack ${SCANNER_LIBS} musepack_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
   endif()
 
   if(FLAG_STD_C99 AND FFMPEG_FOUND)
@@ -207,13 +212,9 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     set_target_properties(${FFMPEG_INPUT} PROPERTIES COMPILE_FLAGS "-std=c99")
 
     add_executable(${R128_FFMPEG} src/scanner.c)
-    target_link_libraries(${R128_FFMPEG} ebur128 nproc ${FFMPEG_INPUT} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+    target_link_libraries(${R128_FFMPEG} ${SCANNER_LIBS} ${FFMPEG_INPUT} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
   endif()
 
-  if(TAGLIB_FOUND)
-    add_executable(rgtag src/rgtag.cpp)
-    target_link_libraries(rgtag ${TAGLIB_LIBRARIES})
-  endif()
 endif()
 
 
