@@ -282,19 +282,22 @@ static gboolean parse_interval(const gchar *option_name,
   if (gd.interval <= 0.0) {
     return FALSE;
   }
-  if (!g_strcmp0(option_name, "-m") || !g_strcmp0(option_name, "--momentary")) {
+  if (!g_strcmp0(option_name, "-m") ||
+      !g_strcmp0(option_name, "--momentary")) {
     gd.mode = EBUR128_MODE_M;
     if (gd.interval > 0.4) {
       fprintf(stderr, "Warning: you may lose samples when specifying "
                       "this interval!\n");
     }
-  } else if (!g_strcmp0(option_name, "-s") || !g_strcmp0(option_name, "--shortterm")) {
+  } else if (!g_strcmp0(option_name, "-s") ||
+             !g_strcmp0(option_name, "--shortterm")) {
     gd.mode = EBUR128_MODE_S;
     if (gd.interval > 3.0) {
       fprintf(stderr, "Warning: you may lose samples when specifying "
                       "this interval!\n");
     }
-  } else if (!g_strcmp0(option_name, "-i") || !g_strcmp0(option_name, "--integrated")) {
+  } else if (!g_strcmp0(option_name, "-i") ||
+             !g_strcmp0(option_name, "--integrated")) {
     gd.mode = EBUR128_MODE_I;
   } else {
     return FALSE;
@@ -303,12 +306,24 @@ static gboolean parse_interval(const gchar *option_name,
 }
 
 static GOptionEntry entries[] = {
-  { "lra", 'r', 0, G_OPTION_ARG_NONE, &gd.calculate_lra, "calculate loudness range in LRA", NULL },
-  { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK, (void*) (size_t) &parse_interval, "display momentary loudness every INTERVAL seconds", NULL },
-  { "shortterm", 's', 0, G_OPTION_ARG_CALLBACK, (void*) (size_t) &parse_interval, "display shortterm loudness every INTERVAL seconds", NULL },
-  { "integrated", 'i', 0, G_OPTION_ARG_CALLBACK, (void*) (size_t) &parse_interval, "display integrated loudness every INTERVAL seconds", NULL },
-  { "tagging", 't', 0, G_OPTION_ARG_NONE, &gd.tag_rg, "output ReplayGain tagging info (for use in scripts)", NULL },
-  { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &gd.file_names, "<input>" , NULL},
+  { "lra", 'r', 0, G_OPTION_ARG_NONE,
+                 &gd.calculate_lra,
+                 "calculate loudness range in LRA", NULL },
+  { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK,
+                 (void*) (size_t) &parse_interval,
+                 "display momentary loudness every INTERVAL seconds", NULL },
+  { "shortterm", 's', 0, G_OPTION_ARG_CALLBACK,
+                 (void*) (size_t) &parse_interval,
+                 "display shortterm loudness every INTERVAL seconds", NULL },
+  { "integrated", 'i', 0, G_OPTION_ARG_CALLBACK,
+                 (void*) (size_t) &parse_interval,
+                 "display integrated loudness every INTERVAL seconds", NULL },
+  { "tagging", 't', 0, G_OPTION_ARG_NONE,
+                 &gd.tag_rg,
+                 "output ReplayGain tagging info (for use in scripts)", NULL },
+  { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
+                 &gd.file_names,
+                 "<input>" , NULL},
   { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
