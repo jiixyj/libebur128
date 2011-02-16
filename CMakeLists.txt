@@ -32,6 +32,12 @@ if(NOT WIN32)
 else()
   find_library(GLIB_LIBRARIES glib-2.0-0)
   find_library(GTHREAD_LIBRARIES gthread-2.0-0)
+  if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+    find_library(INTL_LIBRARIES intl)
+  endif()
+  if(INTL_LIBRARIES)
+    set(INTL_FOUND TRUE)
+  endif()
   find_path(GLIB_INCLUDE_DIR glib.h PATH_SUFFIXES glib-2.0)
   find_path(GLIB_LIB_INCLUDE_DIR glibconfig.h PATH_SUFFIXES ../lib/glib-2.0/include)
   if(GLIB_LIBRARIES AND GTHREAD_LIBRARIES AND GLIB_INCLUDE_DIR AND GLIB_LIB_INCLUDE_DIR)
@@ -144,7 +150,7 @@ if(NOT WIN32)
   target_link_libraries(ebur128 m)
 endif()
 
-if(GLIB_FOUND AND GTHREAD_FOUND)
+if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
   add_library(nproc src/nproc.c)
   if(SNDFILE_FOUND)
     add_library(sndfile_input src/input_sndfile.c)
@@ -197,7 +203,7 @@ endif()
 ######################################
 ##### Install                    #####
 ######################################
-if(GLIB_FOUND AND GTHREAD_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
+if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   install(TARGETS r128-sndfile ${R128_FFMPEG} r128-mpg123 r128-musepack
           RUNTIME DESTINATION .
           ARCHIVE DESTINATION lib)
@@ -208,27 +214,16 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FO
   endif()
   install(PROGRAMS src/rgtag.py src/r128-tag.py DESTINATION .)
   install(DIRECTORY doc/license DESTINATION .)
-  if(WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+  if(WIN32)
     install(FILES
-            mingw-lib64/avcodec-52.dll
-            mingw-lib64/avformat-52.dll
-            mingw-lib64/avutil-50.dll
-            mingw-lib64/libmpg123-0.dll
-            mingw-lib64/libsndfile-1.dll
-            mingw-lib64/libintl-8.dll
-            mingw-lib64/libglib-2.0-0.dll
-            mingw-lib64/libgthread-2.0-0.dll
-            DESTINATION .)
-  elseif(WIN32)
-    install(FILES
-            mingw-lib/avcodec-52.dll
-            mingw-lib/avformat-52.dll
-            mingw-lib/avutil-50.dll
-            mingw-lib/libmpg123-0.dll
-            mingw-lib/libsndfile-1.dll
-            mingw-lib/intl.dll
-            mingw-lib/libglib-2.0-0.dll
-            mingw-lib/libgthread-2.0-0.dll
+            ${LIBAVCODEC_LIBRARIES}
+            ${LIBAVFORMAT_LIBRARIES}
+            ${LIBAVUTIL_LIBRARIES}
+            ${MPG123_LIBRARIES}
+            ${SNDFILE_LIBRARIES}
+            ${INTL_LIBRARIES}
+            ${GLIB_LIBRARIES}
+            ${GTHREAD_LIBRARIES}
             DESTINATION .)
   endif()
 
