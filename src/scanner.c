@@ -1,11 +1,9 @@
 /* See LICENSE file for copyright and license details. */
-#define _POSIX_C_SOURCE 2
 #include <float.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 
 #include <glib.h>
 
@@ -22,7 +20,7 @@
 extern long nproc();
 
 struct gain_data {
-  char* const* file_names;
+  char** file_names;
   int calculate_lra, tag_rg, errcode;
   double interval;
   int mode;
@@ -269,81 +267,87 @@ exit:
   return errcode;
 }
 
-int main(int ac, char* const av[]) {
-  int errcode = 0, c;
+static struct gain_data gd;
 
-  struct gain_data gd;
+static gboolean parse_interval(const gchar *option_name,
+                               const gchar *value,
+                               gpointer data,
+                               GError **error) {
+  (void) data; (void) error;
+  if (gd.mode) {
+    fprintf(stderr, "-m, -s and -i can not be specified together!\n");
+    return FALSE;
+  }
+  gd.interval = atof(value);
+  if (gd.interval <= 0.0) {
+    return FALSE;
+  }
+  if (!g_strcmp0(option_name, "-m") || !g_strcmp0(option_name, "--momentary")) {
+    gd.mode = EBUR128_MODE_M;
+    if (gd.interval > 0.4) {
+      fprintf(stderr, "Warning: you may lose samples when specifying "
+                      "this interval!\n");
+    }
+  } else if (!g_strcmp0(option_name, "-s") || !g_strcmp0(option_name, "--shortterm")) {
+    gd.mode = EBUR128_MODE_S;
+    if (gd.interval > 3.0) {
+      fprintf(stderr, "Warning: you may lose samples when specifying "
+                      "this interval!\n");
+    }
+  } else if (!g_strcmp0(option_name, "-i") || !g_strcmp0(option_name, "--integrated")) {
+    gd.mode = EBUR128_MODE_I;
+  } else {
+    return FALSE;
+  }
+  return TRUE;
+}
+
+static GOptionEntry entries[] = {
+  { "lra", 'r', 0, G_OPTION_ARG_NONE, &gd.calculate_lra, "calculate loudness range in LRA", NULL },
+  { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK, (void*) (size_t) &parse_interval, "display momentary loudness every INTERVAL seconds", NULL },
+  { "shortterm", 's', 0, G_OPTION_ARG_CALLBACK, (void*) (size_t) &parse_interval, "display shortterm loudness every INTERVAL seconds", NULL },
+  { "integrated", 'i', 0, G_OPTION_ARG_CALLBACK, (void*) (size_t) &parse_interval, "display integrated loudness every INTERVAL seconds", NULL },
+  { "tagging", 't', 0, G_OPTION_ARG_NONE, &gd.tag_rg, "output ReplayGain tagging info (for use in scripts)", NULL },
+  { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &gd.file_names, "<input>" , NULL},
+  { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
+};
+
+int main(int ac, char* av[]) {
+  int errcode = 0;
+  GError *error = NULL;
+  GOptionContext *context;
+
   gd.calculate_lra = 0;
   gd.tag_rg = 0;
   gd.interval = 0.0;
   gd.mode = 0;
+  gd.file_names = NULL;
 
-  g_thread_init(NULL);
+  context = g_option_context_new("- test tree model performance");
+  g_option_context_add_main_entries(context, entries, NULL);
+  g_option_context_parse(context, &ac, (gchar***) &av, &error);
+  g_option_context_free(context);
 
-  CHECK_ERROR(ac < 2, "usage: r128-test [-r] [-t] [-m|s INTERVAL] FILENAME(S) ...\n\n"
-                      " -r: calculate loudness range in LRA\n"
-                      " -m: display momentary loudness every INTERVAL seconds\n"
-                      " -s: display shortterm loudness every INTERVAL seconds\n"
-                      " -i: display integrated loudness every INTERVAL seconds\n"
-                      " -t: output ReplayGain tagging info\n", 1, exit)
-  while ((c = getopt(ac, av, "trm:s:i:")) != -1) {
-    switch (c) {
-      case 't':
-        gd.tag_rg = 1;
-        break;
-      case 'r':
-        gd.calculate_lra = 1;
-        break;
-      case 'm':
-        gd.mode |= EBUR128_MODE_M;
-        gd.interval = atof(optarg);
-        if (gd.interval <= 0.0) {
-          fprintf(stderr, "Invalid argument to -m!\n");
-          return 1;
-        } else if (gd.interval > 0.4) {
-          fprintf(stderr, "Warning: you may lose samples when specifying "
-                          "this interval!\n");
-        }
-        break;
-      case 's':
-        gd.mode |= EBUR128_MODE_S;
-        gd.interval = atof(optarg);
-        if (gd.interval <= 0.0) {
-          fprintf(stderr, "Invalid argument to -s!\n");
-          return 1;
-        } else if (gd.interval > 3.0) {
-          fprintf(stderr, "Warning: you may lose samples when specifying "
-                          "this interval!\n");
-        }
-        break;
-      case 'i':
-        gd.mode |= EBUR128_MODE_I;
-        gd.interval = atof(optarg);
-        if (gd.interval <= 0.0) {
-          fprintf(stderr, "Invalid argument to -i!\n");
-          return 1;
-        }
-        break;
-      default:
-        return 1;
-        break;
-    }
-  }
-  if (gd.mode != EBUR128_MODE_M && gd.mode != EBUR128_MODE_S &&
-      gd.mode != EBUR128_MODE_I && gd.mode != 0) {
-    fprintf(stderr, "-m and -s can not be specified together!\n");
+  if (error) {
+    fprintf(stderr, "%s\n", error->message);
     return 1;
   }
 
-  gd.file_names = &av[optind];
-  if (gd.interval > 0.0) {
-    interval_loudness(&gd, ac - optind);
-  } else {
-    gd.segment_loudness = calloc((size_t) (ac - optind), sizeof(double));
-    gd.segment_peaks = calloc((size_t) (ac - optind), sizeof(double));
-    gd.library_states = calloc((size_t) (ac - optind), sizeof(ebur128_state*));
+  if (!gd.file_names) {
+    fprintf(stderr, "Must specify at least one file name!\n");
+    return 1;
+  }
+  ac = (int) g_strv_length(gd.file_names);
 
-    if (loudness_or_lra(&gd, ac - optind)) {
+  g_thread_init(NULL);
+  if (gd.interval > 0.0) {
+    interval_loudness(&gd, ac);
+  } else {
+    gd.segment_loudness = calloc((size_t) ac, sizeof(double));
+    gd.segment_peaks = calloc((size_t) ac, sizeof(double));
+    gd.library_states = calloc((size_t) ac, sizeof(ebur128_state*));
+
+    if (loudness_or_lra(&gd, ac)) {
       errcode = 1;
     }
 
@@ -352,6 +356,6 @@ int main(int ac, char* const av[]) {
     free(gd.segment_peaks);
   }
 
-exit:
+
   return errcode;
 }
