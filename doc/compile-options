@@ -13,12 +13,12 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 
 FFmpeg (0.6.1 - win64):
 ./configure --enable-memalign-hack --target-os=mingw32 --arch=x86_64 \
-            --cross-prefix=x86_64-w64-mingw32- --enable-shared --disable-dxva2 \
-            --disable-zlib --disable-bzlib
+            --cross-prefix=amd64-mingw32msvc- --enable-shared --disable-dxva2 \
+            --disable-zlib --disable-bzlib --disable-swscale
 
 FFmpeg (0.6.1 - win32):
 ./configure --enable-memalign-hack --arch=x86 --target-os=mingw32 \
-            --cross-prefix=i486-mingw32- --enable-shared \
+            --cross-prefix=i586-mingw32msvc- --enable-shared \
             --disable-zlib --disable-bzlib
 
 FFmpeg (0.6.1 - lsb 4.0 64 bit):
@@ -51,12 +51,12 @@ FFmpeg (0.5.3 - lsb 4.0 32 bit):
 -DPRId64='\"lld\"' -DPRIx64='\"llx\"' -DPRIu64='\"llu\"' -DPRIdFAST16='\"d\"' \
 -DPRIdFAST32='\"d\"' -DPRIx8='\"x\"'"
 
-libmpcdec (r435 - win64):
-cmake .. -DCMAKE_TOOLCHAIN_FILE=x86_64-w64-mingw32.cmake \
+libmpcdec (r459 - win64):
+cmake .. -DCMAKE_TOOLCHAIN_FILE=amd64-mingw32msvc.cmake \
          -DCMAKE_BUILD_TYPE=Release
 
-libmpcdec (r435 - win32):
-cmake .. -DCMAKE_TOOLCHAIN_FILE=i486-mingw32.cmake \
+libmpcdec (r459 - win32):
+cmake .. -DCMAKE_TOOLCHAIN_FILE=i586-mingw32msvc.cmake \
          -DCMAKE_BUILD_TYPE=Release
 
 libmpcdec (r435 - linux & lsb 4.0 64 bit):
