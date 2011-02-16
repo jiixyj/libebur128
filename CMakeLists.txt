@@ -1,7 +1,7 @@
 ######################################
 ##### CMake environment setup    #####
 ######################################
-project(libebur128 C)
+project(libebur128)
 cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_MODULE_PATH ${${PROJECT_NAME}_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
@@ -116,6 +116,15 @@ else()
   message(STATUS "Could not find mpc include dir! Will not build mpcdec example.")
 endif()
 
+##### taglib
+if(NOT WIN32)
+  pkg_check_modules(TAGLIB taglib)
+  if(TAGLIB_FOUND)
+    include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
+    link_directories(${TAGLIB_LIBRARY_DIRS})
+  endif()
+endif()
+
 
 ######################################
 ##### Compiler setup             #####
@@ -199,6 +208,11 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
 
     add_executable(${R128_FFMPEG} src/scanner.c)
     target_link_libraries(${R128_FFMPEG} ebur128 nproc ${FFMPEG_INPUT} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+  endif()
+
+  if(TAGLIB_FOUND)
+    add_executable(rgtag src/rgtag.cpp)
+    target_link_libraries(rgtag ${TAGLIB_LIBRARIES})
   endif()
 endif()
 
