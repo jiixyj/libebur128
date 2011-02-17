@@ -57,16 +57,14 @@ typedef struct {
 ebur128_state* ebur128_init(int channels, int samplerate, size_t mode);
 int ebur128_destroy(ebur128_state** st);
 
-/* The length of channel_map should be equal to the number of channels.
- * The default is: {EBUR128_LEFT,
- *                  EBUR128_RIGHT,
- *                  EBUR128_CENTER,
- *                  EBUR128_UNUSED,
- *                  EBUR128_LEFT_SURROUND,
- *                  EBUR128_RIGHT_SURROUND} */
-void ebur128_set_channel_map(ebur128_state* st, int* channel_map);
 /* Set channel "channel_number" (zero based index) to value, where value is
- * from the "channels" enum. Returns 1 if channel_number is invalid. */
+ * from the "channels" enum. Returns 1 if channel_number is invalid.
+ * The default is: 0 - EBUR128_LEFT
+ *                 1 - EBUR128_RIGHT
+ *                 2 - EBUR128_CENTER
+ *                 3 - EBUR128_UNUSED
+ *                 4 - EBUR128_LEFT_SURROUND
+ *                 5 - EBUR128_RIGHT_SURROUND  */
 int ebur128_set_channel(ebur128_state* st, int channel_number, int value);
 /* Note that the channel map will be reset when setting a different number of
  * channels. The current unfinished block will be lost.

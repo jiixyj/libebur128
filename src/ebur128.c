@@ -297,11 +297,6 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
   }
 }
 
-void ebur128_set_channel_map(ebur128_state* st,
-                            int* channel_map) {
-  memcpy(st->channel_map, channel_map, st->channels * sizeof(int));
-}
-
 int ebur128_set_channel(ebur128_state* st, int channel_number, int value) {
   if (channel_number < 0 || (size_t) channel_number >= st->channels) {
     return 1;
