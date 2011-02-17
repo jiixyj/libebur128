@@ -171,7 +171,11 @@ if(NOT WIN32)
 endif()
 
 if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND TAGLIB_FOUND)
-  add_library(rgtag src/rgtag.cpp)
+  if(WIN32)
+    add_library(rgtag SHARED src/rgtag.cpp)
+  else()
+    add_library(rgtag src/rgtag.cpp)
+  endif()
   target_link_libraries(rgtag ${TAGLIB_LIBRARIES})
   add_library(nproc src/nproc.c)
 
