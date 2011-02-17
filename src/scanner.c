@@ -347,7 +347,7 @@ static GOptionEntry entries[] = {
 };
 
 int main(int ac, char* av[]) {
-  int errcode = 0;
+  int errcode = 0, i;
   GError *error = NULL;
   GOptionContext *context;
 
@@ -386,6 +386,14 @@ int main(int ac, char* av[]) {
   }
 
   ac = (int) g_strv_length(gd.file_names);
+
+  for (i = 0; i < ac; ++i) {
+    if (!g_file_test(gd.file_names[i], G_FILE_TEST_IS_REGULAR)) {
+      errcode = 1;
+      fprintf(stderr, "File %s does not exist!\n", gd.file_names[i]);
+    }
+  }
+  if (errcode) return 1;
 
   g_thread_init(NULL);
   if (gd.interval > 0.0) {
