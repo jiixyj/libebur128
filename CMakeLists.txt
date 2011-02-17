@@ -123,6 +123,13 @@ if(NOT WIN32)
     include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
     link_directories(${TAGLIB_LIBRARY_DIRS})
   endif()
+else()
+  find_library(TAGLIB_LIBRARIES tag)
+  find_path(TAGLIB_INCLUDE_DIR taglib.h PATH_SUFFIXES taglib)
+  if(TAGLIB_LIBRARIES AND TAGLIB_INCLUDE_DIR)
+    include_directories(SYSTEM ${TAGLIB_INCLUDE_DIR})
+    set(TAGLIB_FOUND TRUE)
+  endif()
 endif()
 
 
@@ -229,6 +236,7 @@ message(STATUS "libsndfile:     ${SNDFILE_FOUND}")
 message(STATUS "libmpg123:      ${MPG123_FOUND}")
 message(STATUS "libmpcdec:      ${MPCDEC_FOUND}")
 message(STATUS "ffmpeg:         ${FFMPEG_FOUND}")
+message(STATUS "taglib:         ${TAGLIB_FOUND}")
 if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
   install(TARGETS r128-sndfile ${R128_FFMPEG} r128-mpg123 r128-musepack
           RUNTIME DESTINATION .
@@ -250,6 +258,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND SNDFILE_FOUND AND MPG123_FOUN
             ${INTL_LIBRARIES}
             ${GLIB_LIBRARIES}
             ${GTHREAD_LIBRARIES}
+            ${TAGLIB_LIBRARIES}
             DESTINATION .)
   endif()
 
