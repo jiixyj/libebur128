@@ -128,7 +128,7 @@ int loudness_or_lra(struct gain_data* gd, int no_files) {
   if (no_files > 1) {
     for (i = 0; i < no_files; ++i) {
       /* if not NaN */
-      if (gd->segment_loudness[i] != gd->segment_loudness[i]) {
+      if (gd->segment_loudness[i] == gd->segment_loudness[i]) {
         fprintf(stderr, "\r");
         fprintf(stderr, "segment %d: %.2f LUFS\n", (int) i + 1,
                         gd->segment_loudness[i]);
