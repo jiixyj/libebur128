@@ -22,7 +22,8 @@ extern long nproc();
 
 struct gain_data {
   char** file_names;
-  int calculate_lra, tag_rg, errcode;
+  int calculate_lra, errcode;
+  char* tag_rg;
   double interval;
   int mode;
   ebur128_state** library_states;
@@ -36,7 +37,8 @@ void calculate_gain_of_file(void* user, void* user_data) {
   char* const* av = gd->file_names;
   double* segment_loudness = gd->segment_loudness;
   double* segment_peaks = gd->segment_peaks;
-  int calculate_lra = gd->calculate_lra, tag_rg = gd->tag_rg;
+  int calculate_lra = gd->calculate_lra;
+  char* tag_rg = gd->tag_rg;
 
   struct input_handle* ih = input_handle_init();
   size_t nr_frames_read, nr_frames_read_all = 0;
@@ -109,6 +111,10 @@ int loudness_or_lra(struct gain_data* gd, int no_files) {
   int errcode = 0, i, result;
   GThreadPool* pool;
 
+  gd->segment_loudness = calloc((size_t) no_files, sizeof(double));
+  gd->segment_peaks = calloc((size_t) no_files, sizeof(double));
+  gd->library_states = calloc((size_t) no_files, sizeof(ebur128_state*));
+
   CHECK_ERROR(input_init_library(),
               "Could not initialize input library!", 1, exit)
 
@@ -157,13 +163,17 @@ int loudness_or_lra(struct gain_data* gd, int no_files) {
         }
       }
       for (i = 0; i < no_files; ++i) {
-        printf("%.8f %.8f %.8f %.8f\n", -18.0 - gd->segment_loudness[i],
-                                        gd->segment_peaks[i],
-                                        -18.0 - gated_loudness,
-                                        global_peak);
+        printf("%s:\n%.8f %.8f", gd->file_names[i],
+                                 -18.0 - gd->segment_loudness[i],
+                                 gd->segment_peaks[i]);
+        if (!g_strcmp0(gd->tag_rg, "album")) {
+          printf(" %.8f %.8f", -18.0 - gated_loudness,
+                              global_peak);
+        }
+        printf("\n");
         set_rg_info(gd->file_names[i], -18.0 - gd->segment_loudness[i],
                                        gd->segment_peaks[i],
-                                       1,
+                                       !g_strcmp0(gd->tag_rg, "album") ? 1 : 0,
                                        -18.0 - gated_loudness,
                                        global_peak);
       }
@@ -178,6 +188,9 @@ int loudness_or_lra(struct gain_data* gd, int no_files) {
   input_exit_library();
 
 exit:
+  free(gd->library_states);
+  free(gd->segment_loudness);
+  free(gd->segment_peaks);
   return errcode;
 }
 
@@ -317,19 +330,19 @@ static GOptionEntry entries[] = {
                  "calculate loudness range in LRA", NULL },
   { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
-                 "display momentary loudness every INTERVAL seconds", NULL },
+                 "print momentary loudness every INTERVAL seconds", "INTERVAL" },
   { "shortterm", 's', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
-                 "display shortterm loudness every INTERVAL seconds", NULL },
+                 "print shortterm loudness every INTERVAL seconds", "INTERVAL" },
   { "integrated", 'i', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
-                 "display integrated loudness every INTERVAL seconds", NULL },
-  { "tagging", 't', 0, G_OPTION_ARG_NONE,
+                 "print integrated loudness every INTERVAL seconds", "INTERVAL" },
+  { "tagging", 't', 0, G_OPTION_ARG_STRING,
                  &gd.tag_rg,
-                 "write ReplayGain tags to files", NULL },
+                 "write ReplayGain tags to files", "album|track" },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &gd.file_names,
-                 "<input>" , NULL},
+                 "<input>" , "FILE...|DIRECTORY"},
   { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
@@ -339,12 +352,12 @@ int main(int ac, char* av[]) {
   GOptionContext *context;
 
   gd.calculate_lra = 0;
-  gd.tag_rg = 0;
+  gd.tag_rg = NULL;
   gd.interval = 0.0;
   gd.mode = 0;
   gd.file_names = NULL;
 
-  context = g_option_context_new("- test tree model performance");
+  context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
   g_option_context_parse(context, &ac, &av, &error);
   g_option_context_free(context);
@@ -358,25 +371,24 @@ int main(int ac, char* av[]) {
     fprintf(stderr, "Must specify at least one file name!\n");
     return 1;
   }
+
+  if (gd.tag_rg &&
+      g_strcmp0(gd.tag_rg, "album") &&
+      g_strcmp0(gd.tag_rg, "track")) {
+    fprintf(stderr, "Invalid argument to --tagging!\n");
+    return 1;
+  }
+
   ac = (int) g_strv_length(gd.file_names);
 
   g_thread_init(NULL);
   if (gd.interval > 0.0) {
     interval_loudness(&gd, ac);
   } else {
-    gd.segment_loudness = calloc((size_t) ac, sizeof(double));
-    gd.segment_peaks = calloc((size_t) ac, sizeof(double));
-    gd.library_states = calloc((size_t) ac, sizeof(ebur128_state*));
-
     if (loudness_or_lra(&gd, ac)) {
       errcode = 1;
     }
-
-    free(gd.library_states);
-    free(gd.segment_loudness);
-    free(gd.segment_peaks);
   }
-
 
   return errcode;
 }
