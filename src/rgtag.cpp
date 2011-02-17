@@ -136,6 +136,8 @@ void set_rg_info(const char* filename,
     } else {
       xiph->removeField("replaygain_album_gain");
       xiph->removeField("replaygain_album_peak");
+      xiph->removeField("REPLAYGAIN_ALBUM_GAIN");
+      xiph->removeField("REPLAYGAIN_ALBUM_PEAK");
     }
     file->save();
     delete file;
@@ -159,6 +161,8 @@ void set_rg_info(const char* filename,
     } else {
       ape->removeItem("replaygain_album_gain");
       ape->removeItem("replaygain_album_peak");
+      ape->removeItem("REPLAYGAIN_ALBUM_GAIN");
+      ape->removeItem("REPLAYGAIN_ALBUM_PEAK");
     }
     file->save();
     delete file;
