@@ -360,7 +360,6 @@ int main(int ac, char* av[]) {
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
   g_option_context_parse(context, &ac, &av, &error);
-  g_option_context_free(context);
 
   if (error) {
     fprintf(stderr, "%s\n", error->message);
@@ -368,9 +367,16 @@ int main(int ac, char* av[]) {
   }
 
   if (!gd.file_names) {
-    fprintf(stderr, "Must specify at least one file name!\n");
+#if GLIB_CHECK_VERSION(2, 14, 0)
+    gchar* help = g_option_context_get_help(context, FALSE, NULL);
+    fprintf(stderr, "%s", help);
+#else
+    fprintf(stderr, "Get help with -h or --help.\n");
+#endif
+    g_option_context_free(context);
     return 1;
   }
+  g_option_context_free(context);
 
   if (gd.tag_rg &&
       g_strcmp0(gd.tag_rg, "album") &&
