@@ -31,12 +31,11 @@ int main(int ac, const char* av[]) {
 
   /* example: set channel map (note: see ebur128.h for the default map) */
   if (file_info.channels == 5) {
-    int channel_map_five[] = {EBUR128_LEFT,
-                              EBUR128_RIGHT,
-                              EBUR128_CENTER,
-                              EBUR128_LEFT_SURROUND,
-                              EBUR128_RIGHT_SURROUND};
-    ebur128_set_channel_map(st, channel_map_five);
+    ebur128_set_channel(st, 0, EBUR128_LEFT);
+    ebur128_set_channel(st, 1, EBUR128_RIGHT);
+    ebur128_set_channel(st, 2, EBUR128_CENTER);
+    ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
+    ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
 
   buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
