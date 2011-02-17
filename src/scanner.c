@@ -346,7 +346,7 @@ int main(int ac, char* av[]) {
 
   context = g_option_context_new("- test tree model performance");
   g_option_context_add_main_entries(context, entries, NULL);
-  g_option_context_parse(context, &ac, (gchar***) &av, &error);
+  g_option_context_parse(context, &ac, &av, &error);
   g_option_context_free(context);
 
   if (error) {
