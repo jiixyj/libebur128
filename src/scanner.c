@@ -21,9 +21,10 @@
 extern long nproc();
 
 struct gain_data {
-  char** file_names;
+  GArray* file_names;
   int calculate_lra, errcode;
-  char* tag_rg;
+  char* tag_rg;                    /* NULL, "album" or "track" */
+  int recursive_scan;
   double interval;
   int mode;
   ebur128_state** library_states;
@@ -31,14 +32,11 @@ struct gain_data {
   double* segment_peaks;
 };
 
+/* Calculates gain and peak of i-th file in the gain_data struct.
+ * This function will be in a GThreadPool. */
 void calculate_gain_of_file(void* user, void* user_data) {
   struct gain_data* gd = (struct gain_data*) user_data;
   size_t i = (size_t) user - 1;
-  char* const* av = gd->file_names;
-  double* segment_loudness = gd->segment_loudness;
-  double* segment_peaks = gd->segment_peaks;
-  int calculate_lra = gd->calculate_lra;
-  char* tag_rg = gd->tag_rg;
 
   struct input_handle* ih = input_handle_init();
   size_t nr_frames_read, nr_frames_read_all = 0;
@@ -48,14 +46,17 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode, result;
 
-  segment_loudness[i] = 0.0 / 0.0;
-  result = input_open_file(ih, av[i]);
-  CHECK_ERROR(result, "Could not open file!\n", 1, endloop)
+  gd->segment_loudness[i] = 0.0 / 0.0;
+  result = input_open_file(ih, g_array_index(gd->file_names, char*, i));
+  if (result) {
+    errcode = 1;
+    goto endloop;
+  }
 
   st = ebur128_init(input_get_channels(ih),
                     input_get_samplerate(ih),
                     EBUR128_MODE_I |
-                    (calculate_lra ? EBUR128_MODE_LRA : 0));
+                    (gd->calculate_lra ? EBUR128_MODE_LRA : 0));
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
   gd->library_states[i] = st;
 
@@ -72,16 +73,16 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   result = input_allocate_buffer(ih);
   CHECK_ERROR(result, "Could not allocate memory!\n", 1, close_file)
-  segment_peaks[i] = 0.0;
+  gd->segment_peaks[i] = 0.0;
   buffer = input_get_buffer(ih);
   while ((nr_frames_read = input_read_frames(ih))) {
-    if (tag_rg) {
+    if (gd->tag_rg) {
       size_t j;
       for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
-        if (buffer[j] > segment_peaks[i])
-          segment_peaks[i] = buffer[j];
-        else if (-buffer[j] > segment_peaks[i])
-          segment_peaks[i] = -buffer[j];
+        if (buffer[j] > gd->segment_peaks[i])
+          gd->segment_peaks[i] = buffer[j];
+        else if (-buffer[j] > gd->segment_peaks[i])
+          gd->segment_peaks[i] = -buffer[j];
       }
     }
     nr_frames_read_all += nr_frames_read;
@@ -93,7 +94,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
                             " or determine right length!\n");
   }
 
-  segment_loudness[i] = ebur128_loudness_global(st);
+  gd->segment_loudness[i] = ebur128_loudness_global(st);
   fprintf(stderr, "*");
 
 free_buffer:
@@ -107,13 +108,19 @@ endloop:
   gd->errcode = errcode;
 }
 
-int loudness_or_lra(struct gain_data* gd, int no_files) {
-  int errcode = 0, i, result;
+int loudness_or_lra(struct gain_data* gd) {
+  int errcode = 0;
+  size_t i;
+  double gated_loudness;
   GThreadPool* pool;
 
-  gd->segment_loudness = calloc((size_t) no_files, sizeof(double));
-  gd->segment_peaks = calloc((size_t) no_files, sizeof(double));
-  gd->library_states = calloc((size_t) no_files, sizeof(ebur128_state*));
+  if (!gd->file_names->len) {
+    return 2;
+  }
+
+  gd->segment_loudness = calloc(gd->file_names->len, sizeof(double));
+  gd->segment_peaks = calloc(gd->file_names->len, sizeof(double));
+  gd->library_states = calloc(gd->file_names->len, sizeof(ebur128_state*));
 
   CHECK_ERROR(input_init_library(),
               "Could not initialize input library!", 1, exit)
@@ -121,66 +128,66 @@ int loudness_or_lra(struct gain_data* gd, int no_files) {
   pool = g_thread_pool_new(calculate_gain_of_file, gd, (int) nproc(),
                            FALSE, NULL);
 
-  for (i = 0; i < no_files; ++i) {
+  fprintf(stderr, "\n");
+  for (i = 0; i < gd->file_names->len; ++i) {
     g_thread_pool_push(pool, GINT_TO_POINTER(i + 1), NULL);
   }
   g_thread_pool_free(pool, FALSE, TRUE);
-  if (no_files > 1) {
-    for (i = 0; i < no_files; ++i) {
+  if (gd->file_names->len > 1) {
+    for (i = 0; i < gd->file_names->len; ++i) {
       /* if not NaN */
       if (gd->segment_loudness[i] == gd->segment_loudness[i]) {
-        fprintf(stderr, "\r");
-        fprintf(stderr, "segment %d: %.2f LUFS\n", (int) i + 1,
-                        gd->segment_loudness[i]);
+        fprintf(stderr, "\r%3.2f LUFS (%s)\n",
+                        gd->segment_loudness[i],
+                        g_array_index(gd->file_names, char*, i));
+      } else {
+        fprintf(stderr, "\rignoring %s\n",
+                        g_array_index(gd->file_names, char*, i));
       }
     }
   }
 
-  result = 1;
-  for (i = 0; i < no_files; ++i) {
-    if (!gd->library_states[i]) {
-      result = 0;
-    }
+  gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
+                                                    gd->file_names->len);
+  fprintf(stderr, "\rglobal loudness: %.2f LUFS\n", gated_loudness);
+
+  if (gd->calculate_lra) {
+    fprintf(stderr, "LRA: %.2f\n",
+            ebur128_loudness_range_multiple(gd->library_states,
+                                            gd->file_names->len));
   }
 
-  if (result) {
-    double gated_loudness;
-    gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
-                                                      (size_t) (no_files));
-    fprintf(stderr, "\rglobal loudness: %.2f LUFS\n", gated_loudness);
-
-    if (gd->calculate_lra) {
-      fprintf(stderr, "LRA: %.2f\n",
-              ebur128_loudness_range_multiple(gd->library_states,
-                                              (size_t) (no_files)));
-    }
-
-    if (gd->tag_rg) {
-      double global_peak = 0.0;
-      for (i = 0; i < no_files; ++i) {
-        if (gd->segment_peaks[i] > global_peak) {
-          global_peak = gd->segment_peaks[i];
-        }
+  if (gd->tag_rg) {
+    double global_peak = 0.0;
+    fprintf(stderr, "tagging...\n");
+    for (i = 0; i < gd->file_names->len; ++i) {
+      if (gd->segment_peaks[i] > global_peak) {
+        global_peak = gd->segment_peaks[i];
       }
-      for (i = 0; i < no_files; ++i) {
-        printf("%s:\n%.8f %.8f", gd->file_names[i],
+    }
+    for (i = 0; i < gd->file_names->len; ++i) {
+      if (gd->library_states[i]) {
+        #if 0
+        printf("%s:\n%.8f %.8f", g_array_index(gd->file_names, char*, i),
                                  -18.0 - gd->segment_loudness[i],
                                  gd->segment_peaks[i]);
         if (!g_strcmp0(gd->tag_rg, "album")) {
           printf(" %.8f %.8f", -18.0 - gated_loudness,
-                              global_peak);
+                               global_peak);
         }
         printf("\n");
-        set_rg_info(gd->file_names[i], -18.0 - gd->segment_loudness[i],
-                                       gd->segment_peaks[i],
-                                       !g_strcmp0(gd->tag_rg, "album") ? 1 : 0,
-                                       -18.0 - gated_loudness,
-                                       global_peak);
+        #endif
+        set_rg_info(g_array_index(gd->file_names, char*, i),
+                    -18.0 - gd->segment_loudness[i],
+                    gd->segment_peaks[i],
+                    !g_strcmp0(gd->tag_rg, "album") ? 1 : 0,
+                    -18.0 - gated_loudness,
+                    global_peak);
       }
     }
   }
 
-  for (i = 0; i < no_files; ++i) {
+  for (i = 0; i < gd->file_names->len; ++i) {
     if (gd->library_states[i]) {
       ebur128_destroy(&gd->library_states[i]);
     }
@@ -194,8 +201,9 @@ exit:
   return errcode;
 }
 
-int interval_loudness(struct gain_data* gd, int no_files) {
-  int errcode = 0, i, result;
+int scan_files_interval_loudness(struct gain_data* gd) {
+  int errcode = 0, result;
+  size_t i;
   ebur128_state* st = NULL;
   float* buffer = NULL;
   size_t nr_frames_read;
@@ -205,11 +213,14 @@ int interval_loudness(struct gain_data* gd, int no_files) {
               "Could not initialize input library!", 1, exit)
 
 
-  for (i = 0; i < no_files; ++i) {
+  for (i = 0; i < gd->file_names->len; ++i) {
     struct input_handle* ih = input_handle_init();
 
-    result = input_open_file(ih, gd->file_names[i]);
-    CHECK_ERROR(result, "Could not open file!\n", 1, endloop)
+    result = input_open_file(ih, g_array_index(gd->file_names, char*, i));
+    if (result) {
+      errcode = 1;
+      goto endloop;
+    }
 
     if (!st) {
       st = ebur128_init(input_get_channels(ih),
@@ -286,6 +297,41 @@ exit:
   return errcode;
 }
 
+int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
+  int errcode = 0;
+  size_t i;
+  GArray* regular_files = g_array_new(FALSE, TRUE, sizeof(char*));
+  for (i = 0; i < gdt->file_names->len; ++i) {
+    const char* fn = g_array_index(gdt->file_names, char*, i);
+    if (g_file_test(fn, G_FILE_TEST_IS_REGULAR)) {
+      char* foo = g_strdup(fn);
+      g_array_append_val(regular_files, foo);
+    } else if (depth && g_file_test(fn, G_FILE_TEST_IS_DIR)) {
+      GArray* files_in_new_dir = g_array_new(FALSE, TRUE, sizeof(char*));
+      GDir* dir = g_dir_open(fn, 0, NULL);
+      const char* dir_file = NULL;
+      while ((dir_file = g_dir_read_name(dir))) {
+        char* foo = g_build_filename(fn, dir_file, NULL);
+        g_array_append_val(files_in_new_dir, foo);
+      }
+      {
+        GArray* old_file_names = gdt->file_names;
+        gdt->file_names = files_in_new_dir;
+        errcode = scan_files_gated_loudness_or_lra(gdt, depth - 1);
+        gdt->file_names = old_file_names;
+      }
+    }
+  }
+  {
+    GArray* old_file_names = gdt->file_names;
+    gdt->file_names = regular_files;
+    errcode = loudness_or_lra(gdt);
+    gdt->file_names = old_file_names;
+  }
+
+  return errcode;
+}
+
 static struct gain_data gd;
 
 static gboolean parse_interval(const gchar *option_name,
@@ -324,6 +370,7 @@ static gboolean parse_interval(const gchar *option_name,
   return TRUE;
 }
 
+static char** file_names = NULL;
 static GOptionEntry entries[] = {
   { "lra", 'l', 0, G_OPTION_ARG_NONE,
                  &gd.calculate_lra,
@@ -340,14 +387,46 @@ static GOptionEntry entries[] = {
   { "tagging", 't', 0, G_OPTION_ARG_STRING,
                  &gd.tag_rg,
                  "write ReplayGain tags to files", "album|track" },
+  { "recursive", 'r', 0, G_OPTION_ARG_NONE,
+                 &gd.recursive_scan,
+                 "scan directory recursively, one album per folder", NULL },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
-                 &gd.file_names,
+                 &file_names,
                  "<input>" , "FILE...|DIRECTORY"},
   { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
+int test_files_in_gd(struct gain_data* gdata, size_t ac, int test) {
+  int errcode = 0;
+  size_t i;
+  for (i = 0; i < ac; ++i) {
+    if (!g_file_test(g_array_index(gdata->file_names, char*, i),
+                     G_FILE_TEST_EXISTS)) {
+      errcode = 1;
+      switch (test) {
+        case G_FILE_TEST_EXISTS:
+          fprintf(stderr, "File or directory %s does not exist!\n",
+                          g_array_index(gdata->file_names, char*, i));
+          break;
+        case G_FILE_TEST_IS_DIR:
+          fprintf(stderr, "%s is not a directory!\n",
+                          g_array_index(gdata->file_names, char*, i));
+          break;
+        case G_FILE_TEST_IS_REGULAR:
+          fprintf(stderr, "%s is not a regular file!\n",
+                          g_array_index(gdata->file_names, char*, i));
+          break;
+        default:
+          return 2;
+      }
+    }
+  }
+  return errcode;
+}
+
 int main(int ac, char* av[]) {
-  int errcode = 0, i;
+  int errcode = 0;
+  size_t i = 0, nr_files = 0;
   GError *error = NULL;
   GOptionContext *context;
 
@@ -356,6 +435,7 @@ int main(int ac, char* av[]) {
   gd.interval = 0.0;
   gd.mode = 0;
   gd.file_names = NULL;
+  gd.recursive_scan = FALSE;
 
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
@@ -366,7 +446,14 @@ int main(int ac, char* av[]) {
     return 1;
   }
 
-  if (!gd.file_names) {
+  if (gd.tag_rg &&
+      g_strcmp0(gd.tag_rg, "album") &&
+      g_strcmp0(gd.tag_rg, "track")) {
+    fprintf(stderr, "Invalid argument to --tagging!\n");
+    return 1;
+  }
+
+  if (!file_names) {
 #if GLIB_CHECK_VERSION(2, 14, 0)
     gchar* help = g_option_context_get_help(context, FALSE, NULL);
     fprintf(stderr, "%s", help);
@@ -378,31 +465,34 @@ int main(int ac, char* av[]) {
   }
   g_option_context_free(context);
 
-  if (gd.tag_rg &&
-      g_strcmp0(gd.tag_rg, "album") &&
-      g_strcmp0(gd.tag_rg, "track")) {
-    fprintf(stderr, "Invalid argument to --tagging!\n");
-    return 1;
+  /* Put all filenames in the file name GArray in gd. */
+  nr_files = g_strv_length(file_names);
+  gd.file_names = g_array_new(FALSE, TRUE, sizeof(char*));
+  for (i = 0; i < nr_files; ++i) {
+    char* fn = g_strdup(file_names[i]);
+    g_array_append_val(gd.file_names, fn);
   }
-
-  ac = (int) g_strv_length(gd.file_names);
-
-  for (i = 0; i < ac; ++i) {
-    if (!g_file_test(gd.file_names[i], G_FILE_TEST_IS_REGULAR)) {
-      errcode = 1;
-      fprintf(stderr, "File %s does not exist!\n", gd.file_names[i]);
-    }
-  }
-  if (errcode) return 1;
 
   g_thread_init(NULL);
   if (gd.interval > 0.0) {
-    interval_loudness(&gd, ac);
+    if (test_files_in_gd(&gd, nr_files, G_FILE_TEST_IS_REGULAR)) {
+      return 1;
+    } else {
+      errcode = scan_files_interval_loudness(&gd);
+    }
   } else {
-    if (loudness_or_lra(&gd, ac)) {
-      errcode = 1;
+    if (test_files_in_gd(&gd, nr_files, G_FILE_TEST_EXISTS)) {
+      return 1;
+    } else {
+      errcode = scan_files_gated_loudness_or_lra(&gd, !gd.recursive_scan);
     }
   }
+
+  /* Free the file name GArray in gd. */
+  for (i = 0; i < gd.file_names->len; ++i) {
+    g_free(g_array_index(gd.file_names, char*, i));
+  }
+  g_array_free(gd.file_names, TRUE);
 
   return errcode;
 }
