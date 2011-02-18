@@ -14,6 +14,8 @@ set(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
 include(FindPkgConfig)
 if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
   set(LSB_COMPILER_FOUND TRUE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--allow-shlib-undefined")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-shlib-undefined")
 endif()
 
 ##### glib
@@ -138,7 +140,7 @@ endif()
 include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
 CHECK_C_COMPILER_FLAG("-ansi" FLAG_ANSI)
 if(FLAG_ANSI)
-  set(CMAKE_C_FLAGS "-ansi")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi")
 endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
 
