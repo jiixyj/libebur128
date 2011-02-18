@@ -449,12 +449,13 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
   size_t i;
 
   for (i = 0; i < size; i++) {
-    if ((sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) {
+    if (sts[i] && (sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) {
       return 0.0 / 0.0;
     }
   }
 
   for (i = 0; i < size; i++) {
+    if (!sts[i]) continue;
     SLIST_FOREACH(it, &sts[i]->block_list, entries) {
       if (above_thresh_counter >= block_count) break;
       ++above_thresh_counter;
@@ -466,6 +467,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
   relative_threshold *= minus_eight_decibels;
   above_thresh_counter = 0;
   for (i = 0; i < size; i++) {
+    if (!sts[i]) continue;
     SLIST_FOREACH(it, &sts[i]->block_list, entries) {
       if (block_count == 0) break;
       if (it->z >= relative_threshold) {
@@ -535,12 +537,13 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
   double h_en, l_en;
 
   for (i = 0; i < size; ++i) {
-    if ((sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
+    if (sts[i] && (sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
       return 0.0 / 0.0;
     }
   }
 
   for (i = 0; i < size; ++i) {
+    if (!sts[i]) continue;
     SLIST_FOREACH(it, &sts[i]->short_term_block_list, entries) {
       ++stl_size;
     }
@@ -550,6 +553,7 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
   if (!stl_vector) return 0.0 / 0.0;
   j = 0;
   for (i = 0; i < size; ++i) {
+    if (!sts[i]) continue;
     SLIST_FOREACH(it, &sts[i]->short_term_block_list, entries) {
       stl_vector[j] = it->z;
       ++j;
