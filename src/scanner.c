@@ -171,7 +171,7 @@ int loudness_or_lra(struct gain_data* gd) {
         printf("%s:\n%.8f %.8f", g_array_index(gd->file_names, char*, i),
                                  -18.0 - gd->segment_loudness[i],
                                  gd->segment_peaks[i]);
-        if (!g_strcmp0(gd->tag_rg, "album")) {
+        if (!strcmp(gd->tag_rg, "album")) {
           printf(" %.8f %.8f", -18.0 - gated_loudness,
                                global_peak);
         }
@@ -180,7 +180,7 @@ int loudness_or_lra(struct gain_data* gd) {
         set_rg_info(g_array_index(gd->file_names, char*, i),
                     -18.0 - gd->segment_loudness[i],
                     gd->segment_peaks[i],
-                    !g_strcmp0(gd->tag_rg, "album") ? 1 : 0,
+                    !strcmp(gd->tag_rg, "album") ? 1 : 0,
                     -18.0 - gated_loudness,
                     global_peak);
       }
@@ -349,22 +349,22 @@ static gboolean parse_interval(const gchar *option_name,
   if (gd.interval <= 0.0) {
     return FALSE;
   }
-  if (!g_strcmp0(option_name, "-m") ||
-      !g_strcmp0(option_name, "--momentary")) {
+  if (!strcmp(option_name, "-m") ||
+      !strcmp(option_name, "--momentary")) {
     gd.mode = EBUR128_MODE_M;
     if (gd.interval > 0.4) {
       fprintf(stderr, "Warning: you may lose samples when specifying "
                       "this interval!\n");
     }
-  } else if (!g_strcmp0(option_name, "-s") ||
-             !g_strcmp0(option_name, "--shortterm")) {
+  } else if (!strcmp(option_name, "-s") ||
+             !strcmp(option_name, "--shortterm")) {
     gd.mode = EBUR128_MODE_S;
     if (gd.interval > 3.0) {
       fprintf(stderr, "Warning: you may lose samples when specifying "
                       "this interval!\n");
     }
-  } else if (!g_strcmp0(option_name, "-i") ||
-             !g_strcmp0(option_name, "--integrated")) {
+  } else if (!strcmp(option_name, "-i") ||
+             !strcmp(option_name, "--integrated")) {
     gd.mode = EBUR128_MODE_I;
   } else {
     return FALSE;
@@ -449,8 +449,8 @@ int main(int ac, char* av[]) {
   }
 
   if (gd.tag_rg &&
-      g_strcmp0(gd.tag_rg, "album") &&
-      g_strcmp0(gd.tag_rg, "track")) {
+      strcmp(gd.tag_rg, "album") &&
+      strcmp(gd.tag_rg, "track")) {
     fprintf(stderr, "Invalid argument to --tagging!\n");
     return 1;
   }
