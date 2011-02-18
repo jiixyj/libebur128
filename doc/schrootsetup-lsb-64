@@ -1,0 +1,49 @@
+#!/bin/bash
+# setup a schroot for LSB compiling
+set -e
+
+schroot -u root -c testbank
+apt-get -y update
+apt-get -y upgrade
+apt-get -y install lsb
+cat /etc/apt/sources.list | sed -e 's|^deb|deb-src|' >> /etc/apt/sources.list
+apt-get -y update
+apt-get -y upgrade
+
+mkdir lsb
+cd lsb/
+wget http://ftp.linux-foundation.org/pub/lsb/bundles/released-4.1.0/sdk/lsb-sdk-4.1.0-4.x86_64.tar.gz
+tar xf lsb-sdk-4.1.0-4.x86_64.tar.gz
+cd lsb-sdk/
+yes | ./install.sh
+cd ..
+
+# apt-get -y build-dep libsndfile
+# apt-get source libsndfile
+# cd libsndfile-1.0.21
+# LSBCC_SHAREDLIBS="ogg" CC="/opt/lsb/bin/lsbcc --lsb-besteffort -DPRId64='\"ld\"' -DPRIx64='\"lx\"'" dpkg-buildpackage -b -us -uc
+# cd ..
+#
+# apt-get -y build-dep taglib
+# apt-get source taglib
+# cd taglib-1.6.3
+# LSBCC_SHAREDLIBS="rcc" CXX="/opt/lsb/bin/lsbc++ --lsb-besteffort" dpkg-buildpackage -b -us -uc
+# cd ..
+#
+# apt-get -y build-dep mpg123
+# apt-get source mpg123
+# cd mpg123-1.12.1
+# sed -i -e 's|setlinebuf(outstream);|setvbuf(outstream, (char*)NULL, _IOLBF, 0);|' src/control_generic.c
+# sed -i -e 's|--disable-ltdl-install|--disable-ltdl-install --with-default-audio=dummy|' debian/rules
+# sed -i '3,4d' debian/mpg123.install
+# # echo '#define __snd_alloca(ptr,type) do { *ptr = (type##_t *) alloca(type##_sizeof()); memset(*ptr, 0, type##_sizeof()); } while (0)' >> alsa.tmp
+# # sed -i -e 's|snd_pcm_sw_params_alloca(\&sw);|__snd_alloca(\&sw, snd_pcm_sw_params);|' src/output/alsa.c
+# # sed -i -e 's|snd_pcm_hw_params_alloca(\&hw);|__snd_alloca(\&hw, snd_pcm_hw_params);|' src/output/alsa.c
+# # cat src/output/alsa.c >> alsa.tmp
+# # mv alsa.tmp src/output/alsa.c
+# CC="/opt/lsb/bin/lsbcc --lsb-besteffort" dpkg-buildpackage -b -us -uc
+# cd ..
+#
+# apt-get -y build-dep ffmpeg
+# apt-get source ffmpeg
+# cd ffmpeg-0.5.2
