@@ -24,8 +24,6 @@ The library itself has no requirements besides ANSI C.
 
 The scanner needs libsndfile, libmpg123, FFmpeg or libmpcdec.
 
-You need at least Python 2.4 and Mutagen for the ReplayGain tagging support.
-
 
 Download
 --------
@@ -81,11 +79,10 @@ The output will look like this:
     global loudness: -11.3 LUFS
 
 
-If you have Python and Mutagen (a tagging library) installed, the scanners also
-support ReplayGain tagging with a little helper script called "r128-tag". Just
-run the script like this:
+The scanners also support ReplayGain tagging with the option "-t". Run it like
+this:
 
-    r128-tag.py <directory>
+    r128-sndfile -t <directory>
 
 and it will scan the directory as one album. Use the option "-r" to search
 recursively for music files and tag them as one album per subfolder. The tagger
@@ -95,14 +92,11 @@ The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
 
 All scanners support loudness range measurement with the command line
-option "-r".
+option "-l".
 
-Use the options "-s" and "-m" to print short-term (3s) or momentary (0.4s)
-loudness information to stdout. For example:
+Use the options "-s", "-m" or "-i" to print short-term (3s), momentary (0.4s)
+or integrated loudness information to stdout. For example:
 
     r128-sndfile -m 0.1 foo.wav
 
 to print the momentary loudness of foo.wav to stdout every 0.1s.
-
-For examples how to use the library, see ebur128.h, minimal-example.c,
-sndfile-example.c, mpg123-example, mpcdec-example.c and ffmpeg-example.c.
