@@ -292,7 +292,9 @@ int scan_files_interval_loudness(struct gain_data* gd) {
     input_handle_destroy(&ih);
   }
   input_exit_library();
-  ebur128_destroy(&st);
+  if (st) {
+    ebur128_destroy(&st);
+  }
 exit:
   return errcode;
 }
@@ -392,7 +394,7 @@ static GOptionEntry entries[] = {
                  "scan directory recursively, one album per folder", NULL },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &file_names,
-                 "<input>" , "FILE...|DIRECTORY"},
+                 "<input>" , "[FILE|DIRECTORY]..."},
   { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
@@ -401,7 +403,7 @@ int test_files_in_gd(struct gain_data* gdata, size_t ac, int test) {
   size_t i;
   for (i = 0; i < ac; ++i) {
     if (!g_file_test(g_array_index(gdata->file_names, char*, i),
-                     G_FILE_TEST_EXISTS)) {
+                     test)) {
       errcode = 1;
       switch (test) {
         case G_FILE_TEST_EXISTS:
