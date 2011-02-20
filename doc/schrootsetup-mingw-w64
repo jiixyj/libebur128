@@ -1,0 +1,169 @@
+#!/bin/bash
+# setup a schroot for Mingw-w64 compiling
+set -e
+
+cd
+cat /etc/apt/sources.list | sed -e 's|^deb|deb-src|' >> /etc/apt/sources.list
+sed -i -e 's|main|main contrib non-free|' /etc/apt/sources.list
+apt-get -y update
+apt-get -y upgrade
+
+mkdir mingw
+cd mingw
+wget http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_20101003/mingw-w64-bin_x86_64-linux_20101003_sezero.tar.gz
+wget http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/sezero_20101003/mingw-w32-bin_x86_64-linux_20101003_sezero.tar.gz
+tar xf mingw-w64-bin_x86_64-linux_20101003_sezero.tar.gz
+tar xf mingw-w32-bin_x86_64-linux_20101003_sezero.tar.gz
+
+rm -r W32_164871/_build_logs/ W32_164871/lib64/
+rm -r W64_164871/_build_logs/ W64_164871/lib64/
+rm W32_164871/{ChangeLog,ChangeLog.sezero,LICENSE.txt,README.cross_win32,mingw}
+rm W64_164871/{ChangeLog,ChangeLog.sezero,LICENSE.txt,README.compat,README.cross_win64,mingw}
+
+mkdir cross
+cp -r W32_164871/* cross/
+cp -r W64_164871/* cross/
+rm -r cross/share/
+cp -r cross/* /usr/
+
+cd ..
+apt-get -y install cmake-curses-gui build-essential debhelper libgmp3-dev texinfo texlive-latex-base
+mkdir mpfr
+cd mpfr
+wget http://cdn.debian.net/debian/pool/main/m/mpfr/mpfr_2.4.2-3.diff.gz
+wget http://cdn.debian.net/debian/pool/main/m/mpfr/mpfr_2.4.2-3.dsc
+wget http://cdn.debian.net/debian/pool/main/m/mpfr/mpfr_2.4.2.orig.tar.gz
+dpkg-source -x mpfr_2.4.2-3.dsc
+cd mpfr-2.4.2/
+dpkg-buildpackage -b -us -uc
+cd ..
+dpkg -i libmpfr1ldbl_2.4.2-3_amd64.deb
+cd ..
+
+mkdir libs
+cd libs
+echo "set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_C_COMPILER i686-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER i686-w64-mingw32-g++)
+set(CMAKE_FIND_ROOT_PATH  /usr/i686-w64-mingw32)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)" > i686-w64-mingw32.cmake
+echo "set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+set(CMAKE_FIND_ROOT_PATH  /usr/x86_64-w64-mingw32)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)" > x86_64-w64-mingw32.cmake
+wget http://developer.kde.org/~wheeler/files/src/taglib-1.6.3.tar.gz
+tar xf taglib-1.6.3.tar.gz
+cd taglib-1.6.3
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../../i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release
+mkdir dest
+make DESTDIR=`pwd`/dest install
+cd dest/usr
+cp -r local/ /usr/i686-w64-mingw32/
+cd ../..
+rm -r *
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../../x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release
+mkdir dest
+make DESTDIR=`pwd`/dest install
+cd dest/usr
+cp -r local/ /usr/x86_64-w64-mingw32/
+cd ../../../../
+
+apt-get -y install dtrx
+wget http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.26/glib_2.26.1-1_win32.zip
+wget http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.26/glib-dev_2.26.1-1_win32.zip
+wget http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime_0.18.1.1-2_win32.zip
+dtrx glib-dev_2.26.1-1_win32.zip
+dtrx glib_2.26.1-1_win32.zip
+dtrx gettext-runtime_0.18.1.1-2_win32.zip
+cp -r glib-dev_2.26.1-1_win32/* /usr/i686-w64-mingw32/local/
+cp -r glib_2.26.1-1_win32/* /usr/i686-w64-mingw32/local/
+cp -r gettext-runtime_0.18.1.1-2_win32/* /usr/i686-w64-mingw32/local/
+
+wget http://ftp.gnome.org/pub/gnome/binaries/win64/glib/2.26/glib_2.26.1-1_win64.zip
+wget http://ftp.gnome.org/pub/gnome/binaries/win64/glib/2.26/glib-dev_2.26.1-1_win64.zip
+wget http://ftp.gnome.org/pub/gnome/binaries/win64/dependencies/gettext-runtime_0.18.1.1-2_win64.zip
+dtrx glib_2.26.1-1_win64.zip
+dtrx glib-dev_2.26.1-1_win64.zip
+dtrx gettext-runtime_0.18.1.1-2_win64.zip
+cp -r glib-dev_2.26.1-1_win64/* /usr/x86_64-w64-mingw32/local/
+cp -r glib_2.26.1-1_win64/* /usr/x86_64-w64-mingw32/local/
+cp -r gettext-runtime_0.18.1.1-2_win64/* /usr/x86_64-w64-mingw32/local/
+
+apt-get -y install wine unrar
+wget http://sourceforge.net/projects/innounp/files/innounp/innounp%200.35/innounp035.rar
+wget http://www.mega-nerd.com/libsndfile/files/libsndfile-1.0.23-w32-setup.exe
+wget http://www.mega-nerd.com/libsndfile/files/libsndfile-1.0.23-w64-setup.exe
+unrar x innounp035.rar
+wine innounp -x libsndfile-1.0.23-w32-setup.exe
+cp \{app\}/libsndfile-1.dll /usr/i686-w64-mingw32/local/bin/
+cp \{app\}/include/sndfile.h* /usr/i686-w64-mingw32/local/include/
+rm -r \{app\}
+rm install_script.iss
+wine innounp -x libsndfile-1.0.23-w64-setup.exe
+cp \{app\}/libsndfile-1.dll /usr/x86_64-w64-mingw32/local/bin/
+cp \{app\}/include/sndfile.h* /usr/x86_64-w64-mingw32/local/include/
+rm -r \{app\}
+rm install_script.iss
+
+wget http://www.mpg123.de/download/win64/mpg123-1.13.1-x86-64.zip
+wget http://www.mpg123.de/download/win32/mpg123-1.13.1-x86.zip
+dtrx mpg123-1.13.1-x86.zip
+dtrx mpg123-1.13.1-x86-64.zip
+cp mpg123-1.13.1-x86/mpg123.h /usr/i686-w64-mingw32/local/include/
+cp mpg123-1.13.1-x86/libmpg123-0.dll /usr/i686-w64-mingw32/local/bin/
+cp mpg123-1.13.1-x86-64/mpg123.h /usr/x86_64-w64-mingw32/local/include/
+cp mpg123-1.13.1-x86-64/libmpg123-0.dll /usr/x86_64-w64-mingw32/local/bin/
+
+apt-get source libmpc
+cd libmpc-0.1~r459
+sed -i -e '/add_subdirectory(mpcgain)/d' -e '/add_subdirectory(mpcchap)/d' CMakeLists.txt
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../../i686-w64-mingw32.cmake
+make
+cp libmpcdec/libmpcdec_static.a /usr/i686-w64-mingw32/local/lib/
+cp -r ../include/mpc/ /usr/i686-w64-mingw32/local/include/
+rm -r *
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../../x86_64-w64-mingw32.cmake
+make
+cp libmpcdec/libmpcdec_static.a /usr/x86_64-w64-mingw32/local/lib/
+cp -r ../include/mpc/ /usr/x86_64-w64-mingw32/local/include/
+cd ../../
+
+wget http://www.ffmpeg.org/releases/ffmpeg-0.6.1.tar.bz2
+tar xf ffmpeg-0.6.1.tar.bz2
+cd ffmpeg-0.6.1
+mkdir dest
+./configure --enable-memalign-hack --target-os=mingw32 --arch=x86_64 \
+            --sysroot=/usr/x86_64-w64-mingw32 \
+            --cross-prefix=x86_64-w64-mingw32- --enable-shared --disable-swscale
+make DESTDIR=`pwd`/dest install
+cp -r dest/usr/local/* /usr/x86_64-w64-mingw32/local/
+cd ..
+rm -r ffmpeg-0.6.1
+tar xf ffmpeg-0.6.1.tar.bz2
+cd ffmpeg-0.6.1
+mkdir dest
+sed -i -e '2229,2235d' configure
+./configure --enable-memalign-hack --target-os=mingw32 --arch=x86 \
+            --sysroot=/usr/i686-w64-mingw32 \
+            --cross-prefix=i686-w64-mingw32- --enable-shared --disable-swscale
+make DESTDIR=`pwd`/dest install
+cp -r dest/usr/local/* /usr/i686-w64-mingw32/local/
+cd ..
+
+x86_64-w64-mingw32-strip /usr/x86_64-w64-mingw32/local/bin/*.dll
+i686-w64-mingw32-strip /usr/i686-w64-mingw32/local/bin/*.dll
+
+# as user
+# cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="/local/bin;/local"
+# make package
+# cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="/local/bin;/local"
+# make package
