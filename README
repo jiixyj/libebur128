@@ -78,7 +78,9 @@ The scanners also support ReplayGain tagging with the option "-t". Run it like
 this:
 
     r128-sndfile -t album <directory>
-or
+
+or:
+
     r128-sndfile -t track <directory>
 
 and it will scan the directory as one album/as tracks. Use the option "-r" to
