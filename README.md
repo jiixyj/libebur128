@@ -49,11 +49,6 @@ In the root folder, type:
     make
 
 
-It is also possible to compile the scanners directly with gcc:
-
-    gcc -O3 -I../include sndfile-example.c ebur128.c -o r128-test -lm -lsndfile
-
-
 Usage
 -----
 
@@ -82,11 +77,13 @@ The output will look like this:
 The scanners also support ReplayGain tagging with the option "-t". Run it like
 this:
 
-    r128-sndfile -t <directory>
+    r128-sndfile -t album <directory>
+or
+    r128-sndfile -t track <directory>
 
-and it will scan the directory as one album. Use the option "-r" to search
-recursively for music files and tag them as one album per subfolder. The tagger
-also supports file input; then all files are treated as one album.
+and it will scan the directory as one album/as tracks. Use the option "-r" to
+search recursively for music files and tag them as one album per subfolder. The
+tagger also supports file input; then all files are treated as one album.
 
 The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
@@ -94,8 +91,8 @@ of -23 LU).
 All scanners support loudness range measurement with the command line
 option "-l".
 
-Use the options "-s", "-m" or "-i" to print short-term (3s), momentary (0.4s)
-or integrated loudness information to stdout. For example:
+Use the options "-s", "-m" or "-i" to print short-term (last 3s), momentary
+(last 0.4s) or integrated loudness information to stdout. For example:
 
     r128-sndfile -m 0.1 foo.wav
 
