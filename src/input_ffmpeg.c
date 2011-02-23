@@ -169,6 +169,11 @@ size_t input_read_frames(struct input_handle* ih) {
           ih->packet.size = 0;
           break;
         }
+        ih->packet.data += len;
+        ih->packet.size -= len;
+        if (!data_size) {
+          continue;
+        }
         size_t nr_frames_read;
         switch (ih->codec_context->sample_fmt) {
           case SAMPLE_FMT_U8:
@@ -212,8 +217,6 @@ size_t input_read_frames(struct input_handle* ih) {
             return 0;
             break;
         }
-        ih->packet.data += len;
-        ih->packet.size -= len;
         return nr_frames_read;
       }
       ih->packet.data = ih->old_data;
