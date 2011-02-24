@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "./ebur128.h"
+#include "ebur128.h"
 
 double test_global_loudness(const char* filename) {
   SF_INFO file_info;

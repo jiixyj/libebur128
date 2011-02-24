@@ -3,7 +3,7 @@
 #include <libavformat/avformat.h>
 #include <glib.h>
 
-#include "./ebur128.h"
+#include "ebur128.h"
 
 static GMutex* ffmpeg_mutex;
 

@@ -1,7 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 #include <mpc/mpcdec.h>
 
-#include "./ebur128.h"
+#include "ebur128.h"
 
 struct input_handle {
   mpc_reader reader;

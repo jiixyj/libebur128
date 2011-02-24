@@ -2,7 +2,7 @@
 #include <mpg123.h>
 #include <stdio.h>
 
-#include "./ebur128.h"
+#include "ebur128.h"
 
 struct input_handle {
   mpg123_handle* mh;

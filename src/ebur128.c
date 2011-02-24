@@ -1,5 +1,5 @@
 /* See LICENSE file for copyright and license details. */
-#include "./ebur128.h"
+#include "ebur128.h"
 
 #include <float.h>
 #include <limits.h>

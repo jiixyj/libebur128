@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "./ebur128.h"
+#include "ebur128.h"
 
 
 int main(int ac, const char* av[]) {

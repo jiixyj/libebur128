@@ -2,7 +2,7 @@
 #include <sndfile.h>
 #include <stdlib.h>
 
-#include "./ebur128.h"
+#include "ebur128.h"
 
 struct input_handle {
   SF_INFO file_info;

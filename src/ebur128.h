@@ -9,7 +9,7 @@ extern "C" {
 #include <string.h>
 
 /* This can be replaced by any BSD-like queue implementation */
-#include "./queue.h"
+#include "queue.h"
 
 SLIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {

@@ -7,9 +7,9 @@
 
 #include <glib.h>
 
-#include "./ebur128.h"
-#include "./input.h"
-#include "./rgtag.h"
+#include "ebur128.h"
+#include "input.h"
+#include "rgtag.h"
 
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
