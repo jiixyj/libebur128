@@ -1,4 +1,5 @@
 include_directories(queue)
+
 add_library(ebur128 ebur128.c)
 if(NOT WIN32)
   target_link_libraries(ebur128 m)
@@ -16,6 +17,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND TAGLIB_FOUND)
   add_subdirectory(speex_resample)
 
   set(SCANNER_LIBS ebur128 rgtag nproc speex_resample)
+  include_directories(speex_resample)
 
   if(SNDFILE_FOUND)
     add_library(sndfile_input input_sndfile.c)

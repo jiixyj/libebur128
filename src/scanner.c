@@ -11,6 +11,10 @@
 #include "input.h"
 #include "rgtag.h"
 
+#define OUTSIDE_SPEEX
+#define RANDOM_PREFIX ebur128
+#include "speex_resampler.h"
+
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
     fprintf(stderr, message);                                                  \
@@ -25,11 +29,13 @@ struct gain_data {
   int calculate_lra, errcode;
   char* tag_rg;                    /* NULL, "album" or "track" */
   int recursive_scan;
+  char* peak;
   double interval;
   int mode;
   ebur128_state** library_states;
   double* segment_loudness;
   double* segment_peaks;
+  double* segment_true_peaks;
 };
 
 /* Calculates gain and peak of i-th file in the gain_data struct.
@@ -43,6 +49,10 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   ebur128_state* st = NULL;
   float* buffer = NULL;
+  SpeexResamplerState* resampler = NULL;
+  size_t resampler_buffer_frames = 0;
+  float* resampler_buffer = NULL;
+  int oversample_factor = 1;
 
   int errcode, result;
 
@@ -71,23 +81,80 @@ void calculate_gain_of_file(void* user, void* user_data) {
     ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
 
+  if (gd->peak && (!strcmp(gd->peak, "true") || !strcmp(gd->peak, "both")) &&
+      input_get_samplerate(ih) < 192000) {
+    oversample_factor = 2;
+    if (input_get_samplerate(ih) < 96000)
+      oversample_factor = 4;
+    resampler = ebur128_resampler_init((spx_uint32_t) input_get_channels(ih),
+                                       (spx_uint32_t) input_get_samplerate(ih),
+                                       (spx_uint32_t) (input_get_samplerate(ih) *
+                                                       oversample_factor),
+                                       8,
+                                       &result);
+    CHECK_ERROR(!resampler, "Could not initialize resampler!\n", 1, close_file)
+  }
+
   result = input_allocate_buffer(ih);
-  CHECK_ERROR(result, "Could not allocate memory!\n", 1, close_file)
+  CHECK_ERROR(result, "Could not allocate memory!\n", 1, destroy_resampler)
   gd->segment_peaks[i] = 0.0;
   buffer = input_get_buffer(ih);
+
+  if (resampler) {
+    resampler_buffer_frames = (input_get_buffer_size(ih) /
+                               (size_t) input_get_channels(ih) /
+                               sizeof(float)) *
+                              (size_t) oversample_factor;
+    resampler_buffer = calloc(resampler_buffer_frames *
+                              (size_t) input_get_channels(ih) *
+                              sizeof(float), 1);
+    CHECK_ERROR(!resampler_buffer, "Could not allocate memory!\n", 1, free_buffer)
+  }
+
   while ((nr_frames_read = input_read_frames(ih))) {
-    if (gd->tag_rg) {
-      size_t j;
-      for (j = 0; j < (size_t) nr_frames_read * st->channels; ++j) {
+    size_t j;
+    if (gd->tag_rg ||
+        (gd->peak && (!strcmp(gd->peak, "sample") ||
+                      !strcmp(gd->peak, "both")))) {
+      for (j = 0; j < nr_frames_read * st->channels; ++j) {
         if (buffer[j] > gd->segment_peaks[i])
           gd->segment_peaks[i] = buffer[j];
         else if (-buffer[j] > gd->segment_peaks[i])
           gd->segment_peaks[i] = -buffer[j];
       }
     }
+    if (resampler) {
+      spx_uint32_t in_len = (spx_uint32_t) nr_frames_read;
+      spx_uint32_t out_len = (spx_uint32_t) resampler_buffer_frames;
+      ebur128_resampler_process_interleaved_float(
+                          resampler,
+                          buffer,
+                          &in_len,
+                          resampler_buffer,
+                          &out_len);
+      for (j = 0; j < out_len * st->channels; ++j) {
+        if (resampler_buffer[j] > gd->segment_true_peaks[i])
+          gd->segment_true_peaks[i] = resampler_buffer[j];
+        else if (-resampler_buffer[j] > gd->segment_true_peaks[i])
+          gd->segment_true_peaks[i] = -resampler_buffer[j];
+      }
+    } else if (gd->peak && (!strcmp(gd->peak, "true") ||
+                            !strcmp(gd->peak, "both"))) {
+      if (gd->tag_rg || !strcmp(gd->peak, "both")) {
+        gd->segment_true_peaks[i] = gd->segment_peaks[i];
+      } else {
+        for (j = 0; j < nr_frames_read * st->channels; ++j) {
+          if (buffer[j] > gd->segment_true_peaks[i])
+            gd->segment_true_peaks[i] = buffer[j];
+          else if (-buffer[j] > gd->segment_true_peaks[i])
+            gd->segment_true_peaks[i] = -buffer[j];
+        }
+      }
+    }
+
     nr_frames_read_all += nr_frames_read;
     result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
-    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
+    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_resampler_buffer)
   }
   if (input_check_ok(ih, nr_frames_read_all)) {
     fprintf(stderr, "Warning: Could not read full file"
@@ -97,8 +164,16 @@ void calculate_gain_of_file(void* user, void* user_data) {
   gd->segment_loudness[i] = ebur128_loudness_global(st);
   fprintf(stderr, "*");
 
+free_resampler_buffer:
+  free(resampler_buffer);
+
 free_buffer:
   input_free_buffer(ih);
+
+destroy_resampler:
+  if (resampler) {
+    ebur128_resampler_destroy(resampler);
+  }
 
 close_file:
   input_close_file(ih);
@@ -120,6 +195,7 @@ int loudness_or_lra(struct gain_data* gd) {
 
   gd->segment_loudness = calloc(gd->file_names->len, sizeof(double));
   gd->segment_peaks = calloc(gd->file_names->len, sizeof(double));
+  gd->segment_true_peaks = calloc(gd->file_names->len, sizeof(double));
   gd->library_states = calloc(gd->file_names->len, sizeof(ebur128_state*));
 
   CHECK_ERROR(input_init_library(),
@@ -133,29 +209,59 @@ int loudness_or_lra(struct gain_data* gd) {
     g_thread_pool_push(pool, GINT_TO_POINTER(i + 1), NULL);
   }
   g_thread_pool_free(pool, FALSE, TRUE);
-  if (gd->file_names->len > 1) {
-    for (i = 0; i < gd->file_names->len; ++i) {
-      /* if not NaN */
-      if (gd->segment_loudness[i] == gd->segment_loudness[i]) {
-        fprintf(stderr, "\r%3.2f LUFS (%s)\n",
-                        gd->segment_loudness[i],
-                        g_array_index(gd->file_names, char*, i));
-      } else {
-        fprintf(stderr, "\rignoring %s\n",
-                        g_array_index(gd->file_names, char*, i));
+  for (i = 0; i < gd->file_names->len; ++i) {
+    /* if not NaN */
+    if (gd->segment_loudness[i] == gd->segment_loudness[i]) {
+      fprintf(stderr, "\r");
+      printf("%3.2f", gd->segment_loudness[i]);
+      fflush(stdout);
+      fprintf(stderr, " LUFS");
+      if (gd->peak &&
+          (!strcmp(gd->peak, "sample") ||
+           !strcmp(gd->peak, "both"))) {
+        printf(",");
+        fflush(stdout);
+        fprintf(stderr, " sample peak: ");
+        printf("%.8f", gd->segment_peaks[i]);
+        fflush(stdout);
       }
+      if (gd->peak &&
+          (!strcmp(gd->peak, "true") ||
+           !strcmp(gd->peak, "both"))) {
+        printf(",");
+        fflush(stdout);
+        fprintf(stderr, " true peak: ");
+        printf("%.8f", gd->segment_true_peaks[i]);
+        fflush(stdout);
+      }
+      printf(",");
+      fflush(stdout);
+      fprintf(stderr, " ");
+      printf("%s\n", g_array_index(gd->file_names, char*, i));
+    } else {
+      fprintf(stderr, "\rignoring %s\n",
+                      g_array_index(gd->file_names, char*, i));
     }
   }
 
   gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
                                                     gd->file_names->len);
-  fprintf(stderr, "\rglobal loudness: %.2f LUFS\n", gated_loudness);
+  fprintf(stderr, "\rglobal loudness: ");
+  printf("%.2f", gated_loudness);
+  fflush(stdout);
+  fprintf(stderr, " LUFS");
 
   if (gd->calculate_lra) {
-    fprintf(stderr, "LRA: %.2f\n",
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " LRA: ");
+    printf("%.2f",
             ebur128_loudness_range_multiple(gd->library_states,
                                             gd->file_names->len));
+    fflush(stdout);
+    fprintf(stderr, " LU");
   }
+  printf("\n");
 
   if (gd->tag_rg) {
     double global_peak = 0.0;
@@ -167,16 +273,6 @@ int loudness_or_lra(struct gain_data* gd) {
     }
     for (i = 0; i < gd->file_names->len; ++i) {
       if (gd->library_states[i]) {
-        #if 0
-        printf("%s:\n%.8f %.8f", g_array_index(gd->file_names, char*, i),
-                                 -18.0 - gd->segment_loudness[i],
-                                 gd->segment_peaks[i]);
-        if (!strcmp(gd->tag_rg, "album")) {
-          printf(" %.8f %.8f", -18.0 - gated_loudness,
-                               global_peak);
-        }
-        printf("\n");
-        #endif
         set_rg_info(g_array_index(gd->file_names, char*, i),
                     -18.0 - gd->segment_loudness[i],
                     gd->segment_peaks[i],
@@ -198,6 +294,7 @@ exit:
   free(gd->library_states);
   free(gd->segment_loudness);
   free(gd->segment_peaks);
+  free(gd->segment_true_peaks);
   return errcode;
 }
 
@@ -392,6 +489,9 @@ static GOptionEntry entries[] = {
   { "recursive", 'r', 0, G_OPTION_ARG_NONE,
                  &gd.recursive_scan,
                  "scan directory recursively, one album per folder", NULL },
+  { "peak", 'p', 0, G_OPTION_ARG_STRING,
+                 &gd.peak,
+                 "display peak values", "true|sample|both" },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &file_names,
                  "<input>" , "[FILE|DIRECTORY]..."},
@@ -438,6 +538,7 @@ int main(int ac, char* av[]) {
   gd.mode = 0;
   gd.file_names = NULL;
   gd.recursive_scan = FALSE;
+  gd.peak = NULL;
 
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
@@ -452,6 +553,14 @@ int main(int ac, char* av[]) {
       strcmp(gd.tag_rg, "album") &&
       strcmp(gd.tag_rg, "track")) {
     fprintf(stderr, "Invalid argument to --tagging!\n");
+    return 1;
+  }
+
+  if (gd.peak &&
+      strcmp(gd.peak, "true") &&
+      strcmp(gd.peak, "sample") &&
+      strcmp(gd.peak, "both")) {
+    fprintf(stderr, "Invalid argument to --peak!\n");
     return 1;
   }
 

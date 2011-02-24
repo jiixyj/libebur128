@@ -6,6 +6,7 @@ struct input_handle;
 int input_get_channels(struct input_handle* ih);
 int input_get_samplerate(struct input_handle* ih);
 float* input_get_buffer(struct input_handle* ih);
+size_t input_get_buffer_size(struct input_handle* ih);
 struct input_handle* input_handle_init();
 void input_handle_destroy(struct input_handle** ih);
 int input_open_file(struct input_handle* ih, const char* filename);
