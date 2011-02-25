@@ -75,6 +75,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(COMPILER_VERSION STRLESS "4.2.5")
     list(REMOVE_ITEM FLAGS "-Wabi")
     list(REMOVE_ITEM FLAGS "-Wconversion")
+    list(REMOVE_ITEM FLAGS "-Wmissing-include-dirs")
   endif(COMPILER_VERSION STRLESS "4.2.5")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 
