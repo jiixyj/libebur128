@@ -11,12 +11,12 @@ struct input_handle {
   float* buffer;
 };
 
-int input_get_channels(struct input_handle* ih) {
-  return ih->mh_channels;
+size_t input_get_channels(struct input_handle* ih) {
+  return (size_t) ih->mh_channels;
 }
 
-int input_get_samplerate(struct input_handle* ih) {
-  return (int) ih->mh_rate;
+size_t input_get_samplerate(struct input_handle* ih) {
+  return (size_t) ih->mh_rate;
 }
 
 float* input_get_buffer(struct input_handle* ih) {

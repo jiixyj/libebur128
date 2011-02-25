@@ -21,8 +21,8 @@ double test_global_loudness(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0 / 0.0;
   }
-  st = ebur128_init(file_info.channels,
-                    file_info.samplerate,
+  st = ebur128_init((size_t) file_info.channels,
+                    (size_t) file_info.samplerate,
                     EBUR128_MODE_I);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -65,8 +65,8 @@ double test_loudness_range(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0 / 0.0;
   }
-  st = ebur128_init(file_info.channels,
-                    file_info.samplerate,
+  st = ebur128_init((size_t) file_info.channels,
+                    (size_t) file_info.samplerate,
                     EBUR128_MODE_LRA);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);

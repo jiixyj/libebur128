@@ -25,8 +25,8 @@ int main(int ac, const char* av[]) {
   file = sf_open(av[1], SFM_READ, &file_info);
 
 
-  st = ebur128_init(file_info.channels,
-                    file_info.samplerate,
+  st = ebur128_init((size_t) file_info.channels,
+                    (size_t) file_info.samplerate,
                     EBUR128_MODE_I);
 
   /* example: set channel map (note: see ebur128.h for the default map) */

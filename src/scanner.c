@@ -52,7 +52,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
   SpeexResamplerState* resampler = NULL;
   size_t resampler_buffer_frames = 0;
   float* resampler_buffer = NULL;
-  int oversample_factor = 1;
+  size_t oversample_factor = 1;
 
   int errcode, result;
 

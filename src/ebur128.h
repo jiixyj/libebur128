@@ -36,7 +36,7 @@ enum mode {
 };
 
 typedef struct {
-  size_t mode;
+  int mode;
   double* audio_data;
   size_t audio_data_frames;
   size_t audio_data_index;
@@ -54,7 +54,7 @@ typedef struct {
   size_t block_counter;
 } ebur128_state;
 
-ebur128_state* ebur128_init(int channels, int samplerate, size_t mode);
+ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode);
 int ebur128_destroy(ebur128_state** st);
 
 /* Set channel "channel_number" (zero based index) to value, where value is
@@ -65,14 +65,14 @@ int ebur128_destroy(ebur128_state** st);
  *                 3 - EBUR128_UNUSED
  *                 4 - EBUR128_LEFT_SURROUND
  *                 5 - EBUR128_RIGHT_SURROUND  */
-int ebur128_set_channel(ebur128_state* st, int channel_number, int value);
+int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value);
 /* Note that the channel map will be reset when setting a different number of
  * channels. The current unfinished block will be lost.
  * Returns 1 on memory allocation error. The state will be invalid then.
  * Returns 2 if channels and samplerate were not changed. */
 int ebur128_change_parameters(ebur128_state* st,
-                              int channels,
-                              int samplerate);
+                              size_t channels,
+                              size_t samplerate);
 
 int ebur128_add_frames_short(ebur128_state* st,
                              const short* src,

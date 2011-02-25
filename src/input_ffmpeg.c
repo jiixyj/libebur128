@@ -19,12 +19,12 @@ struct input_handle {
   float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 4 + 1];
 };
 
-int input_get_channels(struct input_handle* ih) {
-  return ih->codec_context->channels;
+size_t input_get_channels(struct input_handle* ih) {
+  return (size_t) ih->codec_context->channels;
 }
 
-int input_get_samplerate(struct input_handle* ih) {
-  return ih->codec_context->sample_rate;
+size_t input_get_samplerate(struct input_handle* ih) {
+  return (size_t) ih->codec_context->sample_rate;
 }
 
 float* input_get_buffer(struct input_handle* ih) {
@@ -105,9 +105,9 @@ close_file:
 
 int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   if (ih->codec_context->channel_layout) {
-    int channel_map_index = 0;
+    size_t channel_map_index = 0;
     int bit_counter = 0;
-    while (channel_map_index < ih->codec_context->channels) {
+    while (channel_map_index < (size_t) ih->codec_context->channels) {
       if (ih->codec_context->channel_layout & (1 << bit_counter)) {
         switch (1 << bit_counter) {
           case CH_FRONT_LEFT:

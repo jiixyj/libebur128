@@ -131,16 +131,16 @@ int ebur128_init_channel_map(ebur128_state* st) {
   return 0;
 }
 
-ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
+ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   int errcode;
   ebur128_state* st;
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, "Could not allocate memory!\n", 0, exit)
-  st->channels = (size_t) channels;
+  st->channels = channels;
   errcode = ebur128_init_channel_map(st);
   CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
-  st->samplerate = (size_t) samplerate;
+  st->samplerate = samplerate;
   st->samples_in_200ms = (st->samplerate + 2) / 5;
   st->mode = mode;
   if ((mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
@@ -297,8 +297,8 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
   }
 }
 
-int ebur128_set_channel(ebur128_state* st, int channel_number, int value) {
-  if (channel_number < 0 || (size_t) channel_number >= st->channels) {
+int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value) {
+  if (channel_number >= st->channels) {
     return 1;
   }
   st->channel_map[channel_number] = value;
@@ -306,24 +306,24 @@ int ebur128_set_channel(ebur128_state* st, int channel_number, int value) {
 }
 
 int ebur128_change_parameters(ebur128_state* st,
-                              int channels,
-                              int samplerate) {
+                              size_t channels,
+                              size_t samplerate) {
   int errcode;
-  if ((size_t) channels == st->channels &&
-      (size_t) samplerate == st->samplerate) {
+  if (channels == st->channels &&
+      samplerate == st->samplerate) {
     return 2;
   }
   free(st->audio_data);
   ebur128_release_multi_array(&(st->v), st->channels);
 
-  if ((size_t) channels != st->channels) {
+  if (channels != st->channels) {
     free(st->channel_map);
-    st->channels = (size_t) channels;
+    st->channels = channels;
     errcode = ebur128_init_channel_map(st);
     CHECK_ERROR(errcode, "Could not initialize channel map!\n", 1, exit)
   }
-  if ((size_t) samplerate != st->samplerate) {
-    st->samplerate = (size_t) samplerate;
+  if (samplerate != st->samplerate) {
+    st->samplerate = samplerate;
     free(st->a);
     free(st->b);
     errcode = ebur128_init_filter(st);
