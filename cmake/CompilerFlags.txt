@@ -71,6 +71,12 @@ list(APPEND FLAGS "-Wswitch-enum")
 
 list(APPEND FLAGS "-fPIC")
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+  if(COMPILER_VERSION STRLESS "4.2.5")
+    list(REMOVE_ITEM FLAGS "-Wabi")
+    list(REMOVE_ITEM FLAGS "-Wconversion")
+  endif(COMPILER_VERSION STRLESS "4.2.5")
+endif(CMAKE_COMPILER_IS_GNUCXX)
 
 if(WIN32)
   list(REMOVE_ITEM FLAGS "-fPIC")
