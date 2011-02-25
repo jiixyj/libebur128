@@ -58,7 +58,7 @@ int ebur128_init_filter(ebur128_state* st) {
   double Q  =    0.7071752369554196;
 
   double K      = tan(PI * f0 / (double) st->samplerate);
-  double Vh     = pow(10, G / 20.0);
+  double Vh     = pow(10.0, G / 20.0);
   double Vb     = pow(Vh, 0.4996667741545416);
 
   double b1[] = {0.0, 0.0, 0.0};
@@ -171,8 +171,8 @@ ebur128_state* ebur128_init(int channels, int samplerate, size_t mode) {
   st->audio_data_index = 0;
 
   /* initialize static constants */
-  minus_eight_decibels = pow(10, -8.0 / 10.0);
-  minus_twenty_decibels = pow(10, -20.0 / 10.0);
+  minus_eight_decibels = pow(10.0, -8.0 / 10.0);
+  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
   abs_threshold_energy = pow(10.0, (-70.0 + 0.691) / 10.0);
 
   return st;
