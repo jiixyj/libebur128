@@ -259,7 +259,10 @@ int loudness_or_lra(struct gain_data* gd) {
 
   gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
                                                     gd->file_names->len);
-  fprintf(stderr, "\r\nglobal:\n");
+  fprintf(stderr, "\r--------------------"
+                    "--------------------"
+                    "--------------------"
+                    "--------------------\n");
   printf("%.2f", gated_loudness);
   fflush(stdout);
   fprintf(stderr, " LUFS");
