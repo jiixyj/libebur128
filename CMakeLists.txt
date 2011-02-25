@@ -54,7 +54,7 @@ endif()
 
 ##### libsndfile
 if(NOT WIN32)
-  pkg_check_modules(SNDFILE sndfile>=1.0.21)
+  pkg_check_modules(SNDFILE sndfile>=1.0.18)
   if(SNDFILE_FOUND)
     include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
     link_directories(${SNDFILE_LIBRARY_DIRS})
