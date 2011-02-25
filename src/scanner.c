@@ -34,6 +34,7 @@ struct gain_data {
   int mode;
   ebur128_state** library_states;
   double* segment_loudness;
+  double* segment_lra;
   double* segment_peaks;
   double* segment_true_peaks;
 };
@@ -162,6 +163,9 @@ void calculate_gain_of_file(void* user, void* user_data) {
   }
 
   gd->segment_loudness[i] = ebur128_loudness_global(st);
+  if (gd->calculate_lra) {
+    gd->segment_lra[i] = ebur128_loudness_range(st);
+  }
   fprintf(stderr, "*");
 
 free_resampler_buffer:
@@ -194,6 +198,7 @@ int loudness_or_lra(struct gain_data* gd) {
   }
 
   gd->segment_loudness = calloc(gd->file_names->len, sizeof(double));
+  gd->segment_lra = calloc(gd->file_names->len, sizeof(double));
   gd->segment_peaks = calloc(gd->file_names->len, sizeof(double));
   gd->segment_true_peaks = calloc(gd->file_names->len, sizeof(double));
   gd->library_states = calloc(gd->file_names->len, sizeof(ebur128_state*));
@@ -213,9 +218,17 @@ int loudness_or_lra(struct gain_data* gd) {
     /* if not NaN */
     if (gd->segment_loudness[i] == gd->segment_loudness[i]) {
       fprintf(stderr, "\r");
-      printf("%3.2f", gd->segment_loudness[i]);
+      printf("%.2f", gd->segment_loudness[i]);
       fflush(stdout);
       fprintf(stderr, " LUFS");
+      if (gd->calculate_lra) {
+        printf(",");
+        fflush(stdout);
+        fprintf(stderr, " LRA: ");
+        printf("%.2f", gd->segment_lra[i]);
+        fflush(stdout);
+        fprintf(stderr, " LU");
+      }
       if (gd->peak &&
           (!strcmp(gd->peak, "sample") ||
            !strcmp(gd->peak, "both"))) {
@@ -246,7 +259,7 @@ int loudness_or_lra(struct gain_data* gd) {
 
   gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
                                                     gd->file_names->len);
-  fprintf(stderr, "\rglobal loudness: ");
+  fprintf(stderr, "\r\nglobal:\n");
   printf("%.2f", gated_loudness);
   fflush(stdout);
   fprintf(stderr, " LUFS");
@@ -260,6 +273,36 @@ int loudness_or_lra(struct gain_data* gd) {
                                             gd->file_names->len));
     fflush(stdout);
     fprintf(stderr, " LU");
+  }
+  if (gd->peak &&
+      (!strcmp(gd->peak, "sample") ||
+       !strcmp(gd->peak, "both"))) {
+    double max_peak = 0.0;
+    for (i = 0; i < gd->file_names->len; ++i) {
+      if (gd->segment_peaks[i] > max_peak) {
+        max_peak = gd->segment_peaks[i];
+      }
+    }
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " sample peak: ");
+    printf("%.8f", max_peak);
+    fflush(stdout);
+  }
+  if (gd->peak &&
+      (!strcmp(gd->peak, "true") ||
+       !strcmp(gd->peak, "both"))) {
+    double max_peak = 0.0;
+    for (i = 0; i < gd->file_names->len; ++i) {
+      if (gd->segment_true_peaks[i] > max_peak) {
+        max_peak = gd->segment_true_peaks[i];
+      }
+    }
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " true peak: ");
+    printf("%.8f", max_peak);
+    fflush(stdout);
   }
   printf("\n");
 
@@ -293,6 +336,7 @@ int loudness_or_lra(struct gain_data* gd) {
 exit:
   free(gd->library_states);
   free(gd->segment_loudness);
+  free(gd->segment_lra);
   free(gd->segment_peaks);
   free(gd->segment_true_peaks);
   return errcode;
