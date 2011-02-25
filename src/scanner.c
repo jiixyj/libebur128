@@ -325,6 +325,7 @@ int loudness_or_lra(struct gain_data* gd) {
       }
     }
   }
+  fprintf(stderr, "\n");
 
   for (i = 0; i < gd->file_names->len; ++i) {
     if (gd->library_states[i]) {
@@ -639,7 +640,7 @@ int main(int ac, char* av[]) {
     if (test_files_in_gd(&gd, nr_files, G_FILE_TEST_EXISTS)) {
       return 1;
     } else {
-      errcode = scan_files_gated_loudness_or_lra(&gd, !gd.recursive_scan);
+      errcode = scan_files_gated_loudness_or_lra(&gd, gd.recursive_scan ? -1 : 1);
     }
   }
 
