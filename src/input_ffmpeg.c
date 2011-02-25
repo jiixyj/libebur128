@@ -33,7 +33,7 @@ float* input_get_buffer(struct input_handle* ih) {
 
 size_t input_get_buffer_size(struct input_handle* ih) {
   (void) ih;
-  return (AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 4 + 1;
+  return (AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1;
 }
 
 struct input_handle* input_handle_init() {

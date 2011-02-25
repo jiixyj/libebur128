@@ -24,9 +24,7 @@ float* input_get_buffer(struct input_handle* ih) {
 }
 
 size_t input_get_buffer_size(struct input_handle* ih) {
-  return (size_t) ih->mh_rate *
-         (size_t) ih->mh_channels *
-         sizeof(float);
+  return (size_t) ih->mh_rate * (size_t) ih->mh_channels;
 }
 
 struct input_handle* input_handle_init() {

@@ -102,12 +102,11 @@ void calculate_gain_of_file(void* user, void* user_data) {
   buffer = input_get_buffer(ih);
 
   if (resampler) {
-    resampler_buffer_frames = (input_get_buffer_size(ih) /
-                               (size_t) input_get_channels(ih) /
-                               sizeof(float)) *
-                              (size_t) oversample_factor;
+    resampler_buffer_frames = input_get_buffer_size(ih) /
+                              input_get_channels(ih) *
+                              oversample_factor;
     resampler_buffer = calloc(resampler_buffer_frames *
-                              (size_t) input_get_channels(ih) *
+                              input_get_channels(ih) *
                               sizeof(float), 1);
     CHECK_ERROR(!resampler_buffer, "Could not allocate memory!\n", 1, free_buffer)
   }
