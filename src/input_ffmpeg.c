@@ -16,7 +16,7 @@ struct input_handle {
   int audio_stream;
   uint8_t* old_data;
   uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
-  float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 4 + 1];
+  float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1];
 };
 
 size_t input_get_channels(struct input_handle* ih) {
