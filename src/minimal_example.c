@@ -11,57 +11,59 @@ int main(int ac, const char* av[]) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
-  sf_count_t nr_frames_read_all = 0;
-  ebur128_state* st = NULL;
+  ebur128_state** sts = NULL;
   double* buffer;
-  double gated_loudness;
+  int i;
 
   if (ac < 2) {
-    fprintf(stderr, "usage: r128-test FILENAME\n");
+    fprintf(stderr, "usage: r128-test FILENAME...\n");
     exit(1);
   }
 
-  memset(&file_info, '\0', sizeof(file_info));
-  file = sf_open(av[1], SFM_READ, &file_info);
+  sts = malloc((size_t) (ac - 1) * sizeof(ebur128_state*));
+
+  for (i = 0; i < ac - 1; ++i) {
+    memset(&file_info, '\0', sizeof(file_info));
+    file = sf_open(av[i + 1], SFM_READ, &file_info);
+
+    sts[i] = ebur128_init((size_t) file_info.channels,
+                      (size_t) file_info.samplerate,
+                      EBUR128_MODE_I);
+
+    /* example: set channel map (note: see ebur128.h for the default map) */
+    if (file_info.channels == 5) {
+      ebur128_set_channel(sts[i], 0, EBUR128_LEFT);
+      ebur128_set_channel(sts[i], 1, EBUR128_RIGHT);
+      ebur128_set_channel(sts[i], 2, EBUR128_CENTER);
+      ebur128_set_channel(sts[i], 3, EBUR128_LEFT_SURROUND);
+      ebur128_set_channel(sts[i], 4, EBUR128_RIGHT_SURROUND);
+    }
+
+    buffer = (double*) malloc(sts[i]->samplerate * sts[i]->channels * sizeof(double));
+    while ((nr_frames_read = sf_readf_double(file, buffer,
+                                             (sf_count_t) sts[i]->samplerate))) {
+      ebur128_add_frames_double(sts[i], buffer, (size_t) nr_frames_read);
+    }
+
+    fprintf(stderr, "%.2f LUFS, %s\n", ebur128_loudness_global(sts[i]), av[i + 1]);
 
 
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
-                    EBUR128_MODE_I);
+    free(buffer);
+    buffer = NULL;
 
-  /* example: set channel map (note: see ebur128.h for the default map) */
-  if (file_info.channels == 5) {
-    ebur128_set_channel(st, 0, EBUR128_LEFT);
-    ebur128_set_channel(st, 1, EBUR128_RIGHT);
-    ebur128_set_channel(st, 2, EBUR128_CENTER);
-    ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
-    ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
+    if (sf_close(file)) {
+      fprintf(stderr, "Could not close input file!\n");
+    }
   }
 
-  buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
-  while ((nr_frames_read = sf_readf_double(file, buffer,
-                                           (sf_count_t) st->samplerate))) {
-    nr_frames_read_all += nr_frames_read;
-    ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
-  }
-  if (file_info.frames != nr_frames_read_all) {
-    fprintf(stderr, "Warning: Could not read full file"
-                            " or determine right length!\n");
-  }
-
-  gated_loudness = ebur128_loudness_global(st);
-  fprintf(stderr, "global loudness: %.1f LUFS\n", gated_loudness);
-
+  fprintf(stderr, "-----------\n"
+                  "%.2f LUFS\n", ebur128_loudness_global_multiple(sts, (size_t) ac - 1));
 
   /* clean up */
-  ebur128_destroy(&st);
-
-  free(buffer);
-  buffer = NULL;
-
-  if (sf_close(file)) {
-    fprintf(stderr, "Could not close input file!\n");
+  for (i = 0; i < ac - 1; ++i) {
+    ebur128_destroy(&sts[i]);
   }
+  free(sts);
 
   return 0;
 }
