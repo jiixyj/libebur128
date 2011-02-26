@@ -13,6 +13,7 @@ Features
 * Portable ANSI C code
 * Implements M, S and I modes
 * Implements loudness range measurement (EBU - TECH 3342)
+* True peak scanning
 * Supports all samplerates by recalculation of the filter coefficients
 * ReplayGain compatible tagging support for MP3, OGG, Musepack and FLAC
 
@@ -22,7 +23,7 @@ Requirements
 
 The library itself has no requirements besides ANSI C.
 
-The scanner needs libsndfile, libmpg123, FFmpeg or libmpcdec.
+The scanner needs taglib, libsndfile, libmpg123, FFmpeg and libmpcdec.
 
 
 Download
@@ -57,21 +58,40 @@ want to scan as arguments.
 
 The output will look like this:
 
-    segment 1: -9.8 LUFS
-    segment 2: -9.9 LUFS
-    segment 3: -10.6 LUFS
-    segment 4: -11.9 LUFS
-    segment 5: -10.9 LUFS
-    segment 6: -12.9 LUFS
-    segment 7: -10.7 LUFS
-    segment 8: -11.9 LUFS
-    segment 9: -10.9 LUFS
-    segment 10: -12.8 LUFS
-    segment 11: -12.1 LUFS
-    segment 12: -15.4 LUFS
-    segment 13: -13.7 LUFS
-    segment 14: -11.6 LUFS
-    global loudness: -11.3 LUFS
+    $ ./r128-sndfile ~/music/bad\ loop\ -\ Luo/*.flac
+
+    -12.81 LUFS, /home/jan/music/bad loop - Luo/bad loop - Luo - 01 Nio.flac
+    -11.15 LUFS, /home/jan/music/bad loop - Luo/bad loop - Luo - 02 Eri Valeire.flac
+    -10.14 LUFS, /home/jan/music/bad loop - Luo/bad loop - Luo - 03 Kauniit Ihmiset.flac
+    -11.31 LUFS, /home/jan/music/bad loop - Luo/bad loop - Luo - 04 Mmin.flac
+    -26.13 LUFS, /home/jan/music/bad loop - Luo/bad loop - Luo - 05 3b Or T.flac
+    -14.10 LUFS, /home/jan/music/bad loop - Luo/bad loop - Luo - 06 Kannas Nsp.flac
+    --------------------------------------------------------------------------------
+    -11.75 LUFS
+
+or with more options:
+
+    $ ./r128-sndfile -l -p both ~/music/bad\ loop\ -\ Luo/*.flac
+
+    -12.81 LUFS, LRA: 14.16 LU, sample peak: 0.89151001, true peak: 0.99826229, /home/jan/music/bad loop - Luo/bad loop - Luo - 01 Nio.flac
+    -11.15 LUFS, LRA: 8.26 LU, sample peak: 0.89163208, true peak: 0.99095666, /home/jan/music/bad loop - Luo/bad loop - Luo - 02 Eri Valeire.flac
+    -10.14 LUFS, LRA: 11.79 LU, sample peak: 0.89154053, true peak: 0.99171823, /home/jan/music/bad loop - Luo/bad loop - Luo - 03 Kauniit Ihmiset.flac
+    -11.31 LUFS, LRA: 11.75 LU, sample peak: 0.89157104, true peak: 0.92898595, /home/jan/music/bad loop - Luo/bad loop - Luo - 04 Mmin.flac
+    -26.13 LUFS, LRA: 14.87 LU, sample peak: 0.25204468, true peak: 0.25203928, /home/jan/music/bad loop - Luo/bad loop - Luo - 05 3b Or T.flac
+    -14.10 LUFS, LRA: 11.40 LU, sample peak: 0.89151001, true peak: 1.02603507, /home/jan/music/bad loop - Luo/bad loop - Luo - 06 Kannas Nsp.flac
+    --------------------------------------------------------------------------------
+    -11.75 LUFS, LRA: 13.34 LU, sample peak: 0.89163208, true peak: 1.02603507
+
+Scripts can parse standard output easily:
+
+    $ ./r128-sndfile -l -p both ~/music/bad\ loop\ -\ Luo/*.flac 2> /dev/null
+    -12.81,14.16,0.89151001,0.99826229,/home/jan/music/bad loop - Luo/bad loop - Luo - 01 Nio.flac
+    -11.15,8.26,0.89163208,0.99095666,/home/jan/music/bad loop - Luo/bad loop - Luo - 02 Eri Valeire.flac
+    -10.14,11.79,0.89154053,0.99171823,/home/jan/music/bad loop - Luo/bad loop - Luo - 03 Kauniit Ihmiset.flac
+    -11.31,11.75,0.89157104,0.92898595,/home/jan/music/bad loop - Luo/bad loop - Luo - 04 Mmin.flac
+    -26.13,14.87,0.25204468,0.25203928,/home/jan/music/bad loop - Luo/bad loop - Luo - 05 3b Or T.flac
+    -14.10,11.40,0.89151001,1.02603507,/home/jan/music/bad loop - Luo/bad loop - Luo - 06 Kannas Nsp.flac
+    -11.75,13.34,0.89163208,1.02603507
 
 
 The scanners also support ReplayGain tagging with the option "-t". Run it like
@@ -86,6 +106,9 @@ or:
 and it will scan the directory as one album/as tracks. Use the option "-r" to
 search recursively for music files and tag them as one album per subfolder. The
 tagger also supports file input; then all files are treated as one album.
+
+Use the option "-p" to print information about peak values. Use "-p sample" for
+sample peaks, "-p true" for true peaks, and "-p both" to print both values.
 
 The reference volume is -18 LU (5 dB louder than the EBU R 128 reference level
 of -23 LU).
