@@ -163,7 +163,6 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   SLIST_INIT(&st->block_list);
   SLIST_INIT(&st->short_term_block_list);
   st->short_term_frame_counter = 0;
-  st->block_counter = 0;
 
   /* the first block needs 400ms of audio data */
   st->needed_frames = st->samples_in_200ms * 2;
@@ -189,7 +188,7 @@ exit:
   return NULL;
 }
 
-int ebur128_destroy(ebur128_state** st) {
+void ebur128_destroy(ebur128_state** st) {
   struct ebur128_dq_entry* entry;
   free((*st)->audio_data);
   free((*st)->channel_map);
@@ -209,8 +208,6 @@ int ebur128_destroy(ebur128_state** st) {
 
   free(*st);
   *st = NULL;
-
-  return 0;
 }
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
@@ -290,7 +287,6 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
     if (!block) return -1;
     block->z = sum;
     SLIST_INSERT_HEAD(&st->block_list, block, entries);
-    ++st->block_counter;
     return 0;
   } else {
     return 1;
@@ -423,19 +419,6 @@ EBUR128_ADD_FRAMES(int)
 EBUR128_ADD_FRAMES(float)
 EBUR128_ADD_FRAMES(double)
 
-void ebur128_start_new_segment(ebur128_state* st) {
-  st->block_counter = 0;
-  /* the first block needs 400ms of audio data */
-  st->needed_frames = st->samples_in_200ms * 2;
-  /* start at the beginning of the buffer */
-  st->audio_data_index = 0;
-  memset(st->audio_data, '\0', st->audio_data_frames *
-                               st->channels *
-                               sizeof(double));
-  /* reset short term frame counter */
-  st->short_term_frame_counter = 0;
-}
-
 double ebur128_energy_to_loudness(double energy) {
   return 10 * (log(energy) / log(10.0)) - 0.691;
 }
@@ -484,10 +467,6 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
 
 double ebur128_loudness_global(ebur128_state* st) {
   return ebur128_gated_loudness(&st, 1, (size_t) -1);
-}
-
-double ebur128_loudness_segment(ebur128_state* st) {
-  return ebur128_gated_loudness(&st, 1, st->block_counter);
 }
 
 double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {

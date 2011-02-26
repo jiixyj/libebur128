@@ -51,7 +51,6 @@ typedef struct {
   struct ebur128_double_queue block_list;
   struct ebur128_double_queue short_term_block_list;
   size_t short_term_frame_counter;
-  size_t block_counter;
 } ebur128_state;
 
 ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode);
@@ -87,19 +86,13 @@ int ebur128_add_frames_double(ebur128_state* st,
                              const double* src,
                              size_t frames);
 
-/* Note: The current unfinished block will be lost. */
-void ebur128_start_new_segment(ebur128_state* st);
-
-/* Get integrated loudness of the last segment/track. After this you should
- * start a new segment with ebur128_start_new_segment. Returns NaN if mode does
- * not contain EBUR128_MODE_I. */
-double ebur128_loudness_segment(ebur128_state* st);
 /* Get integrated loudness of the whole programme. Returns NaN if mode does not
  * contain EBUR128_MODE_I. */
 double ebur128_loudness_global(ebur128_state* st);
 /* Get integrated loudness of the whole programme across multiple instances.
    Returns NaN if mode does not contain EBUR128_MODE_I. */
 double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size);
+
 /* Get momentary loudness (last 400ms) */
 double ebur128_loudness_momentary(ebur128_state* st);
 /* Get short-term loudness (last 3s). Will return NaN if mode does not contain
