@@ -17,7 +17,7 @@ extern "C" {
 #include "queue.h"
 
 /** @cond SLIST
- *  Declare a linked list of double for out block energies.
+ *  Declare a linked list for our block energies.
  */
 SLIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {
@@ -30,12 +30,12 @@ struct ebur128_dq_entry {
  *  Use these values when setting the channel map with ebur128_set_channel().
  */
 enum channel {
-  EBUR128_UNUSED = 0,
-  EBUR128_LEFT,
-  EBUR128_RIGHT,
-  EBUR128_CENTER,
-  EBUR128_LEFT_SURROUND,
-  EBUR128_RIGHT_SURROUND
+  EBUR128_UNUSED = 0,     /**< unused channel (for example LFE channel) */
+  EBUR128_LEFT,           /**< left channel */
+  EBUR128_RIGHT,          /**< right channel */
+  EBUR128_CENTER,         /**< center channel */
+  EBUR128_LEFT_SURROUND,  /**< left surround channel */
+  EBUR128_RIGHT_SURROUND  /**< right surround channel */
 };
 
 /** \enum mode
@@ -104,8 +104,7 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode);
 
 /** \brief Destroy library state.
  *
- *  @param st library state.
- *  @param mode see the mode enum for possible values.
+ *  @param st pointer to a library state.
  */
 void ebur128_destroy(ebur128_state** st);
 
@@ -170,25 +169,54 @@ int ebur128_add_frames_double(ebur128_state* st,
                              const double* src,
                              size_t frames);
 
-/* Get integrated loudness of the whole programme. Returns NaN if mode does not
- * contain EBUR128_MODE_I. */
+/** \brief Get global integrated loudness in LUFS.
+ *
+ *  @param st library state.
+ *  @return integrated loudness in LUFS. NaN if mode "EBUR128_MODE_I" has not
+ *          been set.
+ */
 double ebur128_loudness_global(ebur128_state* st);
-/* Get integrated loudness of the whole programme across multiple instances.
-   Returns NaN if mode does not contain EBUR128_MODE_I. */
+/** \brief Get global integrated loudness in LUFS across multiple instances.
+ *
+ *  @param sts array of library states.
+ *  @param size length of sts
+ *  @return integrated loudness in LUFS. NaN if mode "EBUR128_MODE_I" has not
+ *          been set.
+ */
 double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size);
 
-/* Get momentary loudness (last 400ms) */
+/** \brief Get momentary loudness (last 400ms) in LUFS.
+ *
+ *  @param st library state.
+ *  @return momentary loudness in LUFS.
+ */
 double ebur128_loudness_momentary(ebur128_state* st);
-/* Get short-term loudness (last 3s). Will return NaN if mode does not contain
- * EBUR128_MODE_S. */
+/** \brief Get short-term loudness (last 3s) in LUFS.
+ *
+ *  @param st library state.
+ *  @return short-term loudness in LUFS. NaN if mode "EBUR128_MODE_S" has not
+ *          been set.
+ */
 double ebur128_loudness_shortterm(ebur128_state* st);
 
-/* Returns LRA according to EBU 3342. Will return NaN if memory allocation
- * fails or if mode does not contain EBUR128_MODE_LRA. */
+/** \brief Get loudness range (LRA) of programme in LU.
+ *
+ *  Calculates loudness range according to EBU 3342.
+ *
+ *  @param st library state.
+ *  @return loudness range (LRA) in LU. NaN if memory allocation fails or mode
+ *          "EBUR128_MODE_LRA" has not been set.
+ */
 double ebur128_loudness_range(ebur128_state* st);
-/* Get LRA of the whole programme across multiple instances.
- * Returns NaN if memory allocation fails or mode does not contain
- * EBUR128_MODE_LRA. */
+/** \brief Get loudness range (LRA) in LU across multiple instances.
+ *
+ *  Calculates loudness range according to EBU 3342.
+ *
+ *  @param sts array of library states.
+ *  @param size length of sts
+ *  @return loudness range (LRA) in LU. NaN if memory allocation fails or mode
+ *          "EBUR128_MODE_LRA" has not been set.
+ */
 double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size);
 
 #ifdef __cplusplus
