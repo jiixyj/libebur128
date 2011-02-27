@@ -511,6 +511,7 @@ static gboolean parse_interval(const gchar *option_name,
 }
 
 static char** file_names = NULL;
+static char* relative_gate_string = NULL;
 static GOptionEntry entries[] = {
   { "lra", 'l', 0, G_OPTION_ARG_NONE,
                  &gd.calculate_lra,
@@ -533,6 +534,9 @@ static GOptionEntry entries[] = {
   { "peak", 'p', 0, G_OPTION_ARG_STRING,
                  &gd.peak,
                  "display peak values", "true|sample|both" },
+  { "gate", 0, 0, G_OPTION_ARG_STRING,
+                 &relative_gate_string,
+                 "FOR TESTING ONLY: set relative gate (dB)", NULL },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &file_names,
                  "<input>" , "[FILE|DIRECTORY]..."},
@@ -567,6 +571,8 @@ int test_files_in_gd(struct gain_data* gdata, size_t ac, int test) {
   return errcode;
 }
 
+extern double relative_gate;
+
 int main(int ac, char* av[]) {
   int errcode = 0;
   size_t i = 0, nr_files = 0;
@@ -584,6 +590,12 @@ int main(int ac, char* av[]) {
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
   g_option_context_parse(context, &ac, &av, &error);
+  if (relative_gate_string) {
+    relative_gate = atof(relative_gate_string);
+    if (relative_gate != -8.0) {
+      fprintf(stderr, "WARNING: Setting relative gate to non-standard value %.2f dB!\n", relative_gate);
+    }
+  }
 
   if (error) {
     fprintf(stderr, "%s\n", error->message);

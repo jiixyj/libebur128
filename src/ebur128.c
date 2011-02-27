@@ -16,8 +16,10 @@
     goto goto_point;                                                           \
   }
 
+double relative_gate = -8.0;
+
 /* Those will be calculated when initializing the library */
-static double minus_eight_decibels;
+static double relative_gate_factor;
 static double minus_twenty_decibels;
 static double abs_threshold_energy;
 
@@ -170,7 +172,7 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   st->audio_data_index = 0;
 
   /* initialize static constants */
-  minus_eight_decibels = pow(10.0, -8.0 / 10.0);
+  relative_gate_factor = pow(10.0, relative_gate / 10.0);
   minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
   abs_threshold_energy = pow(10.0, (-70.0 + 0.691) / 10.0);
 
@@ -447,7 +449,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
   }
   if (!above_thresh_counter) return -1.0 / 0.0;
   relative_threshold /= (double) above_thresh_counter;
-  relative_threshold *= minus_eight_decibels;
+  relative_threshold *= relative_gate_factor;
   above_thresh_counter = 0;
   for (i = 0; i < size; i++) {
     if (!sts[i]) continue;
