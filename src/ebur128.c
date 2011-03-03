@@ -560,10 +560,15 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
     --stl_relgated_size;
   }
 
-  h_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)];
-  l_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
-  free(stl_vector);
-  return ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+  if (stl_relgated_size) {
+    h_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)];
+    l_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
+    free(stl_vector);
+    return ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+  } else {
+    free(stl_vector);
+    return 0.0;
+  }
 }
 
 double ebur128_loudness_range(ebur128_state* st) {
