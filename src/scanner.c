@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include "ebur128.h"
 #include "input.h"
@@ -56,9 +57,15 @@ void calculate_gain_of_file(void* user, void* user_data) {
   size_t oversample_factor = 1;
 
   int errcode, result;
+  FILE* file;
 
   gd->segment_loudness[i] = 0.0 / 0.0;
-  result = input_open_file(ih, g_array_index(gd->file_names, char*, i));
+  file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
+  if (!file) {
+    errcode = 1;
+    goto endloop;
+  }
+  result = input_open_file(ih, file);
   if (result) {
     errcode = 1;
     goto endloop;
@@ -179,7 +186,7 @@ destroy_resampler:
   }
 
 close_file:
-  input_close_file(ih);
+  input_close_file(ih, file);
 
 endloop:
   input_handle_destroy(&ih);
@@ -346,6 +353,7 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   float* buffer = NULL;
   size_t nr_frames_read;
   size_t frames_counter = 0, frames_needed;
+  FILE* file;
 
   CHECK_ERROR(input_init_library(),
               "Could not initialize input library!", 1, exit)
@@ -354,7 +362,12 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   for (i = 0; i < gd->file_names->len; ++i) {
     struct input_handle* ih = input_handle_init();
 
-    result = input_open_file(ih, g_array_index(gd->file_names, char*, i));
+    file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
+    if (!file) {
+      errcode = 1;
+      goto endloop;
+    }
+    result = input_open_file(ih, file);
     if (result) {
       errcode = 1;
       goto endloop;
@@ -425,7 +438,7 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   free_buffer:
     input_free_buffer(ih);
   close_file:
-    input_close_file(ih);
+    input_close_file(ih, file);
   endloop:
     input_handle_destroy(&ih);
   }

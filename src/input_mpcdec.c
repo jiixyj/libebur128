@@ -34,8 +34,8 @@ struct input_handle* input_handle_init() {
   return ret;
 }
 
-int input_open_file(struct input_handle* ih, const char* filename) {
-  int err = mpc_reader_init_stdio(&ih->reader, filename);
+int input_open_file(struct input_handle* ih, FILE* file) {
+  int err = mpc_reader_init_stdio_stream(&ih->reader, file);
   if (err < 0) {
     return 1;
   }
@@ -83,7 +83,8 @@ void input_free_buffer(struct input_handle* ih) {
   return;
 }
 
-void input_close_file(struct input_handle* ih) {
+void input_close_file(struct input_handle* ih, FILE* file) {
+  (void) file;
   mpc_demux_exit(ih->demux);
   mpc_reader_exit_stdio(&ih->reader);
 }

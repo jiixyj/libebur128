@@ -1,5 +1,7 @@
 /* See LICENSE file for copyright and license details. */
+#define _POSIX_C_SOURCE 1
 #include <sndfile.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "ebur128.h"
@@ -38,9 +40,9 @@ void input_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-int input_open_file(struct input_handle* ih, const char* filename) {
+int input_open_file(struct input_handle* ih, FILE* file) {
   memset(&ih->file_info, '\0', sizeof(ih->file_info));
-  ih->file = sf_open(filename, SFM_READ, &ih->file_info);
+  ih->file = sf_open_fd(fileno(file), SFM_READ, &ih->file_info, 1);
   if (ih->file) {
     return 0;
   } else {
@@ -111,7 +113,8 @@ void input_free_buffer(struct input_handle* ih) {
   ih->buffer = NULL;
 }
 
-void input_close_file(struct input_handle* ih) {
+void input_close_file(struct input_handle* ih, FILE* file) {
+  (void) file;
   if (sf_close(ih->file)) {
     fprintf(stderr, "Could not close input file!\n");
   }

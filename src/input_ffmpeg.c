@@ -1,7 +1,9 @@
 /* See LICENSE file for copyright and license details. */
+#define _POSIX_C_SOURCE 1
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <glib.h>
+#include <glib/gprintf.h>
 
 #include "ebur128.h"
 
@@ -48,8 +50,10 @@ void input_handle_destroy(struct input_handle** ih) {
 }
 
 
-int input_open_file(struct input_handle* ih, const char* filename) {
+int input_open_file(struct input_handle* ih, FILE* file) {
   g_mutex_lock(ffmpeg_mutex);
+  char filename[16];
+  g_snprintf(filename, 16, "pipe:%d", fileno(file));
   if (av_open_input_file(&ih->format_context, filename, NULL, 0, NULL) != 0) {
     fprintf(stderr, "Could not open input file!\n");
     g_mutex_unlock(ffmpeg_mutex);
@@ -243,10 +247,11 @@ void input_free_buffer(struct input_handle* ih) {
   return;
 }
 
-void input_close_file(struct input_handle* ih) {
+void input_close_file(struct input_handle* ih, FILE* file) {
   g_mutex_lock(ffmpeg_mutex);
   avcodec_close(ih->codec_context);
   av_close_input_file(ih->format_context);
+  fclose(file);
   g_mutex_unlock(ffmpeg_mutex);
 }
 

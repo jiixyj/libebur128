@@ -1,4 +1,5 @@
 /* See LICENSE file for copyright and license details. */
+#define _POSIX_C_SOURCE 1
 #include <mpg123.h>
 #include <stdio.h>
 
@@ -38,14 +39,14 @@ void input_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-int input_open_file(struct input_handle* ih, const char* filename) {
+int input_open_file(struct input_handle* ih, FILE* file) {
   int result;
   ih->mh = mpg123_new(NULL, &result);
   if (!ih->mh) {
     fprintf(stderr, "Could not create mpg123 handler!\n");
     goto close_file;
   }
-  result = mpg123_open(ih->mh, filename);
+  result = mpg123_open_fd(ih->mh, fileno(file));
   if (result != MPG123_OK) {
     fprintf(stderr, "Could not open input file!\n");
     goto close_file;
@@ -66,7 +67,7 @@ int input_open_file(struct input_handle* ih, const char* filename) {
     goto close_file;
   }
   result = mpg123_close(ih->mh);
-  result = mpg123_open(ih->mh, filename);
+  result = mpg123_open_fd(ih->mh, fileno(file));
   if (result != MPG123_OK) {
     fprintf(stderr, "Could not open input file!\n");
     goto close_file;
@@ -133,9 +134,10 @@ void input_free_buffer(struct input_handle* ih) {
   ih->buffer = NULL;
 }
 
-void input_close_file(struct input_handle* ih) {
+void input_close_file(struct input_handle* ih, FILE* file) {
   mpg123_close(ih->mh);
   mpg123_delete(ih->mh);
+  fclose(file);
   ih->mh = NULL;
 }
 
