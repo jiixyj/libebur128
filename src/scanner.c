@@ -89,7 +89,9 @@ void calculate_gain_of_file(void* user, void* user_data) {
     ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
 
-  if (gd->peak && (!strcmp(gd->peak, "true") || !strcmp(gd->peak, "both")) &&
+  if (gd->peak && (!strcmp(gd->peak, "true") ||
+                   !strcmp(gd->peak, "dbtp") ||
+                   !strcmp(gd->peak, "all")) &&
       input_get_samplerate(ih) < 192000) {
     oversample_factor = 2;
     if (input_get_samplerate(ih) < 96000)
@@ -122,7 +124,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
     size_t j;
     if (gd->tag_rg ||
         (gd->peak && (!strcmp(gd->peak, "sample") ||
-                      !strcmp(gd->peak, "both")))) {
+                      !strcmp(gd->peak, "all")))) {
       for (j = 0; j < nr_frames_read * st->channels; ++j) {
         if (buffer[j] > gd->segment_peaks[i])
           gd->segment_peaks[i] = buffer[j];
@@ -146,8 +148,9 @@ void calculate_gain_of_file(void* user, void* user_data) {
           gd->segment_true_peaks[i] = -resampler_buffer[j];
       }
     } else if (gd->peak && (!strcmp(gd->peak, "true") ||
-                            !strcmp(gd->peak, "both"))) {
-      if (gd->tag_rg || !strcmp(gd->peak, "both")) {
+                            !strcmp(gd->peak, "dbtp") ||
+                            !strcmp(gd->peak, "all"))) {
+      if (gd->tag_rg || !strcmp(gd->peak, "all")) {
         gd->segment_true_peaks[i] = gd->segment_peaks[i];
       } else {
         for (j = 0; j < nr_frames_read * st->channels; ++j) {
@@ -213,7 +216,7 @@ void print_gain_value(double x) {
   } else if (my_isinf1(x) == -1) {
     printf("-inf");
   } else {
-    printf("%.2f", x);
+    printf("%.1f", x);
   }
 }
 
@@ -253,13 +256,13 @@ int loudness_or_lra(struct gain_data* gd) {
       printf(",");
       fflush(stdout);
       fprintf(stderr, " LRA: ");
-      printf("%.2f", gd->segment_lra[i]);
+      printf("%.1f", gd->segment_lra[i]);
       fflush(stdout);
       fprintf(stderr, " LU");
     }
     if (gd->peak &&
         (!strcmp(gd->peak, "sample") ||
-         !strcmp(gd->peak, "both"))) {
+         !strcmp(gd->peak, "all"))) {
       printf(",");
       fflush(stdout);
       fprintf(stderr, " sample peak: ");
@@ -268,12 +271,22 @@ int loudness_or_lra(struct gain_data* gd) {
     }
     if (gd->peak &&
         (!strcmp(gd->peak, "true") ||
-         !strcmp(gd->peak, "both"))) {
+         !strcmp(gd->peak, "all"))) {
       printf(",");
       fflush(stdout);
       fprintf(stderr, " true peak: ");
       printf("%.8f", gd->segment_true_peaks[i]);
       fflush(stdout);
+    }
+    if (gd->peak &&
+        (!strcmp(gd->peak, "dbtp") ||
+         !strcmp(gd->peak, "all"))) {
+      printf(",");
+      fflush(stdout);
+      fprintf(stderr, " true peak: ");
+      print_gain_value(20.0 * log(gd->segment_true_peaks[i]) / log(10.0));
+      fflush(stdout);
+      fprintf(stderr, " dBTP");
     }
     printf(",");
     fflush(stdout);
@@ -306,7 +319,7 @@ int loudness_or_lra(struct gain_data* gd) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " LRA: ");
-    printf("%.2f",
+    printf("%.1f",
             ebur128_loudness_range_multiple(gd->library_states,
                                             gd->file_names->len));
     fflush(stdout);
@@ -314,7 +327,7 @@ int loudness_or_lra(struct gain_data* gd) {
   }
   if (gd->peak &&
       (!strcmp(gd->peak, "sample") ||
-       !strcmp(gd->peak, "both"))) {
+       !strcmp(gd->peak, "all"))) {
     double max_peak = 0.0;
     for (i = 0; i < gd->file_names->len; ++i) {
       if (gd->segment_peaks[i] > max_peak) {
@@ -329,7 +342,7 @@ int loudness_or_lra(struct gain_data* gd) {
   }
   if (gd->peak &&
       (!strcmp(gd->peak, "true") ||
-       !strcmp(gd->peak, "both"))) {
+       !strcmp(gd->peak, "all"))) {
     double max_peak = 0.0;
     for (i = 0; i < gd->file_names->len; ++i) {
       if (gd->segment_true_peaks[i] > max_peak) {
@@ -341,6 +354,22 @@ int loudness_or_lra(struct gain_data* gd) {
     fprintf(stderr, " true peak: ");
     printf("%.8f", max_peak);
     fflush(stdout);
+  }
+  if (gd->peak &&
+      (!strcmp(gd->peak, "dbtp") ||
+       !strcmp(gd->peak, "all"))) {
+    double max_peak = 0.0;
+    for (i = 0; i < gd->file_names->len; ++i) {
+      if (gd->segment_true_peaks[i] > max_peak) {
+        max_peak = gd->segment_true_peaks[i];
+      }
+    }
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " true peak: ");
+    print_gain_value(20.0 * log(max_peak) / log(10.0));
+    fflush(stdout);
+    fprintf(stderr, " dBTP");
   }
   printf("\n");
 
@@ -563,25 +592,47 @@ static char* relative_gate_string = NULL;
 static GOptionEntry entries[] = {
   { "lra", 'l', 0, G_OPTION_ARG_NONE,
                  &gd.calculate_lra,
-                 "calculate loudness range in LRA", NULL },
+                 "calculate loudness range in LRA\n", NULL },
   { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
-                 "print momentary loudness every INTERVAL seconds", "INTERVAL" },
+                 "print momentary loudness every INTERVAL"
+                 "\n                                      "
+                 "seconds\n", "INTERVAL" },
   { "shortterm", 's', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
-                 "print shortterm loudness every INTERVAL seconds", "INTERVAL" },
+                 "print shortterm loudness every INTERVAL"
+                 "\n                                      "
+                 "seconds\n", "INTERVAL" },
   { "integrated", 'i', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
-                 "print integrated loudness every INTERVAL seconds", "INTERVAL" },
+                 "print integrated loudness (from start of"
+                 "\n                                      "
+                 "file) every INTERVAL seconds\n", "INTERVAL" },
   { "tagging", 't', 0, G_OPTION_ARG_STRING,
                  &gd.tag_rg,
-                 "write ReplayGain tags to files", "album|track" },
+                 "write ReplayGain tags to files"
+                 "\n                                      "
+                 "(reference: -18 LUFS)"
+                 "\n                                      "
+                 "-t album: write album gain"
+                 "\n                                      "
+                 "-t track: write track gain\n", "album|track" },
   { "recursive", 'r', 0, G_OPTION_ARG_NONE,
                  &gd.recursive_scan,
-                 "scan directory recursively, one album per folder", NULL },
+                 "scan directory recursively, one album"
+                 "\n                                      "
+                 "per folder\n", NULL },
   { "peak", 'p', 0, G_OPTION_ARG_STRING,
                  &gd.peak,
-                 "display peak values", "true|sample|both" },
+                 "display peak values"
+                 "\n                                      "
+                 "-p sample: sample peak (float value)"
+                 "\n                                      "
+                 "-p true:   true peak (float value)"
+                 "\n                                      "
+                 "-p dbtp:   true peak (dB True Peak)"
+                 "\n                                      "
+                 "-p all:    show all peak values\n", "sample|true|dbtp|all" },
   { "gate", 0, 0, G_OPTION_ARG_STRING,
                  &relative_gate_string,
                  "FOR TESTING ONLY: set relative gate (dB)", NULL },
@@ -660,7 +711,8 @@ int main(int ac, char* av[]) {
   if (gd.peak &&
       strcmp(gd.peak, "true") &&
       strcmp(gd.peak, "sample") &&
-      strcmp(gd.peak, "both")) {
+      strcmp(gd.peak, "dbtp") &&
+      strcmp(gd.peak, "all")) {
     fprintf(stderr, "Invalid argument to --peak!\n");
     return 1;
   }
