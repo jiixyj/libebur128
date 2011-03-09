@@ -193,6 +193,30 @@ endloop:
   gd->errcode = errcode;
 }
 
+int my_isnan1(double x) {
+  volatile double temp = x;
+  return temp != x;
+}
+
+int my_isinf1(double x) {
+  volatile double temp = x;
+  if ((temp == x) && ((temp - x) != 0.0))
+    return (x < 0.0 ? -1 : 1);
+  else return 0;
+}
+
+void print_gain_value(double x) {
+  if (my_isnan1(x)) {
+    printf("nan");
+  } else if (my_isinf1(x) == 1) {
+    printf("inf");
+  } else if (my_isinf1(x) == -1) {
+    printf("-inf");
+  } else {
+    printf("%.2f", x);
+  }
+}
+
 int loudness_or_lra(struct gain_data* gd) {
   int errcode = 0;
   size_t i;
@@ -222,7 +246,7 @@ int loudness_or_lra(struct gain_data* gd) {
   g_thread_pool_free(pool, FALSE, TRUE);
   for (i = 0; i < gd->file_names->len; ++i) {
     fprintf(stderr, "\r");
-    printf("%.2f", gd->segment_loudness[i]);
+    print_gain_value(gd->segment_loudness[i]);
     fflush(stdout);
     fprintf(stderr, " LUFS");
     if (gd->calculate_lra) {
@@ -254,7 +278,18 @@ int loudness_or_lra(struct gain_data* gd) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " ");
-    printf("%s\n", g_array_index(gd->file_names, char*, i));
+    {
+      char* fn;
+  #ifdef G_OS_WIN32
+      fn = g_win32_locale_filename_from_utf8(
+                                g_array_index(gd->file_names, char*, i));
+  #else
+      fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
+                                -1, NULL, NULL, NULL);
+  #endif
+      printf("%s\n", fn);
+      g_free(fn);
+    }
   }
 
   gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
@@ -263,7 +298,7 @@ int loudness_or_lra(struct gain_data* gd) {
                     "--------------------"
                     "--------------------"
                     "--------------------\n");
-  printf("%.2f", gated_loudness);
+  print_gain_value(gated_loudness);
   fflush(stdout);
   fprintf(stderr, " LUFS");
 
@@ -376,7 +411,7 @@ int scan_files_interval_loudness(struct gain_data* gd) {
     if (!st) {
       st = ebur128_init(input_get_channels(ih),
                         input_get_samplerate(ih),
-                        (size_t) gd->mode);
+                        gd->mode);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
     } else {
       if (!ebur128_change_parameters(st, input_get_channels(ih),
