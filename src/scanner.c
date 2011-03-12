@@ -1,4 +1,5 @@
 /* See LICENSE file for copyright and license details. */
+#define _POSIX_C_SOURCE 200112L
 #include <float.h>
 #include <math.h>
 #include <string.h>
@@ -7,6 +8,11 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
+
+#ifdef G_OS_WIN32
+  #define isnan(x) _isnan(x)
+  #define isinf(x) (!isnan(x) && isnan((x) - (x)))
+#endif
 
 #include "ebur128.h"
 #include "input.h"
@@ -196,24 +202,12 @@ endloop:
   gd->errcode = errcode;
 }
 
-int my_isnan1(double x) {
-  volatile double temp = x;
-  return temp != x;
-}
-
-int my_isinf1(double x) {
-  volatile double temp = x;
-  if ((temp == x) && ((temp - x) != 0.0))
-    return (x < 0.0 ? -1 : 1);
-  else return 0;
-}
-
 void print_gain_value(double x) {
-  if (my_isnan1(x)) {
+  if (isnan(x)) {
     printf("nan");
-  } else if (my_isinf1(x) == 1) {
+  } else if (isinf(x) && x > 0.0) {
     printf("inf");
-  } else if (my_isinf1(x) == -1) {
+  } else if (isinf(x) && x < 0.0) {
     printf("-inf");
   } else {
     printf("%.1f", x);
@@ -281,10 +275,11 @@ int loudness_or_lra(struct gain_data* gd) {
     if (gd->peak &&
         (!strcmp(gd->peak, "dbtp") ||
          !strcmp(gd->peak, "all"))) {
+      double tp_gain = 20.0 * log(gd->segment_true_peaks[i]) / log(10.0);
       printf(",");
       fflush(stdout);
       fprintf(stderr, " true peak: ");
-      print_gain_value(20.0 * log(gd->segment_true_peaks[i]) / log(10.0));
+      print_gain_value(tp_gain);
       fflush(stdout);
       fprintf(stderr, " dBTP");
     }
