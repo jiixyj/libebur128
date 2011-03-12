@@ -16,7 +16,9 @@
 
 #include "ebur128.h"
 #include "input.h"
-#include "rgtag.h"
+#ifdef USE_TAGLIB
+  #include "rgtag.h"
+#endif
 
 #define OUTSIDE_SPEEX
 #define RANDOM_PREFIX ebur128
@@ -34,7 +36,9 @@ extern long nproc();
 struct gain_data {
   GArray* file_names;
   int calculate_lra, errcode;
+#ifdef USE_TAGLIB
   char* tag_rg;                    /* NULL, "album" or "track" */
+#endif
   int recursive_scan;
   char* peak;
   double interval;
@@ -128,6 +132,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   while ((nr_frames_read = input_read_frames(ih))) {
     size_t j;
+#ifdef USE_TAGLIB
     if (gd->tag_rg ||
         (gd->peak && (!strcmp(gd->peak, "sample") ||
                       !strcmp(gd->peak, "all")))) {
@@ -138,6 +143,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
           gd->segment_peaks[i] = -buffer[j];
       }
     }
+#endif
     if (resampler) {
       spx_uint32_t in_len = (spx_uint32_t) nr_frames_read;
       spx_uint32_t out_len = (spx_uint32_t) resampler_buffer_frames;
@@ -156,16 +162,20 @@ void calculate_gain_of_file(void* user, void* user_data) {
     } else if (gd->peak && (!strcmp(gd->peak, "true") ||
                             !strcmp(gd->peak, "dbtp") ||
                             !strcmp(gd->peak, "all"))) {
+    #ifdef USE_TAGLIB
       if (gd->tag_rg || !strcmp(gd->peak, "all")) {
         gd->segment_true_peaks[i] = gd->segment_peaks[i];
       } else {
+    #endif
         for (j = 0; j < nr_frames_read * st->channels; ++j) {
           if (buffer[j] > gd->segment_true_peaks[i])
             gd->segment_true_peaks[i] = buffer[j];
           else if (-buffer[j] > gd->segment_true_peaks[i])
             gd->segment_true_peaks[i] = -buffer[j];
         }
+    #ifdef USE_TAGLIB
       }
+    #endif
     }
 
     nr_frames_read_all += nr_frames_read;
@@ -368,6 +378,7 @@ int loudness_or_lra(struct gain_data* gd) {
   }
   printf("\n");
 
+#ifdef USE_TAGLIB
   if (gd->tag_rg) {
     double global_peak = 0.0;
     fprintf(stderr, "tagging...\n");
@@ -387,6 +398,7 @@ int loudness_or_lra(struct gain_data* gd) {
       }
     }
   }
+#endif
   fprintf(stderr, "\n");
 
   for (i = 0; i < gd->file_names->len; ++i) {
@@ -603,6 +615,7 @@ static GOptionEntry entries[] = {
                  "print integrated loudness (from start of"
                  "\n                                      "
                  "file) every INTERVAL seconds\n", "INTERVAL" },
+#ifdef USE_TAGLIB
   { "tagging", 't', 0, G_OPTION_ARG_STRING,
                  &gd.tag_rg,
                  "write ReplayGain tags to files"
@@ -612,6 +625,7 @@ static GOptionEntry entries[] = {
                  "-t album: write album gain"
                  "\n                                      "
                  "-t track: write track gain\n", "album|track" },
+#endif
   { "recursive", 'r', 0, G_OPTION_ARG_NONE,
                  &gd.recursive_scan,
                  "scan directory recursively, one album"
@@ -674,7 +688,9 @@ int main(int ac, char* av[]) {
   GOptionContext *context;
 
   gd.calculate_lra = 0;
+#ifdef USE_TAGLIB
   gd.tag_rg = NULL;
+#endif
   gd.interval = 0.0;
   gd.mode = 0;
   gd.file_names = NULL;
@@ -696,12 +712,14 @@ int main(int ac, char* av[]) {
     return 1;
   }
 
+#ifdef USE_TAGLIB
   if (gd.tag_rg &&
       strcmp(gd.tag_rg, "album") &&
       strcmp(gd.tag_rg, "track")) {
     fprintf(stderr, "Invalid argument to --tagging!\n");
     return 1;
   }
+#endif
 
   if (gd.peak &&
       strcmp(gd.peak, "true") &&
