@@ -226,7 +226,7 @@ add_subdirectory(src)
 ##### Install                    #####
 ######################################
 if(INSTALL_READY)
-  install(FILES LICENSE README DESTINATION .)
+  install(FILES COPYING README DESTINATION .)
   install(DIRECTORY doc/license DESTINATION .)
 
   set(CPACK_PACKAGE_VERSION_MAJOR "0")
