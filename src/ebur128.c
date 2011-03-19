@@ -143,12 +143,12 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   errcode = ebur128_init_channel_map(st);
   CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
   st->samplerate = samplerate;
-  st->samples_in_200ms = (st->samplerate + 2) / 5;
+  st->samples_in_100ms = (st->samplerate + 5) / 10;
   st->mode = mode;
   if ((mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
-    st->audio_data_frames = st->samples_in_200ms * 15;
+    st->audio_data_frames = st->samples_in_100ms * 30;
   } else if ((mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
-    st->audio_data_frames = st->samples_in_200ms * 2;
+    st->audio_data_frames = st->samples_in_100ms * 4;
   } else {
     return NULL;
   }
@@ -167,7 +167,7 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   st->short_term_frame_counter = 0;
 
   /* the first block needs 400ms of audio data */
-  st->needed_frames = st->samples_in_200ms * 2;
+  st->needed_frames = st->samples_in_100ms * 4;
   /* start at the beginning of the buffer */
   st->audio_data_index = 0;
 
@@ -328,9 +328,9 @@ int ebur128_change_parameters(ebur128_state* st,
     CHECK_ERROR(errcode, "Could not initialize filter!\n", 1, free_channel_map)
   }
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
-    st->audio_data_frames = st->samples_in_200ms * 15;
+    st->audio_data_frames = st->samples_in_100ms * 30;
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
-    st->audio_data_frames = st->samples_in_200ms * 2;
+    st->audio_data_frames = st->samples_in_100ms * 4;
   } else {
     return 1;
   }
@@ -343,7 +343,7 @@ int ebur128_change_parameters(ebur128_state* st,
   CHECK_ERROR(errcode, "Could not allocate memory!\n", 1, free_audio_data)
 
   /* the first block needs 400ms of audio data */
-  st->needed_frames = st->samples_in_200ms * 2;
+  st->needed_frames = st->samples_in_100ms * 4;
   /* start at the beginning of the buffer */
   st->audio_data_index = 0;
   /* reset short term frame counter */
@@ -382,12 +382,12 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       /* calculate the new gating block */                                     \
       if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                     \
         errcode = ebur128_calc_gating_block(st,                                \
-                                            st->samples_in_200ms * 2, NULL);   \
+                                            st->samples_in_100ms * 4, NULL);   \
         if (errcode == -1) return 1;                                           \
       }                                                                        \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->short_term_frame_counter += st->needed_frames;                     \
-        if (st->short_term_frame_counter == st->samples_in_200ms * 15) {       \
+        if (st->short_term_frame_counter == st->samples_in_100ms * 30) {       \
           double st_energy = ebur128_energy_shortterm(st);                     \
           struct ebur128_dq_entry* block;                                      \
           block = (struct ebur128_dq_entry*)                                   \
@@ -395,11 +395,11 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
           if (!block) return 1;                                                \
           block->z = st_energy;                                                \
           SLIST_INSERT_HEAD(&st->short_term_block_list, block, entries);       \
-          st->short_term_frame_counter = st->samples_in_200ms * 10;            \
+          st->short_term_frame_counter = st->samples_in_100ms * 20;            \
         }                                                                      \
       }                                                                        \
-      /* 200ms are needed for all blocks besides the first one */              \
-      st->needed_frames = st->samples_in_200ms;                                \
+      /* 100ms are needed for all blocks besides the first one */              \
+      st->needed_frames = st->samples_in_100ms;                                \
       /* reset audio_data_index when buffer full */                            \
       if (st->audio_data_index == st->audio_data_frames * st->channels) {      \
         st->audio_data_index = 0;                                              \
@@ -484,12 +484,12 @@ double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
 }
 
 double ebur128_loudness_momentary(ebur128_state* st) {
-  double energy = ebur128_energy_in_interval(st, st->samples_in_200ms * 2);
+  double energy = ebur128_energy_in_interval(st, st->samples_in_100ms * 4);
   return ebur128_energy_to_loudness(energy);
 }
 
 double ebur128_energy_shortterm(ebur128_state* st) {
-  return ebur128_energy_in_interval(st, st->samples_in_200ms * 15);
+  return ebur128_energy_in_interval(st, st->samples_in_100ms * 30);
 }
 
 double ebur128_loudness_shortterm(ebur128_state* st) {

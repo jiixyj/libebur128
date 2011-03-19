@@ -68,8 +68,8 @@ typedef struct {
   /** Current index for audio_data. */
   size_t audio_data_index;
   /** How many frames are needed for a gating block. Will correspond to 400ms
-   *  of audio at initialization, and 200ms after the first block (50% overlap
-   *  as specified in R128). */
+   *  of audio at initialization, and 100ms after the first block (75% overlap
+   *  as specified in the 2011 revision of BS1770). */
   size_t needed_frames;
   /** The number of channels. */
   size_t channels;
@@ -77,8 +77,8 @@ typedef struct {
   int* channel_map;
   /** The sample rate. */
   size_t samplerate;
-  /** How many samples fit in 200ms (rounded). */
-  size_t samples_in_200ms;
+  /** How many samples fit in 100ms (rounded). */
+  size_t samples_in_100ms;
   /** BS.1770 filter coefficients (denominator). */
   double* a;
   /** BS.1770 filter coefficients (nominator). */
