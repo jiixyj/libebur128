@@ -23,96 +23,52 @@ static double relative_gate_factor;
 static double minus_twenty_decibels;
 static double abs_threshold_energy;
 
-int ebur128_init_multi_array(double*** v, size_t channels, size_t filter_size) {
-  size_t i;
-  int errcode = 0;
-  *v = (double**) calloc(channels, sizeof(double*));
-  CHECK_ERROR(!(*v), "Could not allocate memory!\n", 1, exit)
-  for (i = 0; i < channels; ++i) {
-    (*v)[i] = (double*) calloc(filter_size, sizeof(double));
-    CHECK_ERROR(!((*v)[i]), "Could not allocate memory!\n", 1, free_all)
-  }
-  return 0;
-
-free_all:
-  for (i = 0; i < channels; ++i) {
-    free((*v)[i]);
-  }
-  free(*v);
-exit:
-  return errcode;
-}
-
-void ebur128_release_multi_array(double*** v, size_t channels) {
-  size_t i;
-  for (i = 0; i < channels; ++i) {
-    free((*v)[i]);
-  }
-  free(*v);
-  *v = NULL;
-}
-
 int ebur128_init_filter(ebur128_state* st) {
-  int errcode = 0;
-
   double f0 = 1681.974450955533;
   double G  =    3.999843853973347;
   double Q  =    0.7071752369554196;
 
-  double K      = tan(PI * f0 / (double) st->samplerate);
-  double Vh     = pow(10.0, G / 20.0);
-  double Vb     = pow(Vh, 0.4996667741545416);
+  double K  = tan(PI * f0 / (double) st->samplerate);
+  double Vh = pow(10.0, G / 20.0);
+  double Vb = pow(Vh, 0.4996667741545416);
 
-  double b1[] = {0.0, 0.0, 0.0};
-  double a1[] = {1.0, 0.0, 0.0};
-  double a0 = 1 + K / Q + K * K;
-  b1[0] = (Vh + Vb * K / Q + K * K) / a0;
-  b1[1] =          2 * (K * K - Vh) / a0;
-  b1[2] = (Vh - Vb * K / Q + K * K) / a0;
-  a1[1] =          2 * (K * K -  1) / a0;
-  a1[2] =       (1 - K / Q + K * K) / a0;
+  double pb[3] = {0.0,  0.0, 0.0};
+  double pa[3] = {1.0,  0.0, 0.0};
+  double rb[3] = {1.0, -2.0, 1.0};
+  double ra[3] = {1.0,  0.0, 0.0};
+
+  double a0 =      1.0 + K / Q + K * K      ;
+  pb[0] =     (Vh + Vb * K / Q + K * K) / a0;
+  pb[1] =           2.0 * (K * K -  Vh) / a0;
+  pb[2] =     (Vh - Vb * K / Q + K * K) / a0;
+  pa[1] =           2.0 * (K * K - 1.0) / a0;
+  pa[2] =         (1.0 - K / Q + K * K) / a0;
 
   /* fprintf(stderr, "%.14f %.14f %.14f %.14f %.14f\n",
                      b1[0], b1[1], b1[2], a1[1], a1[2]); */
 
-  {
-  double b2[] = {1.0, -2.0, 1.0};
-  double a2[] = {1.0, 0.0, 0.0};
-
   f0 = 38.13547087602444;
   Q  =  0.5003270373238773;
-  K = tan(PI * f0 / (double) st->samplerate);
+  K  = tan(PI * f0 / (double) st->samplerate);
 
-  a2[1] =     2 * (K * K - 1) / (1 + K / Q + K * K);
-  a2[2] = (1 - K / Q + K * K) / (1 + K / Q + K * K);
+  ra[1] =   2.0 * (K * K - 1.0) / (1.0 + K / Q + K * K);
+  ra[2] = (1.0 - K / Q + K * K) / (1.0 + K / Q + K * K);
 
   /* fprintf(stderr, "%.14f %.14f\n", a2[1], a2[2]); */
 
+  st->b[0] = pb[0] * rb[0];
+  st->b[1] = pb[0] * rb[1] + pb[1] * rb[0];
+  st->b[2] = pb[0] * rb[2] + pb[1] * rb[1] + pb[2] * rb[0];
+  st->b[3] = pb[1] * rb[2] + pb[2] * rb[1];
+  st->b[4] = pb[2] * rb[2];
 
-  st->a = (double*) calloc(5, sizeof(double));
-  CHECK_ERROR(errcode, "Could not allocate memory!\n", 1, exit)
-  st->b = (double*) calloc(5, sizeof(double));
-  CHECK_ERROR(errcode, "Could not allocate memory!\n", 1, free_a)
-
-  st->b[0] = b1[0] * b2[0];
-  st->b[1] = b1[0] * b2[1] + b1[1] * b2[0];
-  st->b[2] = b1[0] * b2[2] + b1[1] * b2[1] + b1[2] * b2[0];
-  st->b[3] = b1[1] * b2[2] + b1[2] * b2[1];
-  st->b[4] = b1[2] * b2[2];
-
-  st->a[0] = a1[0] * a2[0];
-  st->a[1] = a1[0] * a2[1] + a1[1] * a2[0];
-  st->a[2] = a1[0] * a2[2] + a1[1] * a2[1] + a1[2] * a2[0];
-  st->a[3] = a1[1] * a2[2] + a1[2] * a2[1];
-  st->a[4] = a1[2] * a2[2];
-  }
+  st->a[0] = pa[0] * ra[0];
+  st->a[1] = pa[0] * ra[1] + pa[1] * ra[0];
+  st->a[2] = pa[0] * ra[2] + pa[1] * ra[1] + pa[2] * ra[0];
+  st->a[3] = pa[1] * ra[2] + pa[2] * ra[1];
+  st->a[4] = pa[2] * ra[2];
 
   return 0;
-
-free_a:
-  free(st->a);
-exit:
-  return errcode;
 }
 
 int ebur128_init_channel_map(ebur128_state* st) {
@@ -133,6 +89,67 @@ int ebur128_init_channel_map(ebur128_state* st) {
   return 0;
 }
 
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+int ebur128_init_resampler(ebur128_state* st) {
+  int errcode = 0, result;
+
+  if (st->samplerate < 96000) {
+    st->oversample_factor = 4;
+  } else if (st->samplerate < 192000) {
+    st->oversample_factor = 2;
+  } else {
+    st->oversample_factor = 1;
+    st->resampler_buffer_input = NULL;
+    st->resampler_buffer_output = NULL;
+    st->resampler = NULL;
+  }
+
+  st->resampler_buffer_input_frames = st->samples_in_100ms * 4;
+  st->resampler_buffer_input = calloc(st->resampler_buffer_input_frames *
+                                      st->channels *
+                                      sizeof(float), 1);
+  CHECK_ERROR(!st->resampler_buffer_input, "Could not allocate memory!\n", 1,
+                                           exit)
+
+  st->resampler_buffer_output_frames = st->resampler_buffer_input_frames *
+                                       st->oversample_factor;
+  st->resampler_buffer_output = calloc(st->resampler_buffer_output_frames *
+                                       st->channels *
+                                       sizeof(float), 1);
+  CHECK_ERROR(!st->resampler_buffer_output, "Could not allocate memory!\n",
+                                            1, free_input)
+
+  st->resampler = ebur128_resampler_init((spx_uint32_t) st->channels,
+                                         (spx_uint32_t) st->samplerate,
+                                         (spx_uint32_t) (st->samplerate *
+                                                         st->oversample_factor),
+                                         8,
+                                         &result);
+  CHECK_ERROR(!st->resampler, "Could not initialize resampler!\n", 1,
+                              free_output)
+
+  return 0;
+
+free_input:
+  free(st->resampler_buffer_input);
+  st->resampler_buffer_input = NULL;
+free_output:
+  free(st->resampler_buffer_output);
+  st->resampler_buffer_output = NULL;
+exit:
+  return errcode;
+}
+
+void ebur128_destroy_resampler(ebur128_state* st) {
+  free(st->resampler_buffer_input);
+  st->resampler_buffer_input = NULL;
+  free(st->resampler_buffer_output);
+  st->resampler_buffer_output = NULL;
+  ebur128_resampler_destroy(st->resampler);
+  st->resampler = NULL;
+}
+#endif
+
 ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   int errcode;
   ebur128_state* st;
@@ -142,6 +159,14 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   st->channels = channels;
   errcode = ebur128_init_channel_map(st);
   CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
+
+  st->sample_peak = (double*) calloc(channels, sizeof(double));
+  CHECK_ERROR(!st->sample_peak, "Could not allocate memory!\n", 0,
+                                  free_channel_map)
+  st->true_peak = (double*) calloc(channels, sizeof(double));
+  CHECK_ERROR(!st->true_peak, "Could not allocate memory!\n", 0,
+                                  free_sample_peak)
+
   st->samplerate = samplerate;
   st->samples_in_100ms = (st->samplerate + 5) / 10;
   st->mode = mode;
@@ -153,18 +178,19 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
     return NULL;
   }
   st->audio_data = (double*) calloc(st->audio_data_frames *
-                                       st->channels,
-                                       sizeof(double));
+                                   st->channels,
+                                   sizeof(double));
   CHECK_ERROR(!st->audio_data, "Could not allocate memory!\n", 0,
-                                  free_channel_map)
-  errcode = ebur128_init_multi_array(&(st->v), st->channels, 5);
-  CHECK_ERROR(errcode, "Could not allocate memory!\n", 0, free_audio_data)
-  errcode = ebur128_init_filter(st);
-  CHECK_ERROR(errcode, "Could not initialize filter!\n", 0, free_v)
+                               free_true_peak)
+  ebur128_init_filter(st);
 
   SLIST_INIT(&st->block_list);
   SLIST_INIT(&st->short_term_block_list);
   st->short_term_frame_counter = 0;
+
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+  ebur128_init_resampler(st);
+#endif
 
   /* the first block needs 400ms of audio data */
   st->needed_frames = st->samples_in_100ms * 4;
@@ -178,10 +204,10 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
 
   return st;
 
-free_v:
-  ebur128_release_multi_array(&(st->v), st->channels);
-free_audio_data:
-  free(st->audio_data);
+free_true_peak:
+  free(st->true_peak);
+free_sample_peak:
+  free(st->sample_peak);
 free_channel_map:
   free(st->channel_map);
 free_state:
@@ -194,9 +220,8 @@ void ebur128_destroy(ebur128_state** st) {
   struct ebur128_dq_entry* entry;
   free((*st)->audio_data);
   free((*st)->channel_map);
-  ebur128_release_multi_array(&(*st)->v, (*st)->channels);
-  free((*st)->a);
-  free((*st)->b);
+  free((*st)->sample_peak);
+  free((*st)->true_peak);
   while (!SLIST_EMPTY(&(*st)->block_list)) {
     entry = SLIST_FIRST(&(*st)->block_list);
     SLIST_REMOVE_HEAD(&(*st)->block_list, entries);
@@ -207,9 +232,46 @@ void ebur128_destroy(ebur128_state** st) {
     SLIST_REMOVE_HEAD(&(*st)->short_term_block_list, entries);
     free(entry);
   }
+  ebur128_destroy_resampler(*st);
 
   free(*st);
   *st = NULL;
+}
+
+int ebur128_use_speex_resampler(ebur128_state* st) {
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+  return ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK);
+#else
+  (void) st;
+  return 0;
+#endif
+}
+
+void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+  size_t c, i;
+  spx_uint32_t in_len = (spx_uint32_t) frames;
+  spx_uint32_t out_len = (spx_uint32_t) st->resampler_buffer_output_frames;
+  ebur128_resampler_process_interleaved_float(
+                      st->resampler,
+                      st->resampler_buffer_input,  &in_len,
+                      st->resampler_buffer_output, &out_len);
+  for (c = 0; c < st->channels; ++c) {
+    for (i = 0; i < out_len; ++i) {
+      if (st->resampler_buffer_output[i * st->channels + c] >
+                                                         st->true_peak[c]) {
+        st->true_peak[c] =
+            st->resampler_buffer_output[i * st->channels + c];
+      } else if (-st->resampler_buffer_output[i * st->channels + c] >
+                                                         st->true_peak[c]) {
+        st->true_peak[c] =
+           -st->resampler_buffer_output[i * st->channels + c];
+      }
+    }
+  }
+#else
+  (void) st; (void) frames;
+#endif
 }
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
@@ -218,24 +280,48 @@ int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
                                  -((double) min_scale) : (double) max_scale;   \
   double* audio_data = st->audio_data + st->audio_data_index;                  \
   size_t i, c;                                                                 \
+  if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {     \
+    for (c = 0; c < st->channels; ++c) {                                       \
+      double max = 0.0;                                                        \
+      for (i = 0; i < frames; ++i) {                                           \
+        if (src[i * st->channels + c] > max) {                                 \
+          max =  src[i * st->channels + c];                                    \
+        } else if (-src[i * st->channels + c] > max) {                         \
+          max = -src[i * st->channels + c];                                    \
+        }                                                                      \
+      }                                                                        \
+      max /= scaling_factor;                                                   \
+      if (max > st->sample_peak[c]) st->sample_peak[c] = max;                  \
+    }                                                                          \
+  }                                                                            \
+  if (ebur128_use_speex_resampler(st)) {                                       \
+    for (c = 0; c < st->channels; ++c) {                                       \
+      for (i = 0; i < frames; ++i) {                                           \
+        st->resampler_buffer_input[i * st->channels + c] =                     \
+                      (float) (src[i * st->channels + c] / scaling_factor);    \
+      }                                                                        \
+    }                                                                          \
+    ebur128_check_true_peak(st, frames);                                       \
+  }                                                                            \
   for (c = 0; c < st->channels; ++c) {                                         \
-    if (st->channel_map[c] == EBUR128_UNUSED) continue;                        \
+    int ci = st->channel_map[c] - 1;                                           \
+    if (ci < 0) continue;                                                      \
     for (i = 0; i < frames; ++i) {                                             \
-      st->v[c][0] = src[i * st->channels + c] / scaling_factor                 \
-                  - st->a[1] * st->v[c][1]                                     \
-                  - st->a[2] * st->v[c][2]                                     \
-                  - st->a[3] * st->v[c][3]                                     \
-                  - st->a[4] * st->v[c][4];                                    \
+      st->v[ci][0] = (double) (src[i * st->channels + c] / scaling_factor)     \
+                   - st->a[1] * st->v[ci][1]                                   \
+                   - st->a[2] * st->v[ci][2]                                   \
+                   - st->a[3] * st->v[ci][3]                                   \
+                   - st->a[4] * st->v[ci][4];                                  \
       audio_data[i * st->channels + c] =                                       \
-                    st->b[0] * st->v[c][0]                                     \
-                  + st->b[1] * st->v[c][1]                                     \
-                  + st->b[2] * st->v[c][2]                                     \
-                  + st->b[3] * st->v[c][3]                                     \
-                  + st->b[4] * st->v[c][4];                                    \
-      st->v[c][4] = st->v[c][3];                                               \
-      st->v[c][3] = st->v[c][2];                                               \
-      st->v[c][2] = st->v[c][1];                                               \
-      st->v[c][1] = st->v[c][0];                                               \
+                     st->b[0] * st->v[ci][0]                                   \
+                   + st->b[1] * st->v[ci][1]                                   \
+                   + st->b[2] * st->v[ci][2]                                   \
+                   + st->b[3] * st->v[ci][3]                                   \
+                   + st->b[4] * st->v[ci][4];                                  \
+      st->v[ci][4] = st->v[ci][3];                                             \
+      st->v[ci][3] = st->v[ci][2];                                             \
+      st->v[ci][2] = st->v[ci][1];                                             \
+      st->v[ci][1] = st->v[ci][0];                                             \
     }                                                                          \
   }                                                                            \
   return 0;                                                                    \
@@ -312,20 +398,28 @@ int ebur128_change_parameters(ebur128_state* st,
     return 2;
   }
   free(st->audio_data);
-  ebur128_release_multi_array(&(st->v), st->channels);
+  st->audio_data = NULL;
 
   if (channels != st->channels) {
-    free(st->channel_map);
+    free(st->channel_map); st->channel_map = NULL;
+    free(st->sample_peak); st->sample_peak = NULL;
+    free(st->true_peak);   st->true_peak = NULL;
+    ebur128_destroy_resampler(st);
     st->channels = channels;
+
     errcode = ebur128_init_channel_map(st);
     CHECK_ERROR(errcode, "Could not initialize channel map!\n", 1, exit)
+
+    ebur128_init_resampler(st);
+
+    st->sample_peak = (double*) calloc(channels, sizeof(double));
+    CHECK_ERROR(!st->sample_peak, "Could not allocate memory!\n", 1, exit)
+    st->true_peak = (double*) calloc(channels, sizeof(double));
+    CHECK_ERROR(!st->true_peak, "Could not allocate memory!\n", 1, exit)
   }
   if (samplerate != st->samplerate) {
     st->samplerate = samplerate;
-    free(st->a);
-    free(st->b);
-    errcode = ebur128_init_filter(st);
-    CHECK_ERROR(errcode, "Could not initialize filter!\n", 1, free_channel_map)
+    ebur128_init_filter(st);
   }
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
     st->audio_data_frames = st->samples_in_100ms * 30;
@@ -335,12 +429,9 @@ int ebur128_change_parameters(ebur128_state* st,
     return 1;
   }
   st->audio_data = (double*) calloc(st->audio_data_frames *
-                                    st->channels,
-                                    sizeof(double));
-  CHECK_ERROR(!st->audio_data, "Could not allocate memory!\n", 1,
-                               free_filter_coeffs)
-  errcode = ebur128_init_multi_array(&(st->v), st->channels, 5);
-  CHECK_ERROR(errcode, "Could not allocate memory!\n", 1, free_audio_data)
+                                   st->channels,
+                                   sizeof(double));
+  CHECK_ERROR(!st->audio_data, "Could not allocate memory!\n", 1, exit)
 
   /* the first block needs 400ms of audio data */
   st->needed_frames = st->samples_in_100ms * 4;
@@ -351,17 +442,6 @@ int ebur128_change_parameters(ebur128_state* st,
 
   return 0;
 
-free_audio_data:
-  free(st->audio_data);
-  st->audio_data = NULL;
-free_filter_coeffs:
-  free(st->a);
-  free(st->b);
-  st->a = NULL;
-  st->b = NULL;
-free_channel_map:
-  free(st->channel_map);
-  st->channel_map = NULL;
 exit:
   return 1;
 }
@@ -574,3 +654,21 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
 double ebur128_loudness_range(ebur128_state* st) {
   return ebur128_loudness_range_multiple(&st, 1);
 }
+
+double ebur128_sample_peak(ebur128_state* st, size_t channel_number) {
+  if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK ||
+       channel_number >= st->channels) {
+    return 0.0 / 0.0;
+  }
+  return st->sample_peak[channel_number];
+}
+
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+double ebur128_true_peak(ebur128_state* st, size_t channel_number) {
+  if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK ||
+       channel_number >= st->channels) {
+    return 0.0 / 0.0;
+  }
+  return st->true_peak[channel_number];
+}
+#endif

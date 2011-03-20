@@ -94,6 +94,50 @@ double test_loudness_range(const char* filename) {
   return loudness_range;
 }
 
+double test_true_peak(const char* filename) {
+  SF_INFO file_info;
+  SNDFILE* file;
+  sf_count_t nr_frames_read;
+
+  ebur128_state* st = NULL;
+  double true_peak;
+  double* buffer;
+
+  memset(&file_info, '\0', sizeof(file_info));
+  file = sf_open(filename, SFM_READ, &file_info);
+  if (!file) {
+    fprintf(stderr, "Could not open file %s!\n", filename);
+    return 0.0 / 0.0;
+  }
+  st = ebur128_init((size_t) file_info.channels,
+                    (size_t) file_info.samplerate,
+                    EBUR128_MODE_LRA);
+  if (file_info.channels == 5) {
+    ebur128_set_channel(st, 0, EBUR128_LEFT);
+    ebur128_set_channel(st, 1, EBUR128_RIGHT);
+    ebur128_set_channel(st, 2, EBUR128_CENTER);
+    ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
+    ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
+  }
+  buffer = (double*) malloc(st->samplerate * st->channels * sizeof(double));
+  while ((nr_frames_read = sf_readf_double(file, buffer,
+                                           (sf_count_t) st->samplerate))) {
+    ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
+  }
+
+  true_peak = ebur128_loudness_range(st);
+
+  /* clean up */
+  ebur128_destroy(&st);
+
+  free(buffer);
+  buffer = NULL;
+  if (sf_close(file)) {
+    fprintf(stderr, "Could not close input file!\n");
+  }
+  return true_peak;
+}
+
 double gr[] = {-23.0,
                -33.0,
                -23.0,
@@ -129,10 +173,9 @@ double lrae[] = {1.0001105488329134e+01,
 int main() {
   double result;
 
-  fprintf(stderr, "%s\n",
-                  "Note: the tests do not have to pass with EXACT_PASSED.\n"
+  fprintf(stderr, "Note: the tests do not have to pass with EXACT_PASSED.\n"
                   "Passing these tests does not mean that the library is "
-                  "100%% EBU R 128 compliant!\n");
+                  "100%% EBU R 128 compliant!\n\n");
 
 #define TEST_GLOBAL_LOUDNESS(filename, i)                                      \
   result = test_global_loudness(filename);                                     \

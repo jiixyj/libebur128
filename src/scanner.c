@@ -20,10 +20,6 @@
   #include "rgtag.h"
 #endif
 
-#define OUTSIDE_SPEEX
-#define RANDOM_PREFIX ebur128
-#include "speex_resampler.h"
-
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
     fprintf(stderr, message);                                                  \
@@ -54,17 +50,13 @@ struct gain_data {
  * This function will be in a GThreadPool. */
 void calculate_gain_of_file(void* user, void* user_data) {
   struct gain_data* gd = (struct gain_data*) user_data;
-  size_t i = (size_t) user - 1;
+  size_t i = (size_t) user - 1, j;
 
   struct input_handle* ih = input_handle_init();
   size_t nr_frames_read, nr_frames_read_all = 0;
 
   ebur128_state* st = NULL;
   float* buffer = NULL;
-  SpeexResamplerState* resampler = NULL;
-  size_t resampler_buffer_frames = 0;
-  float* resampler_buffer = NULL;
-  size_t oversample_factor = 1;
 
   int errcode, result;
   FILE* file;
@@ -84,7 +76,21 @@ void calculate_gain_of_file(void* user, void* user_data) {
   st = ebur128_init(input_get_channels(ih),
                     input_get_samplerate(ih),
                     EBUR128_MODE_I |
-                    (gd->calculate_lra ? EBUR128_MODE_LRA : 0));
+                    (gd->calculate_lra ? EBUR128_MODE_LRA : 0) |
+                    ((
+                  #ifdef USE_TAGLIB
+                      gd->tag_rg ||
+                  #endif
+                     (gd->peak && (!strcmp(gd->peak, "sample") ||
+                                   !strcmp(gd->peak, "all")))) ?
+                     EBUR128_MODE_SAMPLE_PEAK : 0)
+                  #ifdef EBUR128_USE_SPEEX_RESAMPLER
+                  | ((gd->peak && (!strcmp(gd->peak, "true") ||
+                                   !strcmp(gd->peak, "dbtp") ||
+                                   !strcmp(gd->peak, "all"))) ?
+                     EBUR128_MODE_TRUE_PEAK : 0)
+                  #endif
+                    );
   CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
   gd->library_states[i] = st;
 
@@ -99,110 +105,45 @@ void calculate_gain_of_file(void* user, void* user_data) {
     ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
 
-  if (gd->peak && (!strcmp(gd->peak, "true") ||
-                   !strcmp(gd->peak, "dbtp") ||
-                   !strcmp(gd->peak, "all")) &&
-      input_get_samplerate(ih) < 192000) {
-    oversample_factor = 2;
-    if (input_get_samplerate(ih) < 96000)
-      oversample_factor = 4;
-    resampler = ebur128_resampler_init((spx_uint32_t) input_get_channels(ih),
-                                       (spx_uint32_t) input_get_samplerate(ih),
-                                       (spx_uint32_t) (input_get_samplerate(ih) *
-                                                       oversample_factor),
-                                       8,
-                                       &result);
-    CHECK_ERROR(!resampler, "Could not initialize resampler!\n", 1, close_file)
-  }
-
   result = input_allocate_buffer(ih);
-  CHECK_ERROR(result, "Could not allocate memory!\n", 1, destroy_resampler)
+  CHECK_ERROR(result, "Could not allocate memory!\n", 1, free_buffer)
   gd->segment_peaks[i] = 0.0;
   buffer = input_get_buffer(ih);
 
-  if (resampler) {
-    resampler_buffer_frames = input_get_buffer_size(ih) /
-                              input_get_channels(ih) *
-                              oversample_factor;
-    resampler_buffer = calloc(resampler_buffer_frames *
-                              input_get_channels(ih) *
-                              sizeof(float), 1);
-    CHECK_ERROR(!resampler_buffer, "Could not allocate memory!\n", 1, free_buffer)
-  }
-
   while ((nr_frames_read = input_read_frames(ih))) {
-    size_t j;
-#ifdef USE_TAGLIB
-    if (gd->tag_rg ||
-        (gd->peak && (!strcmp(gd->peak, "sample") ||
-                      !strcmp(gd->peak, "all")))) {
-      for (j = 0; j < nr_frames_read * st->channels; ++j) {
-        if (buffer[j] > gd->segment_peaks[i])
-          gd->segment_peaks[i] = buffer[j];
-        else if (-buffer[j] > gd->segment_peaks[i])
-          gd->segment_peaks[i] = -buffer[j];
-      }
-    }
-#endif
-    if (resampler) {
-      spx_uint32_t in_len = (spx_uint32_t) nr_frames_read;
-      spx_uint32_t out_len = (spx_uint32_t) resampler_buffer_frames;
-      ebur128_resampler_process_interleaved_float(
-                          resampler,
-                          buffer,
-                          &in_len,
-                          resampler_buffer,
-                          &out_len);
-      for (j = 0; j < out_len * st->channels; ++j) {
-        if (resampler_buffer[j] > gd->segment_true_peaks[i])
-          gd->segment_true_peaks[i] = resampler_buffer[j];
-        else if (-resampler_buffer[j] > gd->segment_true_peaks[i])
-          gd->segment_true_peaks[i] = -resampler_buffer[j];
-      }
-    } else if (gd->peak && (!strcmp(gd->peak, "true") ||
-                            !strcmp(gd->peak, "dbtp") ||
-                            !strcmp(gd->peak, "all"))) {
-    #ifdef USE_TAGLIB
-      if (gd->tag_rg || !strcmp(gd->peak, "all")) {
-        gd->segment_true_peaks[i] = gd->segment_peaks[i];
-      } else {
-    #endif
-        for (j = 0; j < nr_frames_read * st->channels; ++j) {
-          if (buffer[j] > gd->segment_true_peaks[i])
-            gd->segment_true_peaks[i] = buffer[j];
-          else if (-buffer[j] > gd->segment_true_peaks[i])
-            gd->segment_true_peaks[i] = -buffer[j];
-        }
-    #ifdef USE_TAGLIB
-      }
-    #endif
-    }
-
     nr_frames_read_all += nr_frames_read;
     result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
-    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_resampler_buffer)
+    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
   }
   if (input_check_ok(ih, nr_frames_read_all)) {
     fprintf(stderr, "Warning: Could not read full file"
                             " or determine right length!\n");
   }
 
+  if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {
+    for (j = 0; j < st->channels; ++j) {
+      if (ebur128_sample_peak(st, j) > gd->segment_peaks[i]) {
+        gd->segment_peaks[i] = ebur128_sample_peak(st, j);
+      }
+    }
+  }
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+  if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {
+    for (j = 0; j < st->channels; ++j) {
+      if (ebur128_true_peak(st, j) > gd->segment_true_peaks[i]) {
+        gd->segment_true_peaks[i] = ebur128_true_peak(st, j);
+      }
+    }
+  }
+#endif
   gd->segment_loudness[i] = ebur128_loudness_global(st);
   if (gd->calculate_lra) {
     gd->segment_lra[i] = ebur128_loudness_range(st);
   }
   fprintf(stderr, "*");
 
-free_resampler_buffer:
-  free(resampler_buffer);
-
 free_buffer:
   input_free_buffer(ih);
-
-destroy_resampler:
-  if (resampler) {
-    ebur128_resampler_destroy(resampler);
-  }
 
 close_file:
   input_close_file(ih, file);
@@ -636,12 +577,21 @@ static GOptionEntry entries[] = {
                  "display peak values"
                  "\n                                      "
                  "-p sample: sample peak (float value)"
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
                  "\n                                      "
                  "-p true:   true peak (float value)"
                  "\n                                      "
                  "-p dbtp:   true peak (dB True Peak)"
                  "\n                                      "
-                 "-p all:    show all peak values\n", "sample|true|dbtp|all" },
+                 "-p all:    show all peak values"
+#endif
+                 "\n",
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+                 "sample|true|dbtp|all"
+#else
+                 "sample              "
+#endif
+                 },
   { "gate", 0, 0, G_OPTION_ARG_STRING,
                  &relative_gate_string,
                  "FOR TESTING ONLY: set relative gate (dB)", NULL },
@@ -722,10 +672,12 @@ int main(int ac, char* av[]) {
 #endif
 
   if (gd.peak &&
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+      strcmp(gd.peak, "all") &&
       strcmp(gd.peak, "true") &&
-      strcmp(gd.peak, "sample") &&
       strcmp(gd.peak, "dbtp") &&
-      strcmp(gd.peak, "all")) {
+#endif
+      strcmp(gd.peak, "sample")) {
     fprintf(stderr, "Invalid argument to --peak!\n");
     return 1;
   }

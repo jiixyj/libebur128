@@ -13,3 +13,8 @@ set_property(DIRECTORY
              ${SPEEX_COMPILE_DEFINITIONS})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_R128}")
 add_library(speex_resample resample.c)
+
+# Use C99 if available
+if(FLAG_STD_C99)
+  set_target_properties(speex_resample PROPERTIES COMPILE_FLAGS "-std=c99")
+endif()

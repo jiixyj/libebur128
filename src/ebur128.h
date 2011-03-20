@@ -1,6 +1,12 @@
 /* See LICENSE file for copyright and license details. */
-#ifndef _EBUR128_H_
-#define _EBUR128_H_
+#ifndef EBUR128_H_
+#define EBUR128_H_
+
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#  define OUTSIDE_SPEEX
+#  define RANDOM_PREFIX ebur128
+#  include "speex_resampler.h"
+#endif
 
 /** \file ebur128.h
  *  \brief libebur128 - a library for loudness measurement according to
@@ -40,13 +46,17 @@ enum channel {
 
 /** \enum mode
  *  Use these values in ebur128_init (xor'ed). Try to use the lowest possible
- *  mode that suits your needs, as performance will be better.
+ *  modes that suit your needs, as performance will be better.
  */
 enum mode {
-  EBUR128_MODE_M         =  1, /**< can call ebur128_loudness_momentary */
-  EBUR128_MODE_S         =  3, /**< can call ebur128_loudness_shortterm */
-  EBUR128_MODE_I         =  5, /**< can call ebur128_gated_loudness_*   */
-  EBUR128_MODE_LRA       = 11  /**< can call ebur128_loudness_range     */
+  EBUR128_MODE_M           =  1, /**< can call ebur128_loudness_momentary */
+  EBUR128_MODE_S           =  3, /**< can call ebur128_loudness_shortterm */
+  EBUR128_MODE_I           =  5, /**< can call ebur128_gated_loudness_*   */
+  EBUR128_MODE_LRA         = 11, /**< can call ebur128_loudness_range     */
+  EBUR128_MODE_SAMPLE_PEAK = 17  /**< can call ebur128_sample_peak        */
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+ ,EBUR128_MODE_TRUE_PEAK   = 33  /**< can call ebur128_sample_peak        */
+#endif
 };
 
 /** \brief Contains information about the state of a loudness measurement.
@@ -79,18 +89,30 @@ typedef struct {
   size_t samplerate;
   /** How many samples fit in 100ms (rounded). */
   size_t samples_in_100ms;
-  /** BS.1770 filter coefficients (denominator). */
-  double* a;
   /** BS.1770 filter coefficients (nominator). */
-  double* b;
+  double b[5];
+  /** BS.1770 filter coefficients (denominator). */
+  double a[5];
   /** BS.1770 filter state. */
-  double** v;
+  double v[5][5];
   /** Linked list of block energies. */
   struct ebur128_double_queue block_list;
   /** Linked list of 3s-block energies, used to calculate LRA. */
   struct ebur128_double_queue short_term_block_list;
   /** Keeps track of when a new short term block is needed. */
   size_t short_term_frame_counter;
+  /** Maximum sample peak, one per channel */
+  double* sample_peak;
+  /** Maximum true peak, one per channel */
+  double* true_peak;
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+  SpeexResamplerState* resampler;
+#endif
+  size_t oversample_factor;
+  float* resampler_buffer_input;
+  size_t resampler_buffer_input_frames;
+  float* resampler_buffer_output;
+  size_t resampler_buffer_output_frames;
 } ebur128_state;
 
 /** \brief Initialize library state.
@@ -137,7 +159,8 @@ int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value);
  *  @param samplerate new sample rate.
  *  @return
  *    - 0 on success.
- *    - 1 on memory allocation error. The state will be invalid then.
+ *    - 1 on memory allocation error. The state will be invalid and must be
+ *        destroyed.
  *    - 2 if channels and sample rate were not changed.
  */
 int ebur128_change_parameters(ebur128_state* st,
@@ -219,8 +242,14 @@ double ebur128_loudness_range(ebur128_state* st);
  */
 double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size);
 
+double ebur128_sample_peak(ebur128_state*, size_t channel_number);
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+double ebur128_true_peak(ebur128_state*, size_t channel_number);
+double ebur128_dbtp(ebur128_state*, size_t channel_number);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* _EBUR128_H_ */
+#endif  /* EBUR128_H_ */
