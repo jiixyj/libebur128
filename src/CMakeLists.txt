@@ -10,7 +10,7 @@ if(USE_SPEEX_RESAMPLER)
   add_subdirectory(speex_resample)
   include_directories(speex_resample)
   target_link_libraries(ebur128 speex_resample)
-  set_property(DIRECTORY
+  set_property(DIRECTORY APPEND
                PROPERTY COMPILE_DEFINITIONS
                "EBUR128_USE_SPEEX_RESAMPLER")
 endif()
