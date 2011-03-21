@@ -234,7 +234,9 @@ void ebur128_destroy(ebur128_state** st) {
     SLIST_REMOVE_HEAD(&(*st)->short_term_block_list, entries);
     free(entry);
   }
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
   ebur128_destroy_resampler(*st);
+#endif
 
   free(*st);
   *st = NULL;
@@ -406,13 +408,15 @@ int ebur128_change_parameters(ebur128_state* st,
     free(st->channel_map); st->channel_map = NULL;
     free(st->sample_peak); st->sample_peak = NULL;
     free(st->true_peak);   st->true_peak = NULL;
-    ebur128_destroy_resampler(st);
     st->channels = channels;
+
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
+    ebur128_destroy_resampler(st);
+    ebur128_init_resampler(st);
+#endif
 
     errcode = ebur128_init_channel_map(st);
     CHECK_ERROR(errcode, "Could not initialize channel map!\n", 1, exit)
-
-    ebur128_init_resampler(st);
 
     st->sample_peak = (double*) calloc(channels, sizeof(double));
     CHECK_ERROR(!st->sample_peak, "Could not allocate memory!\n", 1, exit)
