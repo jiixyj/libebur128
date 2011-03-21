@@ -68,6 +68,8 @@ int ebur128_init_filter(ebur128_state* st) {
   st->a[3] = pa[1] * ra[2] + pa[2] * ra[1];
   st->a[4] = pa[2] * ra[2];
 
+  memset(st->v, '\0', 25 * sizeof(double));
+
   return 0;
 }
 
