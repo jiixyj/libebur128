@@ -249,7 +249,6 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size);
 double ebur128_sample_peak(ebur128_state*, size_t channel_number);
 #if EBUR128_USE_SPEEX_RESAMPLER
 double ebur128_true_peak(ebur128_state*, size_t channel_number);
-double ebur128_dbtp(ebur128_state*, size_t channel_number);
 #endif
 
 #ifdef __cplusplus
