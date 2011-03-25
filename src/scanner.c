@@ -330,12 +330,21 @@ int loudness_or_lra(struct gain_data* gd) {
     }
     for (i = 0; i < gd->file_names->len; ++i) {
       if (gd->library_states[i]) {
-        set_rg_info(g_array_index(gd->file_names, char*, i),
+        char* fn;
+#ifdef G_OS_WIN32
+        fn = g_win32_locale_filename_from_utf8(
+                                  g_array_index(gd->file_names, char*, i));
+#else
+        fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
+                                  -1, NULL, NULL, NULL);
+#endif
+        set_rg_info(fn,
                     -18.0 - gd->segment_loudness[i],
                     gd->segment_peaks[i],
                     !strcmp(gd->tag_rg, "album") ? 1 : 0,
                     -18.0 - gated_loudness,
                     global_peak);
+        g_free(fn);
       }
     }
   }
