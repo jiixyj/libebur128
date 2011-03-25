@@ -91,7 +91,7 @@ int ebur128_init_channel_map(ebur128_state* st) {
   return 0;
 }
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
 int ebur128_init_resampler(ebur128_state* st) {
   int errcode = 0, result;
 
@@ -190,7 +190,7 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   SLIST_INIT(&st->short_term_block_list);
   st->short_term_frame_counter = 0;
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
   ebur128_init_resampler(st);
 #endif
 
@@ -234,7 +234,7 @@ void ebur128_destroy(ebur128_state** st) {
     SLIST_REMOVE_HEAD(&(*st)->short_term_block_list, entries);
     free(entry);
   }
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
   ebur128_destroy_resampler(*st);
 #endif
 
@@ -243,7 +243,7 @@ void ebur128_destroy(ebur128_state** st) {
 }
 
 int ebur128_use_speex_resampler(ebur128_state* st) {
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
   return ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK);
 #else
   (void) st;
@@ -252,7 +252,7 @@ int ebur128_use_speex_resampler(ebur128_state* st) {
 }
 
 void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
   size_t c, i;
   spx_uint32_t in_len = (spx_uint32_t) frames;
   spx_uint32_t out_len = (spx_uint32_t) st->resampler_buffer_output_frames;
@@ -410,7 +410,7 @@ int ebur128_change_parameters(ebur128_state* st,
     free(st->true_peak);   st->true_peak = NULL;
     st->channels = channels;
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
     ebur128_destroy_resampler(st);
     ebur128_init_resampler(st);
 #endif
@@ -669,7 +669,7 @@ double ebur128_sample_peak(ebur128_state* st, size_t channel_number) {
   return st->sample_peak[channel_number];
 }
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
 double ebur128_true_peak(ebur128_state* st, size_t channel_number) {
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK ||
        channel_number >= st->channels) {

@@ -2,10 +2,14 @@
 #ifndef EBUR128_H_
 #define EBUR128_H_
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
-#  define OUTSIDE_SPEEX
-#  define RANDOM_PREFIX ebur128
-#  include "speex_resampler.h"
+#ifndef EBUR128_USE_SPEEX_RESAMPLER
+  #define EBUR128_USE_SPEEX_RESAMPLER 1
+#endif
+
+#if EBUR128_USE_SPEEX_RESAMPLER
+  #define OUTSIDE_SPEEX
+  #define RANDOM_PREFIX ebur128
+  #include "speex_resampler.h"
 #endif
 
 /** \file ebur128.h
@@ -54,7 +58,7 @@ enum mode {
   EBUR128_MODE_I           =  5, /**< can call ebur128_gated_loudness_*   */
   EBUR128_MODE_LRA         = 11, /**< can call ebur128_loudness_range     */
   EBUR128_MODE_SAMPLE_PEAK = 17  /**< can call ebur128_sample_peak        */
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
  ,EBUR128_MODE_TRUE_PEAK   = 33  /**< can call ebur128_sample_peak        */
 #endif
 };
@@ -105,7 +109,7 @@ typedef struct {
   double* sample_peak;
   /** Maximum true peak, one per channel */
   double* true_peak;
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
   SpeexResamplerState* resampler;
 #endif
   size_t oversample_factor;
@@ -243,7 +247,7 @@ double ebur128_loudness_range(ebur128_state* st);
 double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size);
 
 double ebur128_sample_peak(ebur128_state*, size_t channel_number);
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
 double ebur128_true_peak(ebur128_state*, size_t channel_number);
 double ebur128_dbtp(ebur128_state*, size_t channel_number);
 #endif

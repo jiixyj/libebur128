@@ -84,7 +84,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
                      (gd->peak && (!strcmp(gd->peak, "sample") ||
                                    !strcmp(gd->peak, "all")))) ?
                      EBUR128_MODE_SAMPLE_PEAK : 0)
-                  #ifdef EBUR128_USE_SPEEX_RESAMPLER
+                  #if EBUR128_USE_SPEEX_RESAMPLER
                   | ((gd->peak && (!strcmp(gd->peak, "true") ||
                                    !strcmp(gd->peak, "dbtp") ||
                                    !strcmp(gd->peak, "all"))) ?
@@ -127,7 +127,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
       }
     }
   }
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {
     for (j = 0; j < st->channels; ++j) {
       if (ebur128_true_peak(st, j) > gd->segment_true_peaks[i]) {
@@ -577,7 +577,7 @@ static GOptionEntry entries[] = {
                  "display peak values"
                  "\n                                      "
                  "-p sample: sample peak (float value)"
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
                  "\n                                      "
                  "-p true:   true peak (float value)"
                  "\n                                      "
@@ -586,7 +586,7 @@ static GOptionEntry entries[] = {
                  "-p all:    show all peak values"
 #endif
                  "\n",
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
                  "sample|true|dbtp|all"
 #else
                  "sample              "
@@ -672,7 +672,7 @@ int main(int ac, char* av[]) {
 #endif
 
   if (gd.peak &&
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#if EBUR128_USE_SPEEX_RESAMPLER
       strcmp(gd.peak, "all") &&
       strcmp(gd.peak, "true") &&
       strcmp(gd.peak, "dbtp") &&
