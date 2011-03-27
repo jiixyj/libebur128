@@ -246,9 +246,25 @@ double ebur128_loudness_range(ebur128_state* st);
  */
 double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size);
 
-double ebur128_sample_peak(ebur128_state*, size_t channel_number);
+/** \brief Get maximum sample peak of selected channel in float format.
+ *
+ *  @param st library state
+ *  @param channel_number channel to analyse
+ *  @return maximum sample peak in float format (1.0 is 0 dBFS)
+ */
+double ebur128_sample_peak(ebur128_state* st, size_t channel_number);
 #if EBUR128_USE_SPEEX_RESAMPLER
-double ebur128_true_peak(ebur128_state*, size_t channel_number);
+/** \brief Get maximum true peak of selected channel in float format.
+ *
+ *  Uses the Speex resampler with quality level 8 to calculate true peak. Will
+ *  oversample 4x for sample rates < 96000 Hz, 2x for sample rates < 192000 Hz
+ *  and leave the signal unchanged for 192000 Hz.
+ *
+ *  @param st library state
+ *  @param channel_number channel to analyse
+ *  @return maximum true peak in float format (1.0 is 0 dBFS)
+ */
+double ebur128_true_peak(ebur128_state* st, size_t channel_number);
 #endif
 
 #ifdef __cplusplus
