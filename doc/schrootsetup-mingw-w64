@@ -3,42 +3,25 @@
 set -e
 
 cd
-cat /etc/apt/sources.list | sed -e 's|^deb|deb-src|' >> /etc/apt/sources.list
-sed -i -e 's|main|main contrib non-free|' /etc/apt/sources.list
 apt-get -y update
 apt-get -y upgrade
+apt-get -y install bzip2
 
 mkdir mingw
 cd mingw
-wget http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_20101003/mingw-w64-bin_x86_64-linux_20101003_sezero.tar.gz
-wget http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/sezero_20101003/mingw-w32-bin_x86_64-linux_20101003_sezero.tar.gz
-tar xf mingw-w64-bin_x86_64-linux_20101003_sezero.tar.gz
-tar xf mingw-w32-bin_x86_64-linux_20101003_sezero.tar.gz
 
-rm -r W32_164871/_build_logs/ W32_164871/lib64/
-rm -r W64_164871/_build_logs/ W64_164871/lib64/
-rm W32_164871/{ChangeLog,ChangeLog.sezero,LICENSE.txt,README.cross_win32,mingw}
-rm W64_164871/{ChangeLog,ChangeLog.sezero,LICENSE.txt,README.compat,README.cross_win64,mingw}
-
-mkdir cross
-cp -r W32_164871/* cross/
-cp -r W64_164871/* cross/
-rm -r cross/share/
+wget http://mingw-w64-dgn.googlecode.com/files/mingw-w32-i686-cross-i686-bin-20110220.tar.bz2
+wget http://mingw-w64-dgn.googlecode.com/files/mingw-w64-x86_64-cross-i686-bin-20110220.tar.bz2
+tar xf mingw-w32-i686-cross-i686-bin-20110220.tar.bz2
+rm -r cross/{include,mingw,share}
+mv cross/bin/*.dll cross/i686-w64-mingw32/bin/
+tar xf mingw-w64-x86_64-cross-i686-bin-20110220.tar.bz2
+rm -r cross/{include,mingw,share}
+mv cross/bin/*.dll cross/x86_64-w64-mingw32/bin/
 cp -r cross/* /usr/
+cd ..
 
-cd ..
-apt-get -y install cmake-curses-gui build-essential debhelper libgmp3-dev texinfo texlive-latex-base
-mkdir mpfr
-cd mpfr
-wget http://cdn.debian.net/debian/pool/main/m/mpfr/mpfr_2.4.2-3.diff.gz
-wget http://cdn.debian.net/debian/pool/main/m/mpfr/mpfr_2.4.2-3.dsc
-wget http://cdn.debian.net/debian/pool/main/m/mpfr/mpfr_2.4.2.orig.tar.gz
-dpkg-source -x mpfr_2.4.2-3.dsc
-cd mpfr-2.4.2/
-dpkg-buildpackage -b -us -uc
-cd ..
-dpkg -i libmpfr1ldbl_2.4.2-3_amd64.deb
-cd ..
+apt-get -y install cmake-curses-gui build-essential libc6-i386 lib32z1
 
 mkdir libs
 cd libs
@@ -56,9 +39,10 @@ set(CMAKE_FIND_ROOT_PATH  /usr/x86_64-w64-mingw32)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)" > x86_64-w64-mingw32.cmake
-wget http://developer.kde.org/~wheeler/files/src/taglib-1.6.3.tar.gz
-tar xf taglib-1.6.3.tar.gz
-cd taglib-1.6.3
+
+wget --no-check-certificate https://github.com/taglib/taglib/tarball/stable
+tar xf stable
+cd taglib-taglib-f624d6e
 mkdir build
 cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=../../i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release
@@ -137,24 +121,24 @@ cp libmpcdec/libmpcdec_static.a /usr/x86_64-w64-mingw32/local/lib/
 cp -r ../include/mpc/ /usr/x86_64-w64-mingw32/local/include/
 cd ../../
 
-wget http://www.ffmpeg.org/releases/ffmpeg-0.6.1.tar.bz2
-tar xf ffmpeg-0.6.1.tar.bz2
-cd ffmpeg-0.6.1
+wget http://www.ffmpeg.org/releases/ffmpeg-0.6.2.tar.bz2
+tar xf ffmpeg-0.6.2.tar.bz2
+cd ffmpeg-0.6.2
 mkdir dest
 ./configure --enable-memalign-hack --target-os=mingw32 --arch=x86_64 \
             --sysroot=/usr/x86_64-w64-mingw32 \
-            --cross-prefix=x86_64-w64-mingw32- --enable-shared --disable-swscale
+            --cross-prefix=x86_64-w64-mingw32- --enable-shared --disable-swscale --disable-dxva2
 make DESTDIR=`pwd`/dest install
 cp -r dest/usr/local/* /usr/x86_64-w64-mingw32/local/
 cd ..
-rm -r ffmpeg-0.6.1
-tar xf ffmpeg-0.6.1.tar.bz2
-cd ffmpeg-0.6.1
+rm -r ffmpeg-0.6.2
+tar xf ffmpeg-0.6.2.tar.bz2
+cd ffmpeg-0.6.2
 mkdir dest
-sed -i -e '2229,2235d' configure
+sed -i -e '2230,2236d' configure
 ./configure --enable-memalign-hack --target-os=mingw32 --arch=x86 \
             --sysroot=/usr/i686-w64-mingw32 \
-            --cross-prefix=i686-w64-mingw32- --enable-shared --disable-swscale
+            --cross-prefix=i686-w64-mingw32- --enable-shared --disable-swscale --disable-dxva2
 make DESTDIR=`pwd`/dest install
 cp -r dest/usr/local/* /usr/i686-w64-mingw32/local/
 cd ..

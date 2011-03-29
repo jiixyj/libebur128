@@ -3,7 +3,6 @@
 set -e
 
 cd
-cat /etc/apt/sources.list | sed -e 's|^deb|deb-src|' >> /etc/apt/sources.list
 apt-get -y update
 apt-get -y upgrade
 apt-get -y install lsb
