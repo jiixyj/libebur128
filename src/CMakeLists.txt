@@ -99,8 +99,8 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND AND SNDFILE_FOUND AND
             ${GLIB_LIBRARIES}
             ${GTHREAD_LIBRARIES}
             ${TAGLIB_LIBRARIES}
-            ${GCC_SJLJ_LIBRARY}
-            ${LIBSTDCPP_LIBRARY}
+            ${GCC_SJLJ}
+            ${STDCPP}
             DESTINATION .)
   endif()
 

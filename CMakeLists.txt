@@ -146,6 +146,18 @@ if(USE_TAGLIB)
     find_path(TAGLIB_INCLUDE_DIR taglib.h PATH_SUFFIXES taglib)
     if(TAGLIB_LIBRARIES AND TAGLIB_INCLUDE_DIR AND
        GCC_SJLJ_LIBRARY AND LIBSTDCPP_LIBRARY)
+      get_filename_component(STDCPP_NAME ${LIBSTDCPP_LIBRARY} NAME)
+      get_filename_component(GCC_SJLJ_NAME ${GCC_SJLJ_LIBRARY} NAME)
+      execute_process(COMMAND ${CMAKE_COMMAND} -E copy
+                      ${GCC_SJLJ_LIBRARY}
+                      ${CMAKE_CURRENT_BINARY_DIR}/${GCC_SJLJ_NAME})
+      execute_process(COMMAND ${CMAKE_COMMAND} -E copy
+                      ${LIBSTDCPP_LIBRARY}
+                      ${CMAKE_CURRENT_BINARY_DIR}/${STDCPP_NAME})
+      set(GCC_SJLJ ${CMAKE_CURRENT_BINARY_DIR}/${GCC_SJLJ_NAME})
+      set(STDCPP ${CMAKE_CURRENT_BINARY_DIR}/${STDCPP_NAME})
+      execute_process(COMMAND ${CMAKE_STRIP} ${GCC_SJLJ})
+      execute_process(COMMAND ${CMAKE_STRIP} ${STDCPP})
       include_directories(SYSTEM ${TAGLIB_INCLUDE_DIR})
       set(TAGLIB_FOUND TRUE)
     endif()
