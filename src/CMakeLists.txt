@@ -21,6 +21,17 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
   endif()
   add_library(nproc nproc.c)
 
+  set(SCANNER_SRCS scanner.c)
+  # Enable globbing for MinGW builds
+  if(WIN32)
+    list(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".o")
+    find_library(CRT_GLOB CRT_glob.o)
+    list(REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES ".o")
+    if(CRT_GLOB)
+      message(STATUS "Linking against CRT_glob.o to enable globbing...")
+      list(APPEND SCANNER_SRCS ${CRT_GLOB})
+    endif()
+  endif()
   set(SCANNER_LIBS ${SCANNER_LIBS} ebur128 nproc)
 
   if(SNDFILE_FOUND)
@@ -30,7 +41,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     add_executable(r128-minimal-example minimal_example.c)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
-    add_executable(r128-sndfile scanner.c)
+    add_executable(r128-sndfile ${SCANNER_SRCS})
     target_link_libraries(r128-sndfile ${SCANNER_LIBS} sndfile_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 
     add_executable(r128-test-library tests.c)
@@ -41,7 +52,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     add_library(mpg123_input input_mpg123.c)
     target_link_libraries(mpg123_input ${MPG123_LIBRARIES})
 
-    add_executable(r128-mpg123 scanner.c)
+    add_executable(r128-mpg123 ${SCANNER_SRCS})
     target_link_libraries(r128-mpg123 ${SCANNER_LIBS} mpg123_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
   endif()
 
@@ -49,7 +60,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     add_library(musepack_input input_mpcdec.c)
     target_link_libraries(musepack_input ${MPCDEC_LIBRARY})
 
-    add_executable(r128-musepack scanner.c)
+    add_executable(r128-musepack ${SCANNER_SRCS})
     target_link_libraries(r128-musepack ${SCANNER_LIBS} musepack_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
   endif()
 
@@ -65,7 +76,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     target_link_libraries(${FFMPEG_INPUT} ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
     set_target_properties(${FFMPEG_INPUT} PROPERTIES COMPILE_FLAGS "-std=c99")
 
-    add_executable(${R128_FFMPEG} scanner.c)
+    add_executable(${R128_FFMPEG} ${SCANNER_SRCS})
     target_link_libraries(${R128_FFMPEG} ${SCANNER_LIBS} ${FFMPEG_INPUT} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
   endif()
 endif()
