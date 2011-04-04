@@ -327,6 +327,11 @@ int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
       st->v[ci][2] = st->v[ci][1];                                             \
       st->v[ci][1] = st->v[ci][0];                                             \
     }                                                                          \
+    /* prevent denormal numbers */                                             \
+    st->v[ci][4] = fabs(st->v[ci][4]) < 1.0e-15 ? 0.0 : st->v[ci][4];          \
+    st->v[ci][3] = fabs(st->v[ci][3]) < 1.0e-15 ? 0.0 : st->v[ci][3];          \
+    st->v[ci][2] = fabs(st->v[ci][2]) < 1.0e-15 ? 0.0 : st->v[ci][2];          \
+    st->v[ci][1] = fabs(st->v[ci][1]) < 1.0e-15 ? 0.0 : st->v[ci][1];          \
   }                                                                            \
   return 0;                                                                    \
 }
