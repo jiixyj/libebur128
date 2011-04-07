@@ -29,14 +29,14 @@ The scanner needs taglib, libsndfile, libmpg123, FFmpeg and libmpcdec.
 Download
 --------
 
-* [Source (tar.gz)](libebur128-0.3.1-Source.tar.gz)
-* [Source (zip)](libebur128-0.3.1-Source.zip)
-* [Win32 build (zip)](libebur128-0.3.1-win32.zip)
-* [Win32 SSE2 build (zip)](libebur128-0.3.1-win32-sse2.zip)
-* [Win64 build (zip)](libebur128-0.3.1-win64.zip)
-* [Linux32 build (tar.gz)](libebur128-0.3.1-Linux.tar.gz)
-* [Linux32 SSE2 build (tar.gz)](libebur128-0.3.1-Linux-sse2.tar.gz)
-* [Linux64 build (tar.gz)](libebur128-0.3.1-Linux64.tar.gz)
+* [Source (tar.gz)](libebur128-0.3.2-Source.tar.gz)
+* [Source (zip)](libebur128-0.3.2-Source.zip)
+* [Win32 build (zip)](libebur128-0.3.2-win32.zip)
+* [Win32 SSE2 build (zip)](libebur128-0.3.2-win32-sse2.zip)
+* [Win64 build (zip)](libebur128-0.3.2-win64.zip)
+* [Linux32 build (tar.gz)](libebur128-0.3.2-Linux.tar.gz)
+* [Linux32 SSE2 build (tar.gz)](libebur128-0.3.2-Linux-sse2.tar.gz)
+* [Linux64 build (tar.gz)](libebur128-0.3.2-Linux64.tar.gz)
 
 
 Installation
