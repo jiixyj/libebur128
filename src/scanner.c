@@ -596,7 +596,7 @@ static GOptionEntry entries[] = {
                  "sample              "
 #endif
                  },
-  { "gate", 0, 0, G_OPTION_ARG_STRING,
+  { "gate", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING,
                  &relative_gate_string,
                  "FOR TESTING ONLY: set relative gate (dB)", NULL },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
