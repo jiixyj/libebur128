@@ -29,6 +29,9 @@ struct gain_data {
   int calculate_lra, errcode;
 #ifdef USE_TAGLIB
   char* tag_rg;                    /* NULL, "album" or "track" */
+#if EBUR128_USE_SPEEX_RESAMPLER
+  int tag_true_peak;
+#endif
 #endif
   int recursive_scan;
   char* peak;
@@ -599,6 +602,12 @@ static GOptionEntry entries[] = {
   { "gate", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING,
                  &relative_gate_string,
                  "FOR TESTING ONLY: set relative gate (dB)", NULL },
+#if EBUR128_USE_SPEEX_RESAMPLER && \
+    defined(USE_TAGLIB)
+  { "tag-tp", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE,
+                 &gd.tag_true_peak,
+                 0, NULL },
+#endif
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &file_names,
                  "<input>" , "[FILE|DIRECTORY]..."},
