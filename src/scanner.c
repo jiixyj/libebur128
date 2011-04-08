@@ -1,5 +1,5 @@
 /* See LICENSE file for copyright and license details. */
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 200112L         /* needed for isnan() and isinf() */
 #include <float.h>
 #include <math.h>
 #include <string.h>
@@ -8,11 +8,6 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
-
-#ifdef G_OS_WIN32
-  #define isnan(x) _isnan(x)
-  #define isinf(x) (!isnan(x) && isnan((x) - (x)))
-#endif
 
 #include "ebur128.h"
 #include "input.h"
