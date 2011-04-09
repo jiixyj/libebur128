@@ -682,6 +682,12 @@ int main(int ac, char* av[]) {
     fprintf(stderr, "Invalid argument to --tagging!\n");
     return 1;
   }
+#if EBUR128_USE_SPEEX_RESAMPLER
+  if (gd.tag_true_peak && !gd.tag_rg) {
+    fprintf(stderr, "Please specify a tagging option to use!\n");
+    return 1;
+  }
+#endif
 #endif
 
   if (gd.peak &&
