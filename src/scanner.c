@@ -339,7 +339,7 @@ int loudness_or_lra(struct gain_data* gd) {
         set_rg_info(fn,
                     -18.0 - gd->segment_loudness[i],
                     gd->segment_peaks[i],
-                    !strcmp(gd->tag_rg, "album") ? 1 : 0,
+                    !strcmp(gd->tag_rg, "album"),
                     -18.0 - gated_loudness,
                     global_peak);
         g_free(fn);
