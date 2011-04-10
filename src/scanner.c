@@ -77,15 +77,19 @@ void calculate_gain_of_file(void* user, void* user_data) {
                     (gd->calculate_lra ? EBUR128_MODE_LRA : 0) |
                     ((
                   #ifdef USE_TAGLIB
-                      gd->tag_rg ||
+                     (gd->tag_rg && !gd->tag_true_peak) ||
                   #endif
                      (gd->peak && (!strcmp(gd->peak, "sample") ||
                                    !strcmp(gd->peak, "all")))) ?
                      EBUR128_MODE_SAMPLE_PEAK : 0)
                   #if EBUR128_USE_SPEEX_RESAMPLER
-                  | ((gd->peak && (!strcmp(gd->peak, "true") ||
+                  | ((
+                  #ifdef USE_TAGLIB
+                     (gd->tag_rg && gd->tag_true_peak) ||
+                  #endif
+                     (gd->peak && (!strcmp(gd->peak, "true") ||
                                    !strcmp(gd->peak, "dbtp") ||
-                                   !strcmp(gd->peak, "all"))) ?
+                                   !strcmp(gd->peak, "all")))) ?
                      EBUR128_MODE_TRUE_PEAK : 0)
                   #endif
                     );
@@ -320,10 +324,12 @@ int loudness_or_lra(struct gain_data* gd) {
 #ifdef USE_TAGLIB
   if (gd->tag_rg) {
     double global_peak = 0.0;
+    double* peaks = gd->tag_true_peak ? gd->segment_true_peaks :
+                                        gd->segment_peaks;
     fprintf(stderr, "tagging...\n");
     for (i = 0; i < gd->file_names->len; ++i) {
-      if (gd->segment_peaks[i] > global_peak) {
-        global_peak = gd->segment_peaks[i];
+      if (peaks[i] > global_peak) {
+        global_peak = peaks[i];
       }
     }
     for (i = 0; i < gd->file_names->len; ++i) {
@@ -338,7 +344,7 @@ int loudness_or_lra(struct gain_data* gd) {
 #endif
         set_rg_info(fn,
                     -18.0 - gd->segment_loudness[i],
-                    gd->segment_peaks[i],
+                    peaks[i],
                     !strcmp(gd->tag_rg, "album"),
                     -18.0 - gated_loudness,
                     global_peak);
