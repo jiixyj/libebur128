@@ -3,10 +3,10 @@
 
 #include <gmodule.h>
 
-static const char* plugin_names[] = {"sndfile_input",
-                                     "mpg123_input",
-                                     "musepack_input",
-                                     "ffmpeg_input",
+static const char* plugin_names[] = {"input_sndfile",
+                                     "input_mpg123",
+                                     "input_musepack",
+                                     "input_ffmpeg",
                                      NULL};
 static GSList* g_modules = NULL;
 static GSList* plugin_ops = NULL; /*struct input_ops* ops;*/

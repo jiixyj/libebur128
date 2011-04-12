@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "ebur128.h"
+#include "input.h"
 
 struct input_handle {
   mpg123_handle* mh;
@@ -12,34 +13,34 @@ struct input_handle {
   float* buffer;
 };
 
-size_t input_get_channels(struct input_handle* ih) {
+size_t mpg123_get_channels(struct input_handle* ih) {
   return (size_t) ih->mh_channels;
 }
 
-size_t input_get_samplerate(struct input_handle* ih) {
+size_t mpg123_get_samplerate(struct input_handle* ih) {
   return (size_t) ih->mh_rate;
 }
 
-float* input_get_buffer(struct input_handle* ih) {
+float* mpg123_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-size_t input_get_buffer_size(struct input_handle* ih) {
+size_t mpg123_get_buffer_size(struct input_handle* ih) {
   return (size_t) ih->mh_rate * (size_t) ih->mh_channels;
 }
 
-struct input_handle* input_handle_init() {
+struct input_handle* mpg123_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
   return ret;
 }
 
-void input_handle_destroy(struct input_handle** ih) {
+void mpg123_handle_destroy(struct input_handle** ih) {
   free(*ih);
   *ih = NULL;
 }
 
-int input_open_file(struct input_handle* ih, FILE* file) {
+int mpg123_open_file(struct input_handle* ih, FILE* file) {
   int result;
   ih->mh = mpg123_new(NULL, &result);
   if (!ih->mh) {
@@ -86,13 +87,13 @@ close_file:
   return 1;
 }
 
-int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+int mpg123_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   (void) ih;
   (void) st;
   return 1;
 }
 
-int input_allocate_buffer(struct input_handle* ih) {
+int mpg123_allocate_buffer(struct input_handle* ih) {
   ih->buffer = (float*) malloc((size_t) ih->mh_rate *
                                (size_t) ih->mh_channels *
                                sizeof(float));
@@ -103,7 +104,7 @@ int input_allocate_buffer(struct input_handle* ih) {
   }
 }
 
-size_t input_read_frames(struct input_handle* ih) {
+size_t mpg123_read_frames(struct input_handle* ih) {
   size_t nr_frames_read;
   int result = mpg123_read(ih->mh, (unsigned char*) ih->buffer,
                            (size_t) ih->mh_rate *
@@ -123,25 +124,25 @@ size_t input_read_frames(struct input_handle* ih) {
   return nr_frames_read;
 }
 
-int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+int mpg123_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
   (void) ih;
   (void) nr_frames_read_all;
   return 0;
 }
 
-void input_free_buffer(struct input_handle* ih) {
+void mpg123_free_buffer(struct input_handle* ih) {
   free(ih->buffer);
   ih->buffer = NULL;
 }
 
-void input_close_file(struct input_handle* ih, FILE* file) {
+void mpg123_close_file(struct input_handle* ih, FILE* file) {
   mpg123_close(ih->mh);
   mpg123_delete(ih->mh);
   fclose(file);
   ih->mh = NULL;
 }
 
-int input_init_library() {
+int mpg123_init_library() {
   int result = mpg123_init();
   if (result != MPG123_OK) {
     return 1;
@@ -149,6 +150,26 @@ int input_init_library() {
   return 0;
 }
 
-void input_exit_library() {
+void mpg123_exit_library() {
   mpg123_exit();
 }
+
+struct input_ops ip_ops = {
+  mpg123_get_channels,
+  mpg123_get_samplerate,
+  mpg123_get_buffer,
+  mpg123_get_buffer_size,
+  mpg123_handle_init,
+  mpg123_handle_destroy,
+  mpg123_open_file,
+  mpg123_set_channel_map,
+  mpg123_allocate_buffer,
+  mpg123_read_frames,
+  mpg123_check_ok,
+  mpg123_free_buffer,
+  mpg123_close_file,
+  mpg123_init_library,
+  mpg123_exit_library
+};
+
+const char* ip_exts[] = {"mp3", "mp2", NULL};

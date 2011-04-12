@@ -385,13 +385,15 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   size_t frames_counter = 0, frames_needed;
   FILE* file;
 
+  struct input_ops* ops = NULL;
+  struct input_handle* ih = NULL;
+
   for (i = 0; i < gd->file_names->len; ++i) {
-    struct input_ops* ops = input_get_ops
-                                   (g_array_index(gd->file_names, char*, i));
+    ops = input_get_ops(g_array_index(gd->file_names, char*, i));
     if (!ops) {
       continue;
     }
-    struct input_handle* ih = ops->handle_init();
+    ih = ops->handle_init();
 
     file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
     if (!file) {
@@ -660,6 +662,8 @@ int main(int ac, char* av[]) {
   GError *error = NULL;
   GOptionContext *context;
 
+  g_thread_init(NULL);
+
   if (input_init()) {
     return 1;
   }
@@ -735,7 +739,6 @@ int main(int ac, char* av[]) {
     g_array_append_val(gd.file_names, fn);
   }
 
-  g_thread_init(NULL);
   if (gd.interval > 0.0) {
     if (test_files_in_gd(&gd, nr_files, G_FILE_TEST_IS_REGULAR)) {
       return 1;

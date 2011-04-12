@@ -153,4 +153,4 @@ struct input_ops ip_ops = {
   sndfile_exit_library
 };
 
-const char* ip_exts[] = {"flac", "wav", "ogg", "oga", NULL};
+const char* ip_exts[] = {"wav", "flac", "ogg", "oga", NULL};

@@ -2,6 +2,7 @@
 #include <mpc/mpcdec.h>
 
 #include "ebur128.h"
+#include "input.h"
 
 struct input_handle {
   mpc_reader reader;
@@ -11,30 +12,30 @@ struct input_handle {
   MPC_SAMPLE_FORMAT buffer[MPC_DECODER_BUFFER_LENGTH];
 };
 
-size_t input_get_channels(struct input_handle* ih) {
+size_t mpcdec_get_channels(struct input_handle* ih) {
   return ih->si.channels;
 }
 
-size_t input_get_samplerate(struct input_handle* ih) {
+size_t mpcdec_get_samplerate(struct input_handle* ih) {
   return ih->si.sample_freq;
 }
 
-float* input_get_buffer(struct input_handle* ih) {
+float* mpcdec_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-size_t input_get_buffer_size(struct input_handle* ih) {
+size_t mpcdec_get_buffer_size(struct input_handle* ih) {
   (void) ih;
   return MPC_DECODER_BUFFER_LENGTH;
 }
 
-struct input_handle* input_handle_init() {
+struct input_handle* mpcdec_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
   return ret;
 }
 
-int input_open_file(struct input_handle* ih, FILE* file) {
+int mpcdec_open_file(struct input_handle* ih, FILE* file) {
   int err = mpc_reader_init_stdio_stream(&ih->reader, file);
   if (err < 0) {
     return 1;
@@ -47,23 +48,23 @@ int input_open_file(struct input_handle* ih, FILE* file) {
   return 0;
 }
 
-int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+int mpcdec_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   (void) ih;
   (void) st;
   return 1;
 }
 
-void input_handle_destroy(struct input_handle** ih) {
+void mpcdec_handle_destroy(struct input_handle** ih) {
   free(*ih);
   *ih = NULL;
 }
 
-int input_allocate_buffer(struct input_handle* ih) {
+int mpcdec_allocate_buffer(struct input_handle* ih) {
   (void) ih;
   return 0;
 }
 
-size_t input_read_frames(struct input_handle* ih) {
+size_t mpcdec_read_frames(struct input_handle* ih) {
   mpc_frame_info frame;
   frame.buffer = ih->buffer;
   mpc_demux_decode(ih->demux, &frame);
@@ -72,27 +73,47 @@ size_t input_read_frames(struct input_handle* ih) {
   return frame.samples;
 }
 
-int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+int mpcdec_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
   (void) ih;
   (void) nr_frames_read_all;
   return 0;
 }
 
-void input_free_buffer(struct input_handle* ih) {
+void mpcdec_free_buffer(struct input_handle* ih) {
   (void) ih;
   return;
 }
 
-void input_close_file(struct input_handle* ih, FILE* file) {
+void mpcdec_close_file(struct input_handle* ih, FILE* file) {
   (void) file;
   mpc_demux_exit(ih->demux);
   mpc_reader_exit_stdio(&ih->reader);
 }
 
-int input_init_library() {
+int mpcdec_init_library() {
   return 0;
 }
 
-void input_exit_library() {
+void mpcdec_exit_library() {
   return;
 }
+
+struct input_ops ip_ops = {
+  mpcdec_get_channels,
+  mpcdec_get_samplerate,
+  mpcdec_get_buffer,
+  mpcdec_get_buffer_size,
+  mpcdec_handle_init,
+  mpcdec_handle_destroy,
+  mpcdec_open_file,
+  mpcdec_set_channel_map,
+  mpcdec_allocate_buffer,
+  mpcdec_read_frames,
+  mpcdec_check_ok,
+  mpcdec_free_buffer,
+  mpcdec_close_file,
+  mpcdec_init_library,
+  mpcdec_exit_library
+};
+
+const char* ip_exts[] = {"mpc", NULL};
