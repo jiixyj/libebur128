@@ -216,9 +216,12 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, "Could not allocate memory!\n", 0, exit)
+  st->d = (struct ebur128_state_internal*)
+          malloc(sizeof(struct ebur128_state_internal));
+  CHECK_ERROR(!st->d, "Could not allocate memory!\n", 0, free_state)
   st->channels = channels;
   errcode = ebur128_init_channel_map(st);
-  CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_state)
+  CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_internal)
 
   st->d->sample_peak = (double*) calloc(channels, sizeof(double));
   CHECK_ERROR(!st->d->sample_peak, "Could not allocate memory!\n", 0,
@@ -270,6 +273,8 @@ free_sample_peak:
   free(st->d->sample_peak);
 free_channel_map:
   free(st->d->channel_map);
+free_internal:
+  free(st->d);
 free_state:
   free(st);
 exit:
@@ -296,6 +301,7 @@ void ebur128_destroy(ebur128_state** st) {
   ebur128_destroy_resampler(*st);
 #endif
 
+  free((*st)->d);
   free(*st);
   *st = NULL;
 }
