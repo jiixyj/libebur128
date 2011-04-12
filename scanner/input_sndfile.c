@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "ebur128.h"
+#include "input.h"
 
 struct input_handle {
   SF_INFO file_info;
@@ -12,35 +13,35 @@ struct input_handle {
   float* buffer;
 };
 
-size_t input_get_channels(struct input_handle* ih) {
+size_t sndfile_get_channels(struct input_handle* ih) {
   return (size_t) ih->file_info.channels;
 }
 
-size_t input_get_samplerate(struct input_handle* ih) {
+size_t sndfile_get_samplerate(struct input_handle* ih) {
   return (size_t) ih->file_info.samplerate;
 }
 
-float* input_get_buffer(struct input_handle* ih) {
+float* sndfile_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-size_t input_get_buffer_size(struct input_handle* ih) {
+size_t sndfile_get_buffer_size(struct input_handle* ih) {
   return (size_t) ih->file_info.samplerate *
          (size_t) ih->file_info.channels;
 }
 
-struct input_handle* input_handle_init() {
+struct input_handle* sndfile_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
   return ret;
 }
 
-void input_handle_destroy(struct input_handle** ih) {
+void sndfile_handle_destroy(struct input_handle** ih) {
   free(*ih);
   *ih = NULL;
 }
 
-int input_open_file(struct input_handle* ih, FILE* file) {
+int sndfile_open_file(struct input_handle* ih, FILE* file) {
   memset(&ih->file_info, '\0', sizeof(ih->file_info));
   ih->file = sf_open_fd(fileno(file), SFM_READ, &ih->file_info, 1);
   if (ih->file) {
@@ -50,7 +51,7 @@ int input_open_file(struct input_handle* ih, FILE* file) {
   }
 }
 
-int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+int sndfile_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   int result;
   int* channel_map = (int*) calloc(st->channels, sizeof(int));
   if (!channel_map) return 1;
@@ -89,7 +90,7 @@ int input_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   }
 }
 
-int input_allocate_buffer(struct input_handle* ih) {
+int sndfile_allocate_buffer(struct input_handle* ih) {
   ih->buffer = (float*) malloc((size_t) ih->file_info.samplerate *
                                (size_t) ih->file_info.channels *
                                sizeof(float));
@@ -100,12 +101,12 @@ int input_allocate_buffer(struct input_handle* ih) {
   }
 }
 
-size_t input_read_frames(struct input_handle* ih) {
+size_t sndfile_read_frames(struct input_handle* ih) {
   return (size_t) sf_readf_float(ih->file, ih->buffer,
                                  (sf_count_t) ih->file_info.samplerate);
 }
 
-int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+int sndfile_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
   if (ih->file && (size_t) ih->file_info.frames != nr_frames_read_all) {
     return 1;
   } else {
@@ -113,12 +114,12 @@ int input_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
   }
 }
 
-void input_free_buffer(struct input_handle* ih) {
+void sndfile_free_buffer(struct input_handle* ih) {
   free(ih->buffer);
   ih->buffer = NULL;
 }
 
-void input_close_file(struct input_handle* ih, FILE* file) {
+void sndfile_close_file(struct input_handle* ih, FILE* file) {
   (void) file;
   if (sf_close(ih->file)) {
     fprintf(stderr, "Could not close input file!\n");
@@ -126,10 +127,30 @@ void input_close_file(struct input_handle* ih, FILE* file) {
   ih->file = NULL;
 }
 
-int input_init_library() {
+int sndfile_init_library() {
   return 0;
 }
 
-void input_exit_library() {
+void sndfile_exit_library() {
   return;
 }
+
+struct input_ops ip_ops = {
+  sndfile_get_channels,
+  sndfile_get_samplerate,
+  sndfile_get_buffer,
+  sndfile_get_buffer_size,
+  sndfile_handle_init,
+  sndfile_handle_destroy,
+  sndfile_open_file,
+  sndfile_set_channel_map,
+  sndfile_allocate_buffer,
+  sndfile_read_frames,
+  sndfile_check_ok,
+  sndfile_free_buffer,
+  sndfile_close_file,
+  sndfile_init_library,
+  sndfile_exit_library
+};
+
+const char* ip_exts[] = {"flac", "wav", "ogg", "oga", NULL};

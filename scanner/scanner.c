@@ -50,7 +50,6 @@ void calculate_gain_of_file(void* user, void* user_data) {
   struct gain_data* gd = (struct gain_data*) user_data;
   size_t i = (size_t) user - 1, j;
 
-  struct input_handle* ih = input_handle_init();
   size_t nr_frames_read, nr_frames_read_all = 0;
 
   ebur128_state* st = NULL;
@@ -59,20 +58,31 @@ void calculate_gain_of_file(void* user, void* user_data) {
   int errcode, result;
   FILE* file;
 
+  struct input_ops* ops = NULL;
+  struct input_handle* ih = NULL;
+
   gd->segment_loudness[i] = 0.0 / 0.0;
+
+  ops = input_get_ops(g_array_index(gd->file_names, char*, i));
+  if (!ops) {
+    gd->errcode = 1;
+    return;
+  }
+  ih = ops->handle_init();
+
   file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
   if (!file) {
     errcode = 1;
     goto endloop;
   }
-  result = input_open_file(ih, file);
+  result = ops->open_file(ih, file);
   if (result) {
     errcode = 1;
     goto endloop;
   }
 
-  st = ebur128_init(input_get_channels(ih),
-                    input_get_samplerate(ih),
+  st = ebur128_init(ops->get_channels(ih),
+                    ops->get_samplerate(ih),
                     EBUR128_MODE_I |
                     (gd->calculate_lra ? EBUR128_MODE_LRA : 0) |
                     ((
@@ -98,7 +108,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   /* Special case seq-3341-6-5channels-16bit.wav.
    * Set channel map with function ebur128_set_channel. */
-  result = input_set_channel_map(ih, st);
+  result = ops->set_channel_map(ih, st);
   if (result && st->channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
     ebur128_set_channel(st, 1, EBUR128_RIGHT);
@@ -107,17 +117,17 @@ void calculate_gain_of_file(void* user, void* user_data) {
     ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
 
-  result = input_allocate_buffer(ih);
+  result = ops->allocate_buffer(ih);
   CHECK_ERROR(result, "Could not allocate memory!\n", 1, free_buffer)
   gd->segment_peaks[i] = 0.0;
-  buffer = input_get_buffer(ih);
+  buffer = ops->get_buffer(ih);
 
-  while ((nr_frames_read = input_read_frames(ih))) {
+  while ((nr_frames_read = ops->read_frames(ih))) {
     nr_frames_read_all += nr_frames_read;
     result = ebur128_add_frames_float(st, buffer, (size_t) nr_frames_read);
     CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
   }
-  if (input_check_ok(ih, nr_frames_read_all)) {
+  if (ops->check_ok(ih, nr_frames_read_all)) {
     fprintf(stderr, "Warning: Could not read full file"
                             " or determine right length!\n");
   }
@@ -145,13 +155,13 @@ void calculate_gain_of_file(void* user, void* user_data) {
   fprintf(stderr, "*");
 
 free_buffer:
-  input_free_buffer(ih);
+  ops->free_buffer(ih);
 
 close_file:
-  input_close_file(ih, file);
+  ops->close_file(ih, file);
 
 endloop:
-  input_handle_destroy(&ih);
+  ops->handle_destroy(&ih);
   gd->errcode = errcode;
 }
 
@@ -182,9 +192,6 @@ int loudness_or_lra(struct gain_data* gd) {
   gd->segment_peaks = calloc(gd->file_names->len, sizeof(double));
   gd->segment_true_peaks = calloc(gd->file_names->len, sizeof(double));
   gd->library_states = calloc(gd->file_names->len, sizeof(ebur128_state*));
-
-  CHECK_ERROR(input_init_library(),
-              "Could not initialize input library!", 1, exit)
 
   pool = g_thread_pool_new(calculate_gain_of_file, gd, (int) nproc(),
                            FALSE, NULL);
@@ -360,9 +367,7 @@ int loudness_or_lra(struct gain_data* gd) {
       ebur128_destroy(&gd->library_states[i]);
     }
   }
-  input_exit_library();
 
-exit:
   free(gd->library_states);
   free(gd->segment_loudness);
   free(gd->segment_lra);
@@ -380,39 +385,40 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   size_t frames_counter = 0, frames_needed;
   FILE* file;
 
-  CHECK_ERROR(input_init_library(),
-              "Could not initialize input library!", 1, exit)
-
-
   for (i = 0; i < gd->file_names->len; ++i) {
-    struct input_handle* ih = input_handle_init();
+    struct input_ops* ops = input_get_ops
+                                   (g_array_index(gd->file_names, char*, i));
+    if (!ops) {
+      continue;
+    }
+    struct input_handle* ih = ops->handle_init();
 
     file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
     if (!file) {
       errcode = 1;
       goto endloop;
     }
-    result = input_open_file(ih, file);
+    result = ops->open_file(ih, file);
     if (result) {
       errcode = 1;
       goto endloop;
     }
 
     if (!st) {
-      st = ebur128_init(input_get_channels(ih),
-                        input_get_samplerate(ih),
+      st = ebur128_init(ops->get_channels(ih),
+                        ops->get_samplerate(ih),
                         gd->mode);
       CHECK_ERROR(!st, "Could not initialize EBU R128!\n", 1, close_file)
     } else {
-      if (!ebur128_change_parameters(st, input_get_channels(ih),
-                                         input_get_samplerate(ih))) {
+      if (!ebur128_change_parameters(st, ops->get_channels(ih),
+                                         ops->get_samplerate(ih))) {
         frames_counter = 0;
       }
     }
 
     /* Special case seq-3341-6-5channels-16bit.wav.
      * Set channel map with function ebur128_set_channel. */
-    result = input_set_channel_map(ih, st);
+    result = ops->set_channel_map(ih, st);
     if (result && st->channels == 5) {
       ebur128_set_channel(st, 0, EBUR128_LEFT);
       ebur128_set_channel(st, 1, EBUR128_RIGHT);
@@ -423,10 +429,10 @@ int scan_files_interval_loudness(struct gain_data* gd) {
 
     frames_needed = (size_t) (gd->interval * (double) st->samplerate + 0.5);
 
-    result = input_allocate_buffer(ih);
+    result = ops->allocate_buffer(ih);
     CHECK_ERROR(result, "Could not allocate memory!\n", 1, close_file)
-    buffer = input_get_buffer(ih);
-    while ((nr_frames_read = input_read_frames(ih))) {
+    buffer = ops->get_buffer(ih);
+    while ((nr_frames_read = ops->read_frames(ih))) {
       float* tmp_buffer = buffer;
       while (nr_frames_read > 0) {
         if (frames_counter + nr_frames_read >= frames_needed) {
@@ -461,17 +467,15 @@ int scan_files_interval_loudness(struct gain_data* gd) {
       }
     }
   free_buffer:
-    input_free_buffer(ih);
+    ops->free_buffer(ih);
   close_file:
-    input_close_file(ih, file);
+    ops->close_file(ih, file);
   endloop:
-    input_handle_destroy(&ih);
+    ops->handle_destroy(&ih);
   }
-  input_exit_library();
   if (st) {
     ebur128_destroy(&st);
   }
-exit:
   return errcode;
 }
 
@@ -656,6 +660,10 @@ int main(int ac, char* av[]) {
   GError *error = NULL;
   GOptionContext *context;
 
+  if (input_init()) {
+    return 1;
+  }
+
   gd.calculate_lra = 0;
 #ifdef USE_TAGLIB
   gd.tag_rg = NULL;
@@ -747,6 +755,8 @@ int main(int ac, char* av[]) {
     g_free(g_array_index(gd.file_names, char*, i));
   }
   g_array_free(gd.file_names, TRUE);
+
+  input_deinit();
 
   return errcode;
 }

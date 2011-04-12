@@ -1,4 +1,4 @@
-if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
+if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
   if(USE_TAGLIB)
     if(WIN32)
       add_library(rgtag SHARED rgtag.cpp)
@@ -8,7 +8,9 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
     target_link_libraries(rgtag ${TAGLIB_LIBRARIES})
     set(SCANNER_LIBS rgtag)
   endif()
+
   add_library(nproc nproc.c)
+  add_library(input input.c)
 
   set(SCANNER_SRCS scanner.c)
   # Enable globbing for MinGW builds
@@ -21,17 +23,19 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
       list(APPEND SCANNER_SRCS ${CRT_GLOB})
     endif()
   endif()
-  set(SCANNER_LIBS ${SCANNER_LIBS} ebur128 nproc)
+
+  set(SCANNER_LIBS ${SCANNER_LIBS} ebur128 input nproc)
+  set(CMAKE_SHARED_MODULE_PREFIX "")
 
   if(SNDFILE_FOUND)
-    add_library(sndfile_input input_sndfile.c)
+    add_library(sndfile_input MODULE input_sndfile.c)
     target_link_libraries(sndfile_input ${SNDFILE_LIBRARIES})
 
     add_executable(r128-minimal-example minimal_example.c)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
     add_executable(r128-sndfile ${SCANNER_SRCS})
-    target_link_libraries(r128-sndfile ${SCANNER_LIBS} sndfile_input ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+    target_link_libraries(r128-sndfile ${SCANNER_LIBS} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES} ${GMODULE_LIBRARIES})
 
     add_executable(r128-test-library tests.c)
     target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
