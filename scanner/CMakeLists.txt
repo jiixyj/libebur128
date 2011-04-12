@@ -1,14 +1,3 @@
-include_directories(queue)
-
-add_library(ebur128 ebur128.c)
-if(NOT WIN32)
-  target_link_libraries(ebur128 m)
-endif()
-
-add_subdirectory(speex_resample)
-include_directories(speex_resample)
-target_link_libraries(ebur128 speex_resample)
-
 if(GLIB_FOUND AND GTHREAD_FOUND AND INTL_FOUND)
   if(USE_TAGLIB)
     if(WIN32)

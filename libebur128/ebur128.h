@@ -6,12 +6,6 @@
   #define EBUR128_USE_SPEEX_RESAMPLER 1
 #endif
 
-#if EBUR128_USE_SPEEX_RESAMPLER
-  #define OUTSIDE_SPEEX
-  #define RANDOM_PREFIX ebur128
-  #include "speex_resampler.h"
-#endif
-
 /** \file ebur128.h
  *  \brief libebur128 - a library for loudness measurement according to
  *         the EBU R128 standard.
@@ -21,20 +15,7 @@
 extern "C" {
 #endif
 
-#include <string.h>
-
-/* This can be replaced by any BSD-like queue implementation. */
-#include "queue.h"
-
-/** @cond SLIST
- *  Declare a linked list for our block energies.
- */
-SLIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
-struct ebur128_dq_entry {
-  double z;
-  SLIST_ENTRY(ebur128_dq_entry) entries;
-};
-/** @endcond */
+#include <string.h>       /* for size_t */
 
 /** \enum channel
  *  Use these values when setting the channel map with ebur128_set_channel().
@@ -72,51 +53,15 @@ enum mode {
  *    - channels
  *    - samplerate
  */
+struct ebur128_state_internal;
 typedef struct {
   /** The current mode. */
   int mode;
-  /** Filtered audio data (used as ring buffer). */
-  double* audio_data;
-  /** Size of audio_data array. */
-  size_t audio_data_frames;
-  /** Current index for audio_data. */
-  size_t audio_data_index;
-  /** How many frames are needed for a gating block. Will correspond to 400ms
-   *  of audio at initialization, and 100ms after the first block (75% overlap
-   *  as specified in the 2011 revision of BS1770). */
-  size_t needed_frames;
   /** The number of channels. */
   size_t channels;
-  /** The channel map. Has as many elements as there are channels. */
-  int* channel_map;
   /** The sample rate. */
   size_t samplerate;
-  /** How many samples fit in 100ms (rounded). */
-  size_t samples_in_100ms;
-  /** BS.1770 filter coefficients (nominator). */
-  double b[5];
-  /** BS.1770 filter coefficients (denominator). */
-  double a[5];
-  /** BS.1770 filter state. */
-  double v[5][5];
-  /** Linked list of block energies. */
-  struct ebur128_double_queue block_list;
-  /** Linked list of 3s-block energies, used to calculate LRA. */
-  struct ebur128_double_queue short_term_block_list;
-  /** Keeps track of when a new short term block is needed. */
-  size_t short_term_frame_counter;
-  /** Maximum sample peak, one per channel */
-  double* sample_peak;
-  /** Maximum true peak, one per channel */
-  double* true_peak;
-#if EBUR128_USE_SPEEX_RESAMPLER
-  SpeexResamplerState* resampler;
-#endif
-  size_t oversample_factor;
-  float* resampler_buffer_input;
-  size_t resampler_buffer_input_frames;
-  float* resampler_buffer_output;
-  size_t resampler_buffer_output_frames;
+  struct ebur128_state_internal* d;
 } ebur128_state;
 
 /** \brief Initialize library state.
