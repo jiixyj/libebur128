@@ -556,6 +556,8 @@ static gboolean parse_interval(const gchar *option_name,
 
 static char** file_names = NULL;
 static char* relative_gate_string = NULL;
+static char* forced_plugin = NULL;
+
 static GOptionEntry entries[] = {
   { "lra", 'l', 0, G_OPTION_ARG_NONE,
                  &gd.calculate_lra,
@@ -620,6 +622,11 @@ static GOptionEntry entries[] = {
                  &gd.tag_true_peak,
                  0, NULL },
 #endif
+  { "force-plugin", 0, 0, G_OPTION_ARG_STRING,
+                 &forced_plugin,
+                 "force input plugin; PLUGIN is one of:"
+                 "\n                                      "
+                 "  sndfile, mpg123, musepack, ffmpeg", "PLUGIN" },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &file_names,
                  "<input>" , "[FILE|DIRECTORY]..."},
@@ -664,10 +671,6 @@ int main(int ac, char* av[]) {
 
   g_thread_init(NULL);
 
-  if (input_init()) {
-    return 1;
-  }
-
   gd.calculate_lra = 0;
 #ifdef USE_TAGLIB
   gd.tag_rg = NULL;
@@ -681,6 +684,11 @@ int main(int ac, char* av[]) {
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
   g_option_context_parse(context, &ac, &av, &error);
+
+  if (input_init(forced_plugin)) {
+    return 1;
+  }
+
   if (relative_gate_string) {
     relative_gate = atof(relative_gate_string);
     if (relative_gate != -8.0) {

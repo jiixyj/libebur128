@@ -12,11 +12,18 @@ static GSList* g_modules = NULL;
 static GSList* plugin_ops = NULL; /*struct input_ops* ops;*/
 static GSList* plugin_exts = NULL;
 
-int input_init() {
-  /* Load plugins */
+static int plugin_forced = 0;
+
+int input_init(const char* forced_plugin) {
   int plugin_found = 0;
+  if (forced_plugin) plugin_forced = 1;
+  /* Load plugins */
   const char** cur_plugin_name = plugin_names;
   while (*cur_plugin_name) {
+    if (forced_plugin && strcmp(forced_plugin, (*cur_plugin_name) + 6)) {
+      ++cur_plugin_name;
+      continue;
+    }
     struct input_ops* ops = NULL;
     char** exts = NULL;
     GModule* module = g_module_open(*cur_plugin_name,
@@ -76,7 +83,7 @@ struct input_ops* input_get_ops(const char* filename) {
       char* filename_ext = strrchr(filename, '.');
       if (filename_ext) ++filename_ext;
       while (*cur_exts) {
-        if (!strcmp(filename_ext, *cur_exts)) {
+        if (!strcmp(filename_ext, *cur_exts) || plugin_forced) {
           return (struct input_ops*) ops->data;
         }
         ++cur_exts;
