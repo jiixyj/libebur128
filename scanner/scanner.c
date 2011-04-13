@@ -80,6 +80,13 @@ void calculate_gain_of_file(void* user, void* user_data) {
     errcode = 1;
     goto endloop;
   }
+#ifdef USE_TAGLIB
+  if (gd->tag_rg && ops->get_channels(ih) > 2) {
+    fprintf(stderr, "ReplayGain tagging support only up to 2 channels!\n");
+    errcode = 1;
+    goto close_file;
+  }
+#endif
 
   st = ebur128_init(ops->get_channels(ih),
                     ops->get_samplerate(ih),
@@ -116,6 +123,11 @@ void calculate_gain_of_file(void* user, void* user_data) {
     ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
     ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
+#ifdef USE_TAGLIB
+  if (gd->tag_rg && st->channels == 1) {
+    ebur128_set_channel(st, 0, EBUR128_DUAL_MONO);
+  }
+#endif
 
   result = ops->allocate_buffer(ih);
   CHECK_ERROR(result, "Could not allocate memory!\n", 1, free_buffer)
