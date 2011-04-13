@@ -561,52 +561,52 @@ static char* forced_plugin = NULL;
 static GOptionEntry entries[] = {
   { "lra", 'l', 0, G_OPTION_ARG_NONE,
                  &gd.calculate_lra,
-                 "calculate loudness range in LRA\n", NULL },
+                 "calculate loudness range in LRA", NULL },
   { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
                  "print momentary loudness every INTERVAL"
-                 "\n                                      "
-                 "seconds\n", "INTERVAL" },
+                 "\n                                        "
+                 "seconds", "INTERVAL" },
   { "shortterm", 's', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
                  "print shortterm loudness every INTERVAL"
-                 "\n                                      "
-                 "seconds\n", "INTERVAL" },
+                 "\n                                        "
+                 "seconds", "INTERVAL" },
   { "integrated", 'i', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
                  "print integrated loudness (from start of"
-                 "\n                                      "
-                 "file) every INTERVAL seconds\n", "INTERVAL" },
+                 "\n                                        "
+                 "file) every INTERVAL seconds", "INTERVAL" },
 #ifdef USE_TAGLIB
   { "tagging", 't', 0, G_OPTION_ARG_STRING,
                  &gd.tag_rg,
                  "write ReplayGain tags to files"
-                 "\n                                      "
+                 "\n                                        "
                  "(reference: -18 LUFS)"
-                 "\n                                      "
+                 "\n                                        "
                  "-t album: write album gain"
-                 "\n                                      "
-                 "-t track: write track gain\n", "album|track" },
+                 "\n                                        "
+                 "-t track: write track gain", "album|track" },
 #endif
   { "recursive", 'r', 0, G_OPTION_ARG_NONE,
                  &gd.recursive_scan,
                  "scan directory recursively, one album"
-                 "\n                                      "
-                 "per folder\n", NULL },
+                 "\n                                        "
+                 "per folder", NULL },
   { "peak", 'p', 0, G_OPTION_ARG_STRING,
                  &gd.peak,
                  "display peak values"
-                 "\n                                      "
+                 "\n                                        "
                  "-p sample: sample peak (float value)"
 #if EBUR128_USE_SPEEX_RESAMPLER
-                 "\n                                      "
+                 "\n                                        "
                  "-p true:   true peak (float value)"
-                 "\n                                      "
+                 "\n                                        "
                  "-p dbtp:   true peak (dB True Peak)"
-                 "\n                                      "
+                 "\n                                        "
                  "-p all:    show all peak values"
 #endif
-                 "\n",
+                 ,
 #if EBUR128_USE_SPEEX_RESAMPLER
                  "sample|true|dbtp|all"
 #else
@@ -625,8 +625,8 @@ static GOptionEntry entries[] = {
   { "force-plugin", 0, 0, G_OPTION_ARG_STRING,
                  &forced_plugin,
                  "force input plugin; PLUGIN is one of:"
-                 "\n                                      "
-                 "  sndfile, mpg123, musepack, ffmpeg", "PLUGIN" },
+                 "\n                                        "
+                 "sndfile, mpg123, musepack, ffmpeg", "PLUGIN" },
   { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
                  &file_names,
                  "<input>" , "[FILE|DIRECTORY]..."},
