@@ -374,6 +374,7 @@ int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
   for (c = 0; c < st->channels; ++c) {                                         \
     int ci = st->d->channel_map[c] - 1;                                        \
     if (ci < 0) continue;                                                      \
+    else if (ci > 4) ci = 0; /* dual mono */                                   \
     for (i = 0; i < frames; ++i) {                                             \
       st->d->v[ci][0] = (double) (src[i * st->channels + c] / scaling_factor)  \
                    - st->d->a[1] * st->d->v[ci][1]                             \
@@ -435,6 +436,8 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
     if (st->d->channel_map[c] == EBUR128_LEFT_SURROUND ||
         st->d->channel_map[c] == EBUR128_RIGHT_SURROUND) {
       channel_sum *= 1.41;
+    } else if (st->d->channel_map[c] == EBUR128_DUAL_MONO) {
+      channel_sum *= 2.0;
     }
     sum += channel_sum;
   }
@@ -456,6 +459,11 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
 
 int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value) {
   if (channel_number >= st->channels) {
+    return 1;
+  }
+  if (value == EBUR128_DUAL_MONO &&
+      (st->channels != 1 || channel_number != 0)) {
+    fprintf(stderr, "EBUR128_DUAL_MONO only works with mono files!\n");
     return 1;
   }
   st->d->channel_map[channel_number] = value;

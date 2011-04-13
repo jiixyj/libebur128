@@ -16,18 +16,22 @@ static int plugin_forced = 0;
 
 int input_init(const char* forced_plugin) {
   int plugin_found = 0;
+  const char** cur_plugin_name = plugin_names;
+  struct input_ops* ops;
+  char** exts;
+  GModule* module;
+
   if (forced_plugin) plugin_forced = 1;
   /* Load plugins */
-  const char** cur_plugin_name = plugin_names;
   while (*cur_plugin_name) {
     if (forced_plugin && strcmp(forced_plugin, (*cur_plugin_name) + 6)) {
       ++cur_plugin_name;
       continue;
     }
-    struct input_ops* ops = NULL;
-    char** exts = NULL;
-    GModule* module = g_module_open(*cur_plugin_name,
-                            G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
+    ops = NULL;
+    exts = NULL;
+    module = g_module_open(*cur_plugin_name,
+                           G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
     if (!module) {
       /* fprintf(stderr, "%s\n", g_module_error()); */
     } else {

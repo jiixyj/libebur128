@@ -26,7 +26,8 @@ enum channel {
   EBUR128_RIGHT,          /**< right channel */
   EBUR128_CENTER,         /**< center channel */
   EBUR128_LEFT_SURROUND,  /**< left surround channel */
-  EBUR128_RIGHT_SURROUND  /**< right surround channel */
+  EBUR128_RIGHT_SURROUND, /**< right surround channel */
+  EBUR128_DUAL_MONO       /**< a channel that is counted twice */
 };
 
 /** \enum mode
@@ -46,12 +47,7 @@ enum mode {
 
 /** \brief Contains information about the state of a loudness measurement.
  *
- *  You should not need to modify this struct directly. The contents can change
- *  between library versions. The following fields will always be available for
- *  reading:
- *    - mode
- *    - channels
- *    - samplerate
+ *  You should not need to modify this struct directly.
  */
 struct ebur128_state_internal;
 typedef struct {
