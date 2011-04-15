@@ -569,10 +569,27 @@ static gboolean parse_interval(const gchar *option_name,
 static char** file_names = NULL;
 static char* forced_plugin = NULL;
 
-static GOptionEntry entries[] = {
-  { "lra", 'l', 0, G_OPTION_ARG_NONE,
-                 &gd.calculate_lra,
-                 "calculate loudness range in LRA", NULL },
+#ifdef USE_TAGLIB
+static GOptionEntry tagging_entries[] = {
+  { "tagging", 't', 0, G_OPTION_ARG_STRING,
+                 &gd.tag_rg,
+                 "write ReplayGain tags to files"
+                 "\n                                        "
+                 "(reference: -18 LUFS)"
+                 "\n                                        "
+                 "-t album: write album gain"
+                 "\n                                        "
+                 "-t track: write track gain", "album|track" },
+#if EBUR128_USE_SPEEX_RESAMPLER
+  { "tag-tp", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE,
+                 &gd.tag_true_peak,
+                 0, NULL },
+#endif
+  { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
+};
+#endif
+
+static GOptionEntry r128_entries[] = {
   { "momentary", 'm', 0, G_OPTION_ARG_CALLBACK,
                  (void*) (size_t) &parse_interval,
                  "print momentary loudness every INTERVAL"
@@ -588,22 +605,9 @@ static GOptionEntry entries[] = {
                  "print integrated loudness (from start of"
                  "\n                                        "
                  "file) every INTERVAL seconds", "INTERVAL" },
-#ifdef USE_TAGLIB
-  { "tagging", 't', 0, G_OPTION_ARG_STRING,
-                 &gd.tag_rg,
-                 "write ReplayGain tags to files"
-                 "\n                                        "
-                 "(reference: -18 LUFS)"
-                 "\n                                        "
-                 "-t album: write album gain"
-                 "\n                                        "
-                 "-t track: write track gain", "album|track" },
-#endif
-  { "recursive", 'r', 0, G_OPTION_ARG_NONE,
-                 &gd.recursive_scan,
-                 "scan directory recursively, one album"
-                 "\n                                        "
-                 "per folder", NULL },
+  { "lra", 'l', 0, G_OPTION_ARG_NONE,
+                 &gd.calculate_lra,
+                 "calculate loudness range in LRA", NULL },
   { "peak", 'p', 0, G_OPTION_ARG_STRING,
                  &gd.peak,
                  "display peak values"
@@ -624,12 +628,15 @@ static GOptionEntry entries[] = {
                  "sample              "
 #endif
                  },
-#if EBUR128_USE_SPEEX_RESAMPLER && \
-    defined(USE_TAGLIB)
-  { "tag-tp", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE,
-                 &gd.tag_true_peak,
-                 0, NULL },
-#endif
+  { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
+};
+
+static GOptionEntry entries[] = {
+  { "recursive", 'r', 0, G_OPTION_ARG_NONE,
+                 &gd.recursive_scan,
+                 "scan directory recursively, one album"
+                 "\n                                        "
+                 "per folder", NULL },
   { "force-plugin", 0, 0, G_OPTION_ARG_STRING,
                  &forced_plugin,
                  "force input plugin; PLUGIN is one of:"
@@ -672,8 +679,10 @@ int test_files_in_gd(struct gain_data* gdata, size_t ac, int test) {
 int main(int ac, char* av[]) {
   int errcode = 0;
   size_t i = 0, nr_files = 0;
-  GError *error = NULL;
-  GOptionContext *context;
+  GError* error = NULL;
+  GOptionContext* context;
+  GOptionGroup* tagging_group;
+  GOptionGroup* r128_group;
 
   g_thread_init(NULL);
 
@@ -689,6 +698,25 @@ int main(int ac, char* av[]) {
 
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
+
+  /* add tagging options */
+#ifdef USE_TAGLIB
+  tagging_group = g_option_group_new("tagging",
+                                     "ReplayGain tagging options",
+                                     "Show tagging help options",
+                                     NULL, NULL);
+  g_option_group_add_entries(tagging_group, tagging_entries);
+  g_option_context_add_group(context, tagging_group);
+#endif
+  /* add r128 options */
+  r128_group = g_option_group_new("r128",
+                                  "R128/BS.1770-1 options",
+                                  "Show R128/BS.1770-1 help options",
+                                  NULL, NULL);
+  g_option_group_add_entries(r128_group, r128_entries);
+  g_option_context_add_group(context, r128_group);
+
+
   g_option_context_parse(context, &ac, &av, &error);
 
   if (input_init(forced_plugin)) {
