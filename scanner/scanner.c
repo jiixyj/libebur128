@@ -567,7 +567,6 @@ static gboolean parse_interval(const gchar *option_name,
 }
 
 static char** file_names = NULL;
-static char* relative_gate_string = NULL;
 static char* forced_plugin = NULL;
 
 static GOptionEntry entries[] = {
@@ -625,9 +624,6 @@ static GOptionEntry entries[] = {
                  "sample              "
 #endif
                  },
-  { "gate", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING,
-                 &relative_gate_string,
-                 "FOR TESTING ONLY: set relative gate (dB)", NULL },
 #if EBUR128_USE_SPEEX_RESAMPLER && \
     defined(USE_TAGLIB)
   { "tag-tp", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE,
@@ -673,8 +669,6 @@ int test_files_in_gd(struct gain_data* gdata, size_t ac, int test) {
   return errcode;
 }
 
-extern double relative_gate;
-
 int main(int ac, char* av[]) {
   int errcode = 0;
   size_t i = 0, nr_files = 0;
@@ -699,13 +693,6 @@ int main(int ac, char* av[]) {
 
   if (input_init(forced_plugin)) {
     return 1;
-  }
-
-  if (relative_gate_string) {
-    relative_gate = atof(relative_gate_string);
-    if (relative_gate != -8.0) {
-      fprintf(stderr, "WARNING: Setting relative gate to non-standard value %.2f dB!\n", relative_gate);
-    }
   }
 
   if (error) {
