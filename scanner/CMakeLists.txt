@@ -62,9 +62,9 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
       set(FFMPEG_INPUT input_ffmpeg)
     endif()
     add_library(${FFMPEG_INPUT} MODULE input_ffmpeg.c)
-    target_link_libraries(${FFMPEG_INPUT} ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES} ${LIBAVUTIL_LIBRARIES})
+    target_link_libraries(${FFMPEG_INPUT} ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES})
     if(WIN32)
-      target_link_libraries(${FFMPEG_INPUT} ${GLIB_LIBRARIES} ebur128)
+      target_link_libraries(${FFMPEG_INPUT} ${LIBAVUTIL_LIBRARIES} ${GLIB_LIBRARIES} ebur128)
     endif()
     set_target_properties(${FFMPEG_INPUT} PROPERTIES COMPILE_FLAGS "-std=c99")
   endif()
@@ -77,8 +77,8 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_LIBRARIES AND INTL_FOUND AND
           RUNTIME DESTINATION .
           LIBRARY DESTINATION .)
   if(LSB_COMPILER_FOUND)
-    install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/r128-ffmpeg-0.5.2
-                     ${EXECUTABLE_OUTPUT_PATH}/r128-ffmpeg-0.6.1 DESTINATION .)
+    install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/libinput_ffmpeg0.5.2.so
+                     ${EXECUTABLE_OUTPUT_PATH}/libinput_ffmpeg0.6.2.so DESTINATION .)
   endif()
   if(WIN32)
     get_filename_component(REAL_AVC ${LIBAVCODEC_LIBRARIES} REALPATH)

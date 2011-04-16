@@ -25,15 +25,16 @@ ln -s /usr/lib/libavformat.so .
 ln -s /usr/lib/libavcodec.so .
 ln -s /usr/lib/libsndfile.so .
 ln -s /usr/lib/libmpg123.so .
+ln -s /usr/lib/libmpcdec.so .
 cd /opt/lsb/local
 mkdir ffmpeg
 cd ffmpeg
-wget http://cdn.debian.net/debian/pool/main/f/ffmpeg/libavcodec-dev_0.6.1-5_amd64.deb
-wget http://cdn.debian.net/debian/pool/main/f/ffmpeg/libavcodec52_0.6.1-5_amd64.deb
-wget http://cdn.debian.net/debian/pool/main/f/ffmpeg/libavformat-dev_0.6.1-5_amd64.deb
-wget http://cdn.debian.net/debian/pool/main/f/ffmpeg/libavformat52_0.6.1-5_amd64.deb
-wget http://cdn.debian.net/debian/pool/main/f/ffmpeg/libavutil50_0.6.1-5_amd64.deb
-wget http://cdn.debian.net/debian/pool/main/f/ffmpeg/libavutil-dev_0.6.1-5_amd64.deb
+wget http://cdn.debian.net/debian/pool/main/liba/libav/libavcodec-dev_0.6.2-1_amd64.deb
+wget http://cdn.debian.net/debian/pool/main/liba/libav/libavcodec52_0.6.2-1_amd64.deb
+wget http://cdn.debian.net/debian/pool/main/liba/libav/libavformat-dev_0.6.2-1_amd64.deb
+wget http://cdn.debian.net/debian/pool/main/liba/libav/libavformat52_0.6.2-1_amd64.deb
+wget http://cdn.debian.net/debian/pool/main/liba/libav/libavutil50_0.6.2-1_amd64.deb
+wget http://cdn.debian.net/debian/pool/main/liba/libav/libavutil-dev_0.6.2-1_amd64.deb
 mkdir dest
 find *.deb -exec dpkg-deb -x {} dest \;
 
