@@ -27,12 +27,8 @@ extern long nproc();
 struct gain_data {
   GArray* file_names;
   int calculate_lra, errcode;
-#ifdef USE_TAGLIB
   char* tag_rg;                    /* NULL, "album" or "track" */
-#if EBUR128_USE_SPEEX_RESAMPLER
   int tag_true_peak;
-#endif
-#endif
   int recursive_scan;
   char* peak;
   double interval;
@@ -80,30 +76,24 @@ void calculate_gain_of_file(void* user, void* user_data) {
     errcode = 1;
     goto endloop;
   }
-#ifdef USE_TAGLIB
   if (gd->tag_rg && ops->get_channels(ih) > 2) {
     fprintf(stderr, "ReplayGain tagging support only up to 2 channels!\n");
     errcode = 1;
     goto close_file;
   }
-#endif
 
   st = ebur128_init(ops->get_channels(ih),
                     ops->get_samplerate(ih),
                     EBUR128_MODE_I |
                     (gd->calculate_lra ? EBUR128_MODE_LRA : 0) |
                     ((
-                  #ifdef USE_TAGLIB
                      (gd->tag_rg && !gd->tag_true_peak) ||
-                  #endif
                      (gd->peak && (!strcmp(gd->peak, "sample") ||
                                    !strcmp(gd->peak, "all")))) ?
                      EBUR128_MODE_SAMPLE_PEAK : 0)
                   #if EBUR128_USE_SPEEX_RESAMPLER
                   | ((
-                  #ifdef USE_TAGLIB
                      (gd->tag_rg && gd->tag_true_peak) ||
-                  #endif
                      (gd->peak && (!strcmp(gd->peak, "true") ||
                                    !strcmp(gd->peak, "dbtp") ||
                                    !strcmp(gd->peak, "all")))) ?
@@ -123,11 +113,9 @@ void calculate_gain_of_file(void* user, void* user_data) {
     ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
     ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
   }
-#ifdef USE_TAGLIB
   if (gd->tag_rg && st->channels == 1) {
     ebur128_set_channel(st, 0, EBUR128_DUAL_MONO);
   }
-#endif
 
   result = ops->allocate_buffer(ih);
   CHECK_ERROR(result, "Could not allocate memory!\n", 1, free_buffer)
@@ -383,12 +371,10 @@ int loudness_or_lra(struct gain_data* gd) {
   gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
                                                     gd->file_names->len);
   print_result(gd, gated_loudness);
-#ifdef USE_TAGLIB
   if (gd->tag_rg) {
     fprintf(stderr, "tagging...\n");
     tag_files(gd, gated_loudness);
   }
-#endif
 
   fprintf(stderr, "\n");
 
@@ -707,9 +693,8 @@ int main(int ac, char* av[]) {
   g_thread_init(NULL);
 
   gd.calculate_lra = 0;
-#ifdef USE_TAGLIB
   gd.tag_rg = NULL;
-#endif
+  gd.tag_true_peak = 0;
   gd.interval = 0.0;
   gd.mode = 0;
   gd.file_names = NULL;
@@ -748,20 +733,16 @@ int main(int ac, char* av[]) {
     return 1;
   }
 
-#ifdef USE_TAGLIB
   if (gd.tag_rg &&
       strcmp(gd.tag_rg, "album") &&
       strcmp(gd.tag_rg, "track")) {
     fprintf(stderr, "Invalid argument to --tagging!\n");
     return 1;
   }
-#if EBUR128_USE_SPEEX_RESAMPLER
   if (gd.tag_true_peak && !gd.tag_rg) {
     fprintf(stderr, "Please specify a tagging option to use!\n");
     return 1;
   }
-#endif
-#endif
 
   if (gd.peak &&
 #if EBUR128_USE_SPEEX_RESAMPLER
