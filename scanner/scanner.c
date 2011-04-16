@@ -189,91 +189,67 @@ void print_gain_value(double x) {
   }
 }
 
-int loudness_or_lra(struct gain_data* gd) {
-  int errcode = 0;
-  size_t i;
-  double gated_loudness;
-  GThreadPool* pool;
-
-  if (!gd->file_names->len) {
-    return 2;
-  }
-
-  gd->segment_loudness = calloc(gd->file_names->len, sizeof(double));
-  gd->segment_lra = calloc(gd->file_names->len, sizeof(double));
-  gd->segment_peaks = calloc(gd->file_names->len, sizeof(double));
-  gd->segment_true_peaks = calloc(gd->file_names->len, sizeof(double));
-  gd->library_states = calloc(gd->file_names->len, sizeof(ebur128_state*));
-
-  pool = g_thread_pool_new(calculate_gain_of_file, gd, (int) nproc(),
-                           FALSE, NULL);
-
-  fprintf(stderr, "\n");
-  for (i = 0; i < gd->file_names->len; ++i) {
-    g_thread_pool_push(pool, GINT_TO_POINTER(i + 1), NULL);
-  }
-  g_thread_pool_free(pool, FALSE, TRUE);
-  for (i = 0; i < gd->file_names->len; ++i) {
-    fprintf(stderr, "\r");
-    print_gain_value(gd->segment_loudness[i]);
-    fflush(stdout);
-    fprintf(stderr, " LUFS");
-    if (gd->calculate_lra) {
-      printf(",");
-      fflush(stdout);
-      fprintf(stderr, " LRA: ");
-      printf("%.1f", gd->segment_lra[i]);
-      fflush(stdout);
-      fprintf(stderr, " LU");
-    }
-    if (gd->peak &&
-        (!strcmp(gd->peak, "sample") ||
-         !strcmp(gd->peak, "all"))) {
-      printf(",");
-      fflush(stdout);
-      fprintf(stderr, " sample peak: ");
-      printf("%.8f", gd->segment_peaks[i]);
-      fflush(stdout);
-    }
-    if (gd->peak &&
-        (!strcmp(gd->peak, "true") ||
-         !strcmp(gd->peak, "all"))) {
-      printf(",");
-      fflush(stdout);
-      fprintf(stderr, " true peak: ");
-      printf("%.8f", gd->segment_true_peaks[i]);
-      fflush(stdout);
-    }
-    if (gd->peak &&
-        (!strcmp(gd->peak, "dbtp") ||
-         !strcmp(gd->peak, "all"))) {
-      double tp_gain = 20.0 * log(gd->segment_true_peaks[i]) / log(10.0);
-      printf(",");
-      fflush(stdout);
-      fprintf(stderr, " true peak: ");
-      print_gain_value(tp_gain);
-      fflush(stdout);
-      fprintf(stderr, " dBTP");
-    }
+void print_file_result(struct gain_data* gd, size_t i) {
+  fprintf(stderr, "\r");
+  print_gain_value(gd->segment_loudness[i]);
+  fflush(stdout);
+  fprintf(stderr, " LUFS");
+  if (gd->calculate_lra) {
     printf(",");
     fflush(stdout);
-    fprintf(stderr, " ");
-    {
-      char* fn;
-  #ifdef G_OS_WIN32
-      fn = g_win32_locale_filename_from_utf8(
-                                g_array_index(gd->file_names, char*, i));
-  #else
-      fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
-                                -1, NULL, NULL, NULL);
-  #endif
-      printf("%s\n", fn);
-      g_free(fn);
-    }
+    fprintf(stderr, " LRA: ");
+    printf("%.1f", gd->segment_lra[i]);
+    fflush(stdout);
+    fprintf(stderr, " LU");
   }
+  if (gd->peak &&
+      (!strcmp(gd->peak, "sample") ||
+       !strcmp(gd->peak, "all"))) {
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " sample peak: ");
+    printf("%.8f", gd->segment_peaks[i]);
+    fflush(stdout);
+  }
+  if (gd->peak &&
+      (!strcmp(gd->peak, "true") ||
+       !strcmp(gd->peak, "all"))) {
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " true peak: ");
+    printf("%.8f", gd->segment_true_peaks[i]);
+    fflush(stdout);
+  }
+  if (gd->peak &&
+      (!strcmp(gd->peak, "dbtp") ||
+       !strcmp(gd->peak, "all"))) {
+    double tp_gain = 20.0 * log(gd->segment_true_peaks[i]) / log(10.0);
+    printf(",");
+    fflush(stdout);
+    fprintf(stderr, " true peak: ");
+    print_gain_value(tp_gain);
+    fflush(stdout);
+    fprintf(stderr, " dBTP");
+  }
+  printf(",");
+  fflush(stdout);
+  fprintf(stderr, " ");
+  {
+    char* fn;
+#ifdef G_OS_WIN32
+    fn = g_win32_locale_filename_from_utf8(
+                              g_array_index(gd->file_names, char*, i));
+#else
+    fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
+                              -1, NULL, NULL, NULL);
+#endif
+    printf("%s\n", fn);
+    g_free(fn);
+  }
+}
 
-  gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
-                                                    gd->file_names->len);
+void print_result(struct gain_data* gd, double gated_loudness) {
+  size_t i;
   fprintf(stderr, "\r--------------------"
                     "--------------------"
                     "--------------------"
@@ -339,39 +315,81 @@ int loudness_or_lra(struct gain_data* gd) {
     fprintf(stderr, " dBTP");
   }
   printf("\n");
+}
 
+void tag_files(struct gain_data* gd, double gated_loudness) {
 #ifdef USE_TAGLIB
-  if (gd->tag_rg) {
-    double global_peak = 0.0;
-    double* peaks = gd->tag_true_peak ? gd->segment_true_peaks :
-                                        gd->segment_peaks;
-    fprintf(stderr, "tagging...\n");
-    for (i = 0; i < gd->file_names->len; ++i) {
-      if (peaks[i] > global_peak) {
-        global_peak = peaks[i];
-      }
-    }
-    for (i = 0; i < gd->file_names->len; ++i) {
-      if (gd->library_states[i]) {
-        char* fn;
-#ifdef G_OS_WIN32
-        fn = g_win32_locale_filename_from_utf8(
-                                  g_array_index(gd->file_names, char*, i));
-#else
-        fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
-                                  -1, NULL, NULL, NULL);
-#endif
-        set_rg_info(fn,
-                    -18.0 - gd->segment_loudness[i],
-                    peaks[i],
-                    !strcmp(gd->tag_rg, "album"),
-                    -18.0 - gated_loudness,
-                    global_peak);
-        g_free(fn);
-      }
+  size_t i;
+  double global_peak = 0.0;
+  double* peaks = gd->tag_true_peak ? gd->segment_true_peaks :
+                                      gd->segment_peaks;
+  for (i = 0; i < gd->file_names->len; ++i) {
+    if (peaks[i] > global_peak) {
+      global_peak = peaks[i];
     }
   }
+  for (i = 0; i < gd->file_names->len; ++i) {
+    if (gd->library_states[i]) {
+      char* fn;
+#ifdef G_OS_WIN32
+      fn = g_win32_locale_filename_from_utf8(
+                                g_array_index(gd->file_names, char*, i));
+#else
+      fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
+                                -1, NULL, NULL, NULL);
 #endif
+      set_rg_info(fn,
+                  -18.0 - gd->segment_loudness[i],
+                  peaks[i],
+                  !strcmp(gd->tag_rg, "album"),
+                  -18.0 - gated_loudness,
+                  global_peak);
+      g_free(fn);
+    }
+  }
+#else
+  (void) gd; (void) gated_loudness;
+#endif
+}
+
+int loudness_or_lra(struct gain_data* gd) {
+  double gated_loudness;
+  int errcode = 0;
+  size_t i;
+  GThreadPool* pool;
+
+  if (!gd->file_names->len) {
+    return 2;
+  }
+
+  gd->segment_loudness =   calloc(gd->file_names->len, sizeof(double));
+  gd->segment_lra =        calloc(gd->file_names->len, sizeof(double));
+  gd->segment_peaks =      calloc(gd->file_names->len, sizeof(double));
+  gd->segment_true_peaks = calloc(gd->file_names->len, sizeof(double));
+  gd->library_states =     calloc(gd->file_names->len, sizeof(ebur128_state*));
+
+  pool = g_thread_pool_new(calculate_gain_of_file, gd, (int) nproc(),
+                           FALSE, NULL);
+
+  fprintf(stderr, "\n");
+  for (i = 0; i < gd->file_names->len; ++i) {
+    g_thread_pool_push(pool, GINT_TO_POINTER(i + 1), NULL);
+  }
+  g_thread_pool_free(pool, FALSE, TRUE);
+  for (i = 0; i < gd->file_names->len; ++i) {
+    print_file_result(gd, i);
+  }
+
+  gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
+                                                    gd->file_names->len);
+  print_result(gd, gated_loudness);
+#ifdef USE_TAGLIB
+  if (gd->tag_rg) {
+    fprintf(stderr, "tagging...\n");
+    tag_files(gd, gated_loudness);
+  }
+#endif
+
   fprintf(stderr, "\n");
 
   for (i = 0; i < gd->file_names->len; ++i) {
@@ -681,7 +699,9 @@ int main(int ac, char* av[]) {
   size_t i = 0, nr_files = 0;
   GError* error = NULL;
   GOptionContext* context;
+#ifdef USE_TAGLIB
   GOptionGroup* tagging_group;
+#endif
   GOptionGroup* r128_group;
 
   g_thread_init(NULL);
