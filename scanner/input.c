@@ -3,11 +3,23 @@
 
 #include <gmodule.h>
 
-static const char* plugin_names[] = {"input_sndfile",
-                                     "input_mpg123",
-                                     "input_musepack",
-                                     "input_ffmpeg",
-                                     NULL};
+static const char* plugin_names[] = {
+  "input_sndfile",
+  "input_mpg123",
+  "input_musepack",
+  "input_ffmpeg",
+  NULL
+};
+
+extern char* av0;
+static const char* plugin_search_dir[] = {
+  ".",
+  "r128",
+  "",
+  NULL, /* = g_path_get_dirname(av0); */
+  NULL
+};
+
 static GSList* g_modules = NULL;
 static GSList* plugin_ops = NULL; /*struct input_ops* ops;*/
 static GSList* plugin_exts = NULL;
@@ -16,10 +28,14 @@ static int plugin_forced = 0;
 
 int input_init(const char* forced_plugin) {
   int plugin_found = 0;
+  int plugin_search_dir_index = 0;
   const char** cur_plugin_name = plugin_names;
   struct input_ops* ops;
   char** exts;
   GModule* module;
+
+  char* exe_dir = g_path_get_dirname(av0);
+  plugin_search_dir[3] = exe_dir;
 
   if (forced_plugin) plugin_forced = 1;
   /* Load plugins */
@@ -30,8 +46,17 @@ int input_init(const char* forced_plugin) {
     }
     ops = NULL;
     exts = NULL;
-    module = g_module_open(*cur_plugin_name,
-                           G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
+    module = NULL;
+    plugin_search_dir_index = 0;
+    while (!module && plugin_search_dir[plugin_search_dir_index]) {
+      char* path = g_module_build_path(plugin_search_dir[plugin_search_dir_index],
+                                       *cur_plugin_name);
+      fprintf(stderr, "%s\n", path);
+      module = g_module_open(path,
+                             G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
+      g_free(path);
+      ++plugin_search_dir_index;
+    }
     if (!module) {
       /* fprintf(stderr, "%s\n", g_module_error()); */
     } else {
@@ -51,6 +76,7 @@ int input_init(const char* forced_plugin) {
     plugin_exts = g_slist_append(plugin_exts, exts);
     ++cur_plugin_name;
   }
+  g_free(exe_dir);
   if (!plugin_found) {
     fprintf(stderr, "Warning: no plugins found!\n");
     return 1;

@@ -37,8 +37,6 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
   target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
 
 
-  set(CMAKE_SHARED_MODULE_PREFIX "")
-
   if(SNDFILE_FOUND)
     add_library(input_sndfile MODULE input_sndfile.c)
     target_link_libraries(input_sndfile ${SNDFILE_LIBRARIES})
