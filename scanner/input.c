@@ -8,6 +8,8 @@ static const char* plugin_names[] = {
   "input_mpg123",
   "input_musepack",
   "input_ffmpeg",
+  "input_ffmpeg0.5.2",
+  "input_ffmpeg0.6.2",
   NULL
 };
 
