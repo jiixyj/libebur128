@@ -672,6 +672,8 @@ int test_files_in_gd(struct gain_data* gdata, size_t ac, GFileTest test) {
           fprintf(stderr, "%s is not a regular file!\n",
                           g_array_index(gdata->file_names, char*, i));
           break;
+        case G_FILE_TEST_IS_SYMLINK:
+        case G_FILE_TEST_IS_EXECUTABLE:
         default:
           return 2;
       }
