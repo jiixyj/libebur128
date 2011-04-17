@@ -177,13 +177,16 @@ endif()
 ##### Compiler setup             #####
 ######################################
 include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
+
 if(NOT WIN32)
   CHECK_C_COMPILER_FLAG("-ansi" FLAG_ANSI)
   if(FLAG_ANSI)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi")
   endif()
 endif()
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
+
+CHECK_C_COMPILER_FLAG("-std=c99" FLAG_STD_C99)
 
 if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
   CHECK_C_COMPILER_FLAG("-msse2 -mfpmath=sse" FLAG_SSE2_OPT)
@@ -200,8 +203,6 @@ CHECK_C_COMPILER_FLAG("-isystem /usr/include" FLAG_ISYSTEM)
 if(FLAG_ISYSTEM)
   set(CMAKE_INCLUDE_SYSTEM_FLAG_C "-isystem ")
 endif()
-
-CHECK_C_COMPILER_FLAG("-std=c99" FLAG_STD_C99)
 
 
 ######################################

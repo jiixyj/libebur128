@@ -76,8 +76,15 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     list(REMOVE_ITEM FLAGS "-Wabi")
     list(REMOVE_ITEM FLAGS "-Wconversion")
     list(REMOVE_ITEM FLAGS "-Wmissing-include-dirs")
-  endif(COMPILER_VERSION STRLESS "4.2.5")
-endif(CMAKE_COMPILER_IS_GNUCXX)
+  endif()
+elseif("${CMAKE_C_COMPILER}" MATCHES ".*clang.*")
+  # not implemented in clang
+  list(REMOVE_ITEM FLAGS "-Wsync-nand")
+  list(REMOVE_ITEM FLAGS "-Wlogical-op")
+  list(REMOVE_ITEM FLAGS "-Wunsafe-loop-optimizations")
+  # no aligment issues on x86
+  list(REMOVE_ITEM FLAGS "-Wcast-align")
+endif()
 
 if(WIN32)
   list(REMOVE_ITEM FLAGS "-fPIC")
