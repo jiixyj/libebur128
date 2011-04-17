@@ -51,7 +51,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
   ebur128_state* st = NULL;
   float* buffer = NULL;
 
-  int errcode, result;
+  int errcode = 0, result;
   FILE* file;
 
   struct input_ops* ops = NULL;
@@ -525,7 +525,7 @@ int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
   {
     GArray* old_file_names = gdt->file_names;
     gdt->file_names = regular_files;
-    errcode = loudness_or_lra(gdt);
+    errcode = errcode | loudness_or_lra(gdt);
     gdt->file_names = old_file_names;
   }
 
@@ -652,7 +652,7 @@ static GOptionEntry entries[] = {
   { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
-int test_files_in_gd(struct gain_data* gdata, size_t ac, int test) {
+int test_files_in_gd(struct gain_data* gdata, size_t ac, GFileTest test) {
   int errcode = 0;
   size_t i;
   for (i = 0; i < ac; ++i) {

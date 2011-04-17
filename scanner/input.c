@@ -109,11 +109,15 @@ int input_deinit() {
 struct input_ops* input_get_ops(const char* filename) {
   GSList* ops = plugin_ops;
   GSList* exts = plugin_exts;
+  char* filename_ext = strrchr(filename, '.');
+  if (filename_ext) {
+    ++filename_ext;
+  } else {
+    return NULL;
+  }
   while (ops && exts) {
     if (ops->data && exts->data) {
       const char** cur_exts = exts->data;
-      char* filename_ext = strrchr(filename, '.');
-      if (filename_ext) ++filename_ext;
       while (*cur_exts) {
         if (!strcmp(filename_ext, *cur_exts) || plugin_forced) {
           return (struct input_ops*) ops->data;
