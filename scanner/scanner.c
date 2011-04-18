@@ -11,9 +11,12 @@
 
 #include "ebur128.h"
 #include "input.h"
+
 #ifdef USE_TAGLIB
   #include "rgtag.h"
 #endif
+#define REFERENCE_LEVEL -18.0
+#define REFERENCE_STRING "-18"
 
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
@@ -165,7 +168,7 @@ endloop:
   gd->errcode = errcode;
 }
 
-void print_gain_value(double x) {
+void print_gain_value(double x, int precision) {
   if (isnan(x)) {
     printf("nan");
   } else if (isinf(x) && x > 0.0) {
@@ -173,15 +176,25 @@ void print_gain_value(double x) {
   } else if (isinf(x) && x < 0.0) {
     printf("-inf");
   } else {
-    printf("%.1f", x);
+    if (precision == 1) {
+      printf("%.1f", x);
+    } else if (precision == 2) {
+      printf("%.2f", x);
+    }
   }
 }
 
 void print_file_result(struct gain_data* gd, size_t i) {
   fprintf(stderr, "\r");
-  print_gain_value(gd->segment_loudness[i]);
-  fflush(stdout);
-  fprintf(stderr, " LUFS");
+  if (gd->tag_rg) {
+    print_gain_value(REFERENCE_LEVEL - gd->segment_loudness[i], 2);
+    fflush(stdout);
+    fprintf(stderr, " dB");
+  } else {
+    print_gain_value(gd->segment_loudness[i], 1);
+    fflush(stdout);
+    fprintf(stderr, " LUFS");
+  }
   if (gd->calculate_lra) {
     printf(",");
     fflush(stdout);
@@ -190,18 +203,20 @@ void print_file_result(struct gain_data* gd, size_t i) {
     fflush(stdout);
     fprintf(stderr, " LU");
   }
-  if (gd->peak &&
-      (!strcmp(gd->peak, "sample") ||
-       !strcmp(gd->peak, "all"))) {
+  if ((gd->peak &&
+       (!strcmp(gd->peak, "sample") ||
+        !strcmp(gd->peak, "all"))) ||
+      (gd->tag_rg && !gd->tag_true_peak)) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " sample peak: ");
     printf("%.8f", gd->segment_peaks[i]);
     fflush(stdout);
   }
-  if (gd->peak &&
-      (!strcmp(gd->peak, "true") ||
-       !strcmp(gd->peak, "all"))) {
+  if ((gd->peak &&
+       (!strcmp(gd->peak, "true") ||
+        !strcmp(gd->peak, "all"))) ||
+      (gd->tag_rg && gd->tag_true_peak)) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " true peak: ");
@@ -215,7 +230,7 @@ void print_file_result(struct gain_data* gd, size_t i) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " true peak: ");
-    print_gain_value(tp_gain);
+    print_gain_value(tp_gain, 1);
     fflush(stdout);
     fprintf(stderr, " dBTP");
   }
@@ -242,9 +257,15 @@ void print_result(struct gain_data* gd, double gated_loudness) {
                     "--------------------"
                     "--------------------"
                     "--------------------\n");
-  print_gain_value(gated_loudness);
-  fflush(stdout);
-  fprintf(stderr, " LUFS");
+  if (gd->tag_rg) {
+    print_gain_value(REFERENCE_LEVEL - gated_loudness, 2);
+    fflush(stdout);
+    fprintf(stderr, " dB");
+  } else {
+    print_gain_value(gated_loudness, 1);
+    fflush(stdout);
+    fprintf(stderr, " LUFS");
+  }
 
   if (gd->calculate_lra) {
     printf(",");
@@ -256,9 +277,10 @@ void print_result(struct gain_data* gd, double gated_loudness) {
     fflush(stdout);
     fprintf(stderr, " LU");
   }
-  if (gd->peak &&
-      (!strcmp(gd->peak, "sample") ||
-       !strcmp(gd->peak, "all"))) {
+  if ((gd->peak &&
+       (!strcmp(gd->peak, "sample") ||
+        !strcmp(gd->peak, "all"))) ||
+      (gd->tag_rg && !gd->tag_true_peak)) {
     double max_peak = 0.0;
     for (i = 0; i < gd->file_names->len; ++i) {
       if (gd->segment_peaks[i] > max_peak) {
@@ -271,9 +293,10 @@ void print_result(struct gain_data* gd, double gated_loudness) {
     printf("%.8f", max_peak);
     fflush(stdout);
   }
-  if (gd->peak &&
-      (!strcmp(gd->peak, "true") ||
-       !strcmp(gd->peak, "all"))) {
+  if ((gd->peak &&
+       (!strcmp(gd->peak, "true") ||
+        !strcmp(gd->peak, "all"))) ||
+      (gd->tag_rg && gd->tag_true_peak)) {
     double max_peak = 0.0;
     for (i = 0; i < gd->file_names->len; ++i) {
       if (gd->segment_true_peaks[i] > max_peak) {
@@ -298,7 +321,7 @@ void print_result(struct gain_data* gd, double gated_loudness) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " true peak: ");
-    print_gain_value(20.0 * log(max_peak) / log(10.0));
+    print_gain_value(20.0 * log(max_peak) / log(10.0), 1);
     fflush(stdout);
     fprintf(stderr, " dBTP");
   }
@@ -327,10 +350,10 @@ void tag_files(struct gain_data* gd, double gated_loudness) {
                                 -1, NULL, NULL, NULL);
 #endif
       set_rg_info(fn,
-                  -18.0 - gd->segment_loudness[i],
+                  REFERENCE_LEVEL - gd->segment_loudness[i],
                   peaks[i],
                   !strcmp(gd->tag_rg, "album"),
-                  -18.0 - gated_loudness,
+                  REFERENCE_LEVEL - gated_loudness,
                   global_peak);
       g_free(fn);
     }
@@ -579,7 +602,7 @@ static GOptionEntry tagging_entries[] = {
                  &gd.tag_rg,
                  "write ReplayGain tags to files"
                  "\n                                        "
-                 "(reference: -18 LUFS)"
+                 "(reference: " REFERENCE_STRING " LUFS)"
                  "\n                                        "
                  "-t album: write album gain"
                  "\n                                        "
@@ -758,6 +781,12 @@ int main(int ac, char* av[]) {
 #endif
       strcmp(gd.peak, "sample")) {
     fprintf(stderr, "Invalid argument to --peak!\n");
+    return 1;
+  }
+
+  if (gd.tag_rg && (gd.peak || gd.calculate_lra ||
+                    gd.mode || gd.interval > 0.0)) {
+    fprintf(stderr, "Invalid options in tagging mode!\n");
     return 1;
   }
 
