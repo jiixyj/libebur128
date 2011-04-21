@@ -1,4 +1,2 @@
-DONE - search paths for plugins
-DONE - option to force a specific plugin
-DONE - option for treating mono files as dual mono
+- search PATH for plugins
 - GUI interface
