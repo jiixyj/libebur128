@@ -3,6 +3,7 @@
 #define EBUR128_H_
 
 #ifndef EBUR128_USE_SPEEX_RESAMPLER
+  /** Set this to 1 to enable true peak scanning */
   #define EBUR128_USE_SPEEX_RESAMPLER 1
 #endif
 
@@ -35,29 +36,35 @@ enum channel {
  *  modes that suit your needs, as performance will be better.
  */
 enum mode {
-  EBUR128_MODE_M           =  1, /**< can call ebur128_loudness_momentary */
-  EBUR128_MODE_S           =  3, /**< can call ebur128_loudness_shortterm */
-  EBUR128_MODE_I           =  5, /**< can call ebur128_gated_loudness_*   */
-  EBUR128_MODE_LRA         = 11, /**< can call ebur128_loudness_range     */
-  EBUR128_MODE_SAMPLE_PEAK = 17  /**< can call ebur128_sample_peak        */
+  /** can call ebur128_loudness_momentary */
+  EBUR128_MODE_M           = (1 << 0),
+  /** can call ebur128_loudness_shortterm */
+  EBUR128_MODE_S           = (1 << 1) | EBUR128_MODE_M,
+  /** can call ebur128_gated_loudness_* */
+  EBUR128_MODE_I           = (1 << 2) | EBUR128_MODE_M,
+  /** can call ebur128_loudness_range */
+  EBUR128_MODE_LRA         = (1 << 3) | EBUR128_MODE_S,
+  /** can call ebur128_sample_peak */
+  EBUR128_MODE_SAMPLE_PEAK = (1 << 4) | EBUR128_MODE_M
 #if EBUR128_USE_SPEEX_RESAMPLER
- ,EBUR128_MODE_TRUE_PEAK   = 33  /**< can call ebur128_sample_peak        */
+  ,
+  /** can call ebur128_true_peak */
+  EBUR128_MODE_TRUE_PEAK   = (1 << 5) | EBUR128_MODE_M
 #endif
 };
+
+/** forward declaration of ebur128_state_internal */
+struct ebur128_state_internal;
 
 /** \brief Contains information about the state of a loudness measurement.
  *
  *  You should not need to modify this struct directly.
  */
-struct ebur128_state_internal;
 typedef struct {
-  /** The current mode. */
-  int mode;
-  /** The number of channels. */
-  size_t channels;
-  /** The sample rate. */
-  size_t samplerate;
-  struct ebur128_state_internal* d;
+  int mode;                           /**< The current mode. */
+  size_t channels;                    /**< The number of channels. */
+  size_t samplerate;                  /**< The sample rate. */
+  struct ebur128_state_internal* d;   /**< Internal state. */
 } ebur128_state;
 
 /** \brief Initialize library state.
