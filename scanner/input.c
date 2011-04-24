@@ -30,7 +30,7 @@ static int plugin_forced = 0;
 
 void search_module_in_paths(const char* plugin,
                             GModule** module,
-                            const char* search_dir[]) {
+                            const char** search_dir) {
   int search_dir_index = 0;
   while (!*module && search_dir[search_dir_index]) {
     char* path = g_module_build_path(search_dir[search_dir_index], plugin);
@@ -75,7 +75,7 @@ int input_init(const char* forced_plugin) {
     exts = NULL;
     module = NULL;
     search_module_in_paths(*cur_plugin_name, &module, plugin_search_dirs);
-    search_module_in_paths(*cur_plugin_name, &module, env_path_split);
+    search_module_in_paths(*cur_plugin_name, &module, (const char**) env_path_split);
     if (!module) {
       /* fprintf(stderr, "%s\n", g_module_error()); */
     } else {

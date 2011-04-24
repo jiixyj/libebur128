@@ -247,6 +247,19 @@ message(STATUS "libavcodec:     ${LIBAVCODEC_FOUND}")
 message(STATUS "libavutil:      ${LIBAVUTIL_FOUND}")
 message(STATUS "taglib:         ${TAGLIB_FOUND}")
 
+# set up install folders
+set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
+if(FLAT_INSTALL)
+  set(FOLDER_DOC .)
+  set(FOLDER_BIN .)
+  set(FOLDER_PLUGIN .)
+else()
+  set(FOLDER_DOC share/doc)
+  set(FOLDER_BIN bin)
+  set(FOLDER_PLUGIN bin/r128)
+endif()
+
+
 add_subdirectory(libebur128)
 add_subdirectory(scanner)
 
@@ -255,8 +268,8 @@ add_subdirectory(scanner)
 ##### Install                    #####
 ######################################
 if(INSTALL_READY)
-  install(FILES COPYING README DESTINATION .)
-  install(DIRECTORY doc/license DESTINATION .)
+  install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
+  install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})
 
   set(CPACK_PACKAGE_VERSION_MAJOR "0")
   set(CPACK_PACKAGE_VERSION_MINOR "3")
