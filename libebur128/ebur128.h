@@ -31,7 +31,7 @@ enum channel {
 };
 
 /** \enum mode
- *  Use these values in ebur128_init (xor'ed). Try to use the lowest possible
+ *  Use these values in ebur128_init (or'ed). Try to use the lowest possible
  *  modes that suit your needs, as performance will be better.
  */
 enum mode {
