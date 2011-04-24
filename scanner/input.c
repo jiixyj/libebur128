@@ -14,7 +14,7 @@ static const char* plugin_names[] = {
 };
 
 extern char* av0;
-static const char* plugin_search_dir[] = {
+static const char* plugin_search_dirs[] = {
   ".",
   "r128",
   "",
@@ -28,16 +28,41 @@ static GSList* plugin_exts = NULL;
 
 static int plugin_forced = 0;
 
+void search_module_in_paths(const char* plugin,
+                            GModule** module,
+                            const char* search_dir[]) {
+  int search_dir_index = 0;
+  while (!*module && search_dir[search_dir_index]) {
+    char* path = g_module_build_path(search_dir[search_dir_index], plugin);
+    fprintf(stderr, "%s\n", path);
+    *module = g_module_open(path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
+    g_free(path);
+    ++search_dir_index;
+  }
+}
+
 int input_init(const char* forced_plugin) {
   int plugin_found = 0;
-  int plugin_search_dir_index = 0;
   const char** cur_plugin_name = plugin_names;
   struct input_ops* ops;
   char** exts;
   GModule* module;
+  char* exe_dir;
+  const char* env_path;
+  char** env_path_split;
+  char** it;
 
-  char* exe_dir = g_path_get_dirname(av0);
-  plugin_search_dir[3] = exe_dir;
+  exe_dir = g_path_get_dirname(av0);
+  plugin_search_dirs[3] = exe_dir;
+
+  env_path = g_getenv("PATH");
+  env_path_split = g_strsplit(env_path, ":", 0);
+  for (it = env_path_split; *it; ++it) {
+    char* r128_path = g_build_filename(*it, "r128", NULL);
+    g_free(*it);
+    *it = r128_path;
+    fprintf(stderr, "%s\n", *it);
+  }
 
   if (forced_plugin) plugin_forced = 1;
   /* Load plugins */
@@ -49,16 +74,8 @@ int input_init(const char* forced_plugin) {
     ops = NULL;
     exts = NULL;
     module = NULL;
-    plugin_search_dir_index = 0;
-    while (!module && plugin_search_dir[plugin_search_dir_index]) {
-      char* path = g_module_build_path(plugin_search_dir[plugin_search_dir_index],
-                                       *cur_plugin_name);
-      fprintf(stderr, "%s\n", path);
-      module = g_module_open(path,
-                             G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
-      g_free(path);
-      ++plugin_search_dir_index;
-    }
+    search_module_in_paths(*cur_plugin_name, &module, plugin_search_dirs);
+    search_module_in_paths(*cur_plugin_name, &module, env_path_split);
     if (!module) {
       /* fprintf(stderr, "%s\n", g_module_error()); */
     } else {
@@ -79,6 +96,7 @@ int input_init(const char* forced_plugin) {
     ++cur_plugin_name;
   }
   g_free(exe_dir);
+  g_strfreev(env_path_split);
   if (!plugin_found) {
     fprintf(stderr, "Warning: no plugins found!\n");
     return 1;
