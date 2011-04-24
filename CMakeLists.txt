@@ -176,6 +176,10 @@ endif()
 ######################################
 ##### Compiler setup             #####
 ######################################
+if(NOT CMAKE_BUILD_TYPE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
+endif()
+
 include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
 
