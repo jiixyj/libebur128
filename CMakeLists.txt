@@ -279,7 +279,7 @@ if(INSTALL_READY)
   set(CPACK_SOURCE_GENERATOR ZIP TGZ)
   set(CPACK_STRIP_FILES TRUE)
 
-  set(CPACK_SOURCE_IGNORE_FILES "/build.*/;/.git/;/.gitignore;/mingw.*/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
+  set(CPACK_SOURCE_IGNORE_FILES "/TODO;/build.*/;/.git/;/.gitignore;/mingw.*/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
   if(WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(CPACK_SYSTEM_NAME "win64")
