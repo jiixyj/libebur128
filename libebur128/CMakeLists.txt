@@ -18,10 +18,11 @@ endif()
 set_property(SOURCE speex_resample/resample.c
              PROPERTY COMPILE_DEFINITIONS
              ${SPEEX_COMPILE_DEFINITIONS})
-set_property(SOURCE speex_resample/resample.c PROPERTY COMPILE_FLAGS ${CMAKE_C_FLAGS_R128})
 # Use C99 if available
 if(FLAG_STD_C99)
-  set_property(SOURCE speex_resample/resample.c APPEND PROPERTY COMPILE_FLAGS "-std=c99")
+  set_property(SOURCE speex_resample/resample.c PROPERTY COMPILE_FLAGS "-std=c99 ${CMAKE_C_FLAGS_R128}")
+else()
+  set_property(SOURCE speex_resample/resample.c PROPERTY COMPILE_FLAGS ${CMAKE_C_FLAGS_R128})
 endif()
 
 
