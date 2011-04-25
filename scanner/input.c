@@ -34,7 +34,6 @@ void search_module_in_paths(const char* plugin,
   int search_dir_index = 0;
   while (!*module && search_dir[search_dir_index]) {
     char* path = g_module_build_path(search_dir[search_dir_index], plugin);
-    fprintf(stderr, "%s\n", path);
     *module = g_module_open(path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
     g_free(path);
     ++search_dir_index;
@@ -61,7 +60,6 @@ int input_init(const char* forced_plugin) {
     char* r128_path = g_build_filename(*it, "r128", NULL);
     g_free(*it);
     *it = r128_path;
-    fprintf(stderr, "%s\n", *it);
   }
 
   if (forced_plugin) plugin_forced = 1;
