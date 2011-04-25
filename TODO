@@ -1,2 +1,4 @@
-- search PATH for plugins
+DONE - search PATH for plugins
 - GUI interface
+- build Debian packages
+- remove fprintf calls in library
