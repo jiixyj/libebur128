@@ -135,7 +135,7 @@ struct input_ops* input_get_ops(const char* filename) {
     if (ops->data && exts->data) {
       const char** cur_exts = exts->data;
       while (*cur_exts) {
-        if (!strcmp(filename_ext, *cur_exts) || plugin_forced) {
+        if (!g_ascii_strcasecmp(filename_ext, *cur_exts) || plugin_forced) {
           return (struct input_ops*) ops->data;
         }
         ++cur_exts;
