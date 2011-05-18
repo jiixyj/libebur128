@@ -1,6 +1,11 @@
 /* See LICENSE file for copyright and license details. */
 #include "ebur128.h"
 
+#ifndef _USE_MATH_DEFINES
+  /* This is to get the M_PI etc. defines. */
+  #define _USE_MATH_DEFINES
+#endif
+
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -15,8 +20,6 @@
 
 /* This can be replaced by any BSD-like queue implementation. */
 #include "queue.h"
-
-#define PI 3.14159265358979323846
 
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
@@ -91,7 +94,7 @@ int ebur128_init_filter(ebur128_state* st) {
   double G  =    3.999843853973347;
   double Q  =    0.7071752369554196;
 
-  double K  = tan(PI * f0 / (double) st->samplerate);
+  double K  = tan(M_PI * f0 / (double) st->samplerate);
   double Vh = pow(10.0, G / 20.0);
   double Vb = pow(Vh, 0.4996667741545416);
 
@@ -112,7 +115,7 @@ int ebur128_init_filter(ebur128_state* st) {
 
   f0 = 38.13547087602444;
   Q  =  0.5003270373238773;
-  K  = tan(PI * f0 / (double) st->samplerate);
+  K  = tan(M_PI * f0 / (double) st->samplerate);
 
   ra[1] =   2.0 * (K * K - 1.0) / (1.0 + K / Q + K * K);
   ra[2] = (1.0 - K / Q + K * K) / (1.0 + K / Q + K * K);
