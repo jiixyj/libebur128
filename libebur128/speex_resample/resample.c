@@ -81,8 +81,10 @@ static void speex_free (void *ptr) {free(ptr);}
   /* This is to get the M_PI etc. defines. */
   #define _USE_MATH_DEFINES
 #endif
-
 #include <math.h>
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif
 
 #ifdef FIXED_POINT
 #define WORD2INT(x) ((x) < -32767 ? -32768 : ((x) > 32766 ? 32767 : (x)))  

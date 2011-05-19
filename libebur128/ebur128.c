@@ -5,10 +5,13 @@
   /* This is to get the M_PI etc. defines. */
   #define _USE_MATH_DEFINES
 #endif
+#include <math.h>
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif
 
 #include <float.h>
 #include <limits.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
