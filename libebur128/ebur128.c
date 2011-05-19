@@ -1,6 +1,11 @@
 /* See LICENSE file for copyright and license details. */
 #include "ebur128.h"
 
+#ifndef _USE_MATH_DEFINES
+  /* This is to get the M_PI etc. defines. */
+  #define _USE_MATH_DEFINES
+#endif
+
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -15,8 +20,6 @@
 
 /* This can be replaced by any BSD-like queue implementation. */
 #include "queue.h"
-
-#define PI 3.14159265358979323846
 
 #define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
   if ((condition)) {                                                           \
@@ -79,12 +82,19 @@ static double relative_gate_factor;
 static double minus_twenty_decibels;
 static double abs_threshold_energy;
 
+#ifdef _MSC_VER
+static const unsigned long qnan_bits[2] = {0x00000000, 0xfff80000};
+static const unsigned long ninf_bits[2] = {0x00000000, 0xfff00000};
+#endif
+static double qnan;
+static double ninf;
+
 int ebur128_init_filter(ebur128_state* st) {
   double f0 = 1681.974450955533;
   double G  =    3.999843853973347;
   double Q  =    0.7071752369554196;
 
-  double K  = tan(PI * f0 / (double) st->samplerate);
+  double K  = tan(M_PI * f0 / (double) st->samplerate);
   double Vh = pow(10.0, G / 20.0);
   double Vb = pow(Vh, 0.4996667741545416);
 
@@ -105,7 +115,7 @@ int ebur128_init_filter(ebur128_state* st) {
 
   f0 = 38.13547087602444;
   Q  =  0.5003270373238773;
-  K  = tan(PI * f0 / (double) st->samplerate);
+  K  = tan(M_PI * f0 / (double) st->samplerate);
 
   ra[1] =   2.0 * (K * K - 1.0) / (1.0 + K / Q + K * K);
   ra[2] = (1.0 - K / Q + K * K) / (1.0 + K / Q + K * K);
@@ -264,6 +274,14 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   relative_gate_factor = pow(10.0, relative_gate / 10.0);
   minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
   abs_threshold_energy = pow(10.0, (-70.0 + 0.691) / 10.0);
+
+#ifdef _MSC_VER
+  qnan = *(double*)qnan_bits;
+  ninf = *(double*)ninf_bits;
+#else
+  qnan = 0.0 / 0.0;
+  ninf = -1.0 / 0.0;
+#endif
 
   return st;
 
@@ -598,7 +616,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
 
   for (i = 0; i < size; i++) {
     if (sts[i] && (sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) {
-      return 0.0 / 0.0;
+      return qnan;
     }
   }
 
@@ -610,7 +628,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
       relative_threshold += it->z;
     }
   }
-  if (!above_thresh_counter) return -1.0 / 0.0;
+  if (!above_thresh_counter) return ninf;
   relative_threshold /= (double) above_thresh_counter;
   relative_threshold *= relative_gate_factor;
   above_thresh_counter = 0;
@@ -625,7 +643,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
       --block_count;
     }
   }
-  if (!above_thresh_counter) return -1.0 / 0.0;
+  if (!above_thresh_counter) return ninf;
   gated_loudness /= (double) above_thresh_counter;
   return ebur128_energy_to_loudness(gated_loudness);
 }
@@ -641,7 +659,7 @@ double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
 double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
   double loudness;
 
-  if (interval_frames > st->d->audio_data_frames) return 0.0 / 0.0;
+  if (interval_frames > st->d->audio_data_frames) return qnan;
   ebur128_calc_gating_block(st, interval_frames, &loudness);
   return loudness;
 }
@@ -682,7 +700,7 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
 
   for (i = 0; i < size; ++i) {
     if (sts[i] && (sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
-      return 0.0 / 0.0;
+      return qnan;
     }
   }
 
@@ -694,7 +712,7 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
   }
   if (!stl_size) return 0.0;
   stl_vector = (double*) calloc(stl_size, sizeof(double));
-  if (!stl_vector) return 0.0 / 0.0;
+  if (!stl_vector) return qnan;
   j = 0;
   for (i = 0; i < size; ++i) {
     if (!sts[i]) continue;
@@ -743,7 +761,7 @@ double ebur128_loudness_range(ebur128_state* st) {
 double ebur128_sample_peak(ebur128_state* st, size_t channel_number) {
   if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK ||
        channel_number >= st->channels) {
-    return 0.0 / 0.0;
+    return qnan;
   }
   return st->d->sample_peak[channel_number];
 }
@@ -752,7 +770,7 @@ double ebur128_sample_peak(ebur128_state* st, size_t channel_number) {
 double ebur128_true_peak(ebur128_state* st, size_t channel_number) {
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK ||
        channel_number >= st->channels) {
-    return 0.0 / 0.0;
+    return qnan;
   }
   return st->d->true_peak[channel_number];
 }
