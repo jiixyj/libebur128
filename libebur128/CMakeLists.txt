@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 2.6.4)
+
 include_directories(queue)
 include_directories(speex_resample)
 

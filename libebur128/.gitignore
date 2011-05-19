@@ -1,0 +1,6 @@
+Debug/
+Release/
+Win32/
+*.dir/
+ipch/
+*.*sdf
