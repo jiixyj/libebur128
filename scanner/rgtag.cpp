@@ -15,6 +15,7 @@
 
 #include <cmath>
 #include <sstream>
+#include <ios>
 
 void set_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, std::string value) {
   TagLib::ID3v2::UserTextIdentificationFrame* txxx = TagLib::ID3v2::UserTextIdentificationFrame::find(tag, tag_name);

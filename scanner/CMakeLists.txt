@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
-  if(USE_TAGLIB)
+  if(USE_TAGLIB AND TAGLIB_FOUND)
     if(WIN32)
       add_library(rgtag SHARED rgtag.cpp)
     else()
@@ -32,14 +32,13 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
   add_executable(r128-scanner ${SCANNER_SRCS})
   target_link_libraries(r128-scanner ${SCANNER_LIBS} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
 
-  add_executable(r128-minimal-example minimal_example.c)
-  target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
-
-  add_executable(r128-test-library tests.c)
-  target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
-
-
   if(SNDFILE_FOUND)
+    add_executable(r128-minimal-example minimal_example.c)
+    target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
+
+    add_executable(r128-test-library tests.c)
+    target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
+
     add_library(input_sndfile MODULE input_sndfile.c)
     target_link_libraries(input_sndfile ${SNDFILE_LIBRARIES})
     if(WIN32)
