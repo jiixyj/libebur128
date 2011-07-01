@@ -531,8 +531,16 @@ int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
       g_array_append_val(regular_files, foo);
     } else if (depth && g_file_test(fn, G_FILE_TEST_IS_DIR)) {
       GArray* files_in_new_dir = g_array_new(FALSE, TRUE, sizeof(char*));
-      GDir* dir = g_dir_open(fn, 0, NULL);
+      GError* err = NULL;
+      GDir* dir = g_dir_open(fn, 0, &err);
       const char* dir_file = NULL;
+      if (!dir) {
+        if (err != NULL) {
+          fprintf(stderr, "%s\n", err->message);
+          g_error_free(err);
+        }
+        continue;
+      }
       while ((dir_file = g_dir_read_name(dir))) {
         char* foo = g_build_filename(fn, dir_file, NULL);
         g_array_append_val(files_in_new_dir, foo);
