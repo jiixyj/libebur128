@@ -36,7 +36,6 @@ enum channel {
  */
 enum error {
   EBUR128_SUCCESS = 0,
-  EBUR128_ERROR_NEGINF,
   EBUR128_ERROR_NOMEM,
   EBUR128_ERROR_INVALID_MODE,
   EBUR128_ERROR_INVALID_CHANNEL_INDEX,
@@ -159,12 +158,10 @@ int ebur128_add_frames_double(ebur128_state* st,
 /** \brief Get global integrated loudness in LUFS.
  *
  *  @param st library state.
- *  @param out integrated loudness in LUFS. Will not be changed if result is
- *             negative infinity. EBUR128_ERROR_NEGINF will be returned in this
- *             case.
+ *  @param out integrated loudness in LUFS. -HUGE_VAL if result is negative
+ *             infinity.
  *  @return
  *    - EBUR128_SUCCESS on success.
- *    - EBUR128_ERROR_NEGINF if result is negative infinity.
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_I" has not been set.
  */
 int ebur128_loudness_global(ebur128_state* st, double* out);
@@ -172,12 +169,10 @@ int ebur128_loudness_global(ebur128_state* st, double* out);
  *
  *  @param sts array of library states.
  *  @param size length of sts
- *  @param out integrated loudness in LUFS. Will not be changed if result is
- *             negative infinity. EBUR128_ERROR_NEGINF will be returned in this
- *             case.
+ *  @param out integrated loudness in LUFS. -HUGE_VAL if result is negative
+ *             infinity.
  *  @return
  *    - EBUR128_SUCCESS on success.
- *    - EBUR128_ERROR_NEGINF if result is negative infinity.
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_I" has not been set.
  */
 int ebur128_loudness_global_multiple(ebur128_state** sts, size_t size,
@@ -186,23 +181,19 @@ int ebur128_loudness_global_multiple(ebur128_state** sts, size_t size,
 /** \brief Get momentary loudness (last 400ms) in LUFS.
  *
  *  @param st library state.
- *  @param out momentary loudness in LUFS. Will not be changed if result is
- *             negative infinity. EBUR128_ERROR_NEGINF will be returned in this
- *             case.
+ *  @param out momentary loudness in LUFS. -HUGE_VAL if result is negative
+ *             infinity.
  *  @return
  *    - EBUR128_SUCCESS on success.
- *    - EBUR128_ERROR_NEGINF if result is negative infinity.
  */
 int ebur128_loudness_momentary(ebur128_state* st, double* out);
 /** \brief Get short-term loudness (last 3s) in LUFS.
  *
  *  @param st library state.
- *  @param out short-term loudness in LUFS. Will not be changed if result is
- *             negative infinity. EBUR128_ERROR_NEGINF will be returned in this
- *             case.
+ *  @param out short-term loudness in LUFS. -HUGE_VAL if result is negative
+ *             infinity.
  *  @return
  *    - EBUR128_SUCCESS on success.
- *    - EBUR128_ERROR_NEGINF if result is negative infinity.
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_S" has not been set.
  */
 int ebur128_loudness_shortterm(ebur128_state* st, double* out);

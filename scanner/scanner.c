@@ -60,7 +60,7 @@ void calculate_gain_of_file(void* user, void* user_data) {
   struct input_ops* ops = NULL;
   struct input_handle* ih = NULL;
 
-  gd->segment_loudness[i] = 0.0 / 0.0;
+  gd->segment_loudness[i] = HUGE_VAL;
 
   ops = input_get_ops(g_array_index(gd->file_names, char*, i));
   if (!ops) {
@@ -137,23 +137,27 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {
     for (j = 0; j < st->channels; ++j) {
-      if (ebur128_sample_peak(st, j) > gd->segment_peaks[i]) {
-        gd->segment_peaks[i] = ebur128_sample_peak(st, j);
+      double sp;
+      ebur128_sample_peak(st, j, &sp);
+      if (sp > gd->segment_peaks[i]) {
+        gd->segment_peaks[i] = sp;
       }
     }
   }
 #if EBUR128_USE_SPEEX_RESAMPLER
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {
     for (j = 0; j < st->channels; ++j) {
-      if (ebur128_true_peak(st, j) > gd->segment_true_peaks[i]) {
-        gd->segment_true_peaks[i] = ebur128_true_peak(st, j);
+      double tp;
+      ebur128_true_peak(st, j, &tp);
+      if (tp > gd->segment_true_peaks[i]) {
+        gd->segment_true_peaks[i] = tp;
       }
     }
   }
 #endif
-  gd->segment_loudness[i] = ebur128_loudness_global(st);
+  ebur128_loudness_global(st, &gd->segment_loudness[i]);
   if (gd->calculate_lra) {
-    gd->segment_lra[i] = ebur128_loudness_range(st);
+    ebur128_loudness_range(st, &gd->segment_lra[i]);
   }
   fprintf(stderr, "*");
 
@@ -169,11 +173,9 @@ endloop:
 }
 
 void print_gain_value(double x, int precision) {
-  if (isnan(x)) {
+  if (x >= HUGE_VAL) {
     printf("nan");
-  } else if (isinf(x) && x > 0.0) {
-    printf("inf");
-  } else if (isinf(x) && x < 0.0) {
+  } else if (x <= -HUGE_VAL) {
     printf("-inf");
   } else {
     if (precision == 1) {
@@ -268,12 +270,14 @@ void print_result(struct gain_data* gd, double gated_loudness) {
   }
 
   if (gd->calculate_lra) {
+    double range;
     printf(",");
     fflush(stdout);
     fprintf(stderr, " LRA: ");
-    printf("%.1f",
-            ebur128_loudness_range_multiple(gd->library_states,
-                                            gd->file_names->len));
+    ebur128_loudness_range_multiple(gd->library_states,
+                                    gd->file_names->len,
+                                    &range);
+    printf("%.1f", range);
     fflush(stdout);
     fprintf(stderr, " LU");
   }
@@ -365,7 +369,6 @@ void tag_files(struct gain_data* gd, double gated_loudness) {
 
 int loudness_or_lra(struct gain_data* gd) {
   double gated_loudness;
-  int errcode = 0;
   size_t i;
   GThreadPool* pool;
 
@@ -391,8 +394,8 @@ int loudness_or_lra(struct gain_data* gd) {
     print_file_result(gd, i);
   }
 
-  gated_loudness = ebur128_loudness_global_multiple(gd->library_states,
-                                                    gd->file_names->len);
+  ebur128_loudness_global_multiple(gd->library_states, gd->file_names->len,
+                                   &gated_loudness);
   print_result(gd, gated_loudness);
   if (gd->tag_rg) {
     fprintf(stderr, "tagging...\n");
@@ -412,7 +415,7 @@ int loudness_or_lra(struct gain_data* gd) {
   free(gd->segment_lra);
   free(gd->segment_peaks);
   free(gd->segment_true_peaks);
-  return errcode;
+  return 0;
 }
 
 int scan_files_interval_loudness(struct gain_data* gd) {
@@ -475,6 +478,7 @@ int scan_files_interval_loudness(struct gain_data* gd) {
     buffer = ops->get_buffer(ih);
     while ((nr_frames_read = ops->read_frames(ih))) {
       float* tmp_buffer = buffer;
+      double loudness;
       while (nr_frames_read > 0) {
         if (frames_counter + nr_frames_read >= frames_needed) {
           result = ebur128_add_frames_float(st, tmp_buffer,
@@ -485,13 +489,16 @@ int scan_files_interval_loudness(struct gain_data* gd) {
           frames_counter = 0;
           switch (gd->mode) {
             case EBUR128_MODE_M:
-              printf("%f\n", ebur128_loudness_momentary(st));
+              ebur128_loudness_momentary(st, &loudness);
+              printf("%f\n", loudness);
               break;
             case EBUR128_MODE_S:
-              printf("%f\n", ebur128_loudness_shortterm(st));
+              ebur128_loudness_shortterm(st, &loudness);
+              printf("%f\n", loudness);
               break;
             case EBUR128_MODE_I:
-              printf("%f\n", ebur128_loudness_global(st));
+              ebur128_loudness_global(st, &loudness);
+              printf("%f\n", loudness);
               break;
             default:
               fprintf(stderr, "Invalid mode!\n");
