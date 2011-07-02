@@ -157,7 +157,8 @@ void calculate_gain_of_file(void* user, void* user_data) {
 #endif
   ebur128_loudness_global(st, &gd->segment_loudness[i]);
   if (gd->calculate_lra) {
-    ebur128_loudness_range(st, &gd->segment_lra[i]);
+    result = ebur128_loudness_range(st, &gd->segment_lra[i]);
+    CHECK_ERROR(result, "Internal EBU R128 error!\n", 1, free_buffer)
   }
   fprintf(stderr, "*");
 
