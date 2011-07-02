@@ -24,9 +24,8 @@
 /* This can be replaced by any BSD-like queue implementation. */
 #include "queue.h"
 
-#define CHECK_ERROR(condition, message, errorcode, goto_point)                 \
+#define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \
-    fprintf(stderr, message);                                                  \
     errcode = (errorcode);                                                     \
     goto goto_point;                                                           \
   }
@@ -85,14 +84,7 @@ static double relative_gate_factor;
 static double minus_twenty_decibels;
 static double abs_threshold_energy;
 
-#ifdef _MSC_VER
-static const unsigned long qnan_bits[2] = {0x00000000, 0xfff80000};
-static const unsigned long ninf_bits[2] = {0x00000000, 0xfff00000};
-#endif
-static double qnan;
-static double ninf;
-
-int ebur128_init_filter(ebur128_state* st) {
+static void ebur128_init_filter(ebur128_state* st) {
   double f0 = 1681.974450955533;
   double G  =    3.999843853973347;
   double Q  =    0.7071752369554196;
@@ -138,14 +130,12 @@ int ebur128_init_filter(ebur128_state* st) {
   st->d->a[4] = pa[2] * ra[2];
 
   memset(st->d->v, '\0', 25 * sizeof(double));
-
-  return 0;
 }
 
-int ebur128_init_channel_map(ebur128_state* st) {
+static int ebur128_init_channel_map(ebur128_state* st) {
   size_t i;
   st->d->channel_map = (int*) calloc(st->channels, sizeof(int));
-  if (!st->d->channel_map) return 1;
+  if (!st->d->channel_map) return EBUR128_ERROR_NOMEM;
   for (i = 0; i < st->channels; ++i) {
     switch (i) {
       case 0:  st->d->channel_map[i] = EBUR128_LEFT;           break;
@@ -157,12 +147,12 @@ int ebur128_init_channel_map(ebur128_state* st) {
       default: st->d->channel_map[i] = EBUR128_UNUSED;         break;
     }
   }
-  return 0;
+  return EBUR128_SUCCESS;
 }
 
 #if EBUR128_USE_SPEEX_RESAMPLER
-int ebur128_init_resampler(ebur128_state* st) {
-  int errcode = 0, result;
+static int ebur128_init_resampler(ebur128_state* st) {
+  int errcode = EBUR128_SUCCESS;
 
   if (st->samplerate < 96000) {
     st->d->oversample_factor = 4;
@@ -179,8 +169,7 @@ int ebur128_init_resampler(ebur128_state* st) {
   st->d->resampler_buffer_input = calloc(st->d->resampler_buffer_input_frames *
                                       st->channels *
                                       sizeof(float), 1);
-  CHECK_ERROR(!st->d->resampler_buffer_input, "Could not allocate memory!\n", 1,
-                                           exit)
+  CHECK_ERROR(!st->d->resampler_buffer_input, EBUR128_ERROR_NOMEM, exit)
 
   st->d->resampler_buffer_output_frames =
                                     st->d->resampler_buffer_input_frames *
@@ -189,31 +178,28 @@ int ebur128_init_resampler(ebur128_state* st) {
                                       (st->d->resampler_buffer_output_frames *
                                        st->channels *
                                        sizeof(float), 1);
-  CHECK_ERROR(!st->d->resampler_buffer_output, "Could not allocate memory!\n",
-                                            1, free_input)
+  CHECK_ERROR(!st->d->resampler_buffer_output, EBUR128_ERROR_NOMEM, free_input)
 
   st->d->resampler = ebur128_resampler_init
                  ((spx_uint32_t) st->channels,
                   (spx_uint32_t) st->samplerate,
                   (spx_uint32_t) (st->samplerate * st->d->oversample_factor),
-                  8,
-                  &result);
-  CHECK_ERROR(!st->d->resampler, "Could not initialize resampler!\n", 1,
-                              free_output)
+                  8, NULL);
+  CHECK_ERROR(!st->d->resampler, EBUR128_ERROR_NOMEM, free_output)
 
-  return 0;
+  return errcode;
 
-free_input:
-  free(st->d->resampler_buffer_input);
-  st->d->resampler_buffer_input = NULL;
 free_output:
   free(st->d->resampler_buffer_output);
   st->d->resampler_buffer_output = NULL;
+free_input:
+  free(st->d->resampler_buffer_input);
+  st->d->resampler_buffer_input = NULL;
 exit:
   return errcode;
 }
 
-void ebur128_destroy_resampler(ebur128_state* st) {
+static void ebur128_destroy_resampler(ebur128_state* st) {
   free(st->d->resampler_buffer_input);
   st->d->resampler_buffer_input = NULL;
   free(st->d->resampler_buffer_output);
@@ -224,24 +210,22 @@ void ebur128_destroy_resampler(ebur128_state* st) {
 #endif
 
 ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
-  int errcode;
+  int errcode, result;
   ebur128_state* st;
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
-  CHECK_ERROR(!st, "Could not allocate memory!\n", 0, exit)
+  CHECK_ERROR(!st, 0, exit)
   st->d = (struct ebur128_state_internal*)
           malloc(sizeof(struct ebur128_state_internal));
-  CHECK_ERROR(!st->d, "Could not allocate memory!\n", 0, free_state)
+  CHECK_ERROR(!st->d, 0, free_state)
   st->channels = channels;
   errcode = ebur128_init_channel_map(st);
-  CHECK_ERROR(errcode, "Could not initialize channel map!\n", 0, free_internal)
+  CHECK_ERROR(errcode, 0, free_internal)
 
   st->d->sample_peak = (double*) calloc(channels, sizeof(double));
-  CHECK_ERROR(!st->d->sample_peak, "Could not allocate memory!\n", 0,
-                                  free_channel_map)
+  CHECK_ERROR(!st->d->sample_peak, 0, free_channel_map)
   st->d->true_peak = (double*) calloc(channels, sizeof(double));
-  CHECK_ERROR(!st->d->true_peak, "Could not allocate memory!\n", 0,
-                                  free_sample_peak)
+  CHECK_ERROR(!st->d->true_peak, 0, free_sample_peak)
 
   st->samplerate = samplerate;
   st->d->samples_in_100ms = (st->samplerate + 5) / 10;
@@ -256,8 +240,7 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   st->d->audio_data = (double*) calloc(st->d->audio_data_frames *
                                    st->channels,
                                    sizeof(double));
-  CHECK_ERROR(!st->d->audio_data, "Could not allocate memory!\n", 0,
-                               free_true_peak)
+  CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
   ebur128_init_filter(st);
 
   SLIST_INIT(&st->d->block_list);
@@ -265,7 +248,8 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   st->d->short_term_frame_counter = 0;
 
 #if EBUR128_USE_SPEEX_RESAMPLER
-  ebur128_init_resampler(st);
+  result = ebur128_init_resampler(st);
+  CHECK_ERROR(result, 0, free_audio_data)
 #endif
 
   /* the first block needs 400ms of audio data */
@@ -278,16 +262,10 @@ ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
   minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
   abs_threshold_energy = pow(10.0, (-70.0 + 0.691) / 10.0);
 
-#ifdef _MSC_VER
-  qnan = *(double*)qnan_bits;
-  ninf = *(double*)ninf_bits;
-#else
-  qnan = 0.0 / 0.0;
-  ninf = -1.0 / 0.0;
-#endif
-
   return st;
 
+free_audio_data:
+  free(st->d->audio_data);
 free_true_peak:
   free(st->d->true_peak);
 free_sample_peak:
@@ -327,7 +305,7 @@ void ebur128_destroy(ebur128_state** st) {
   *st = NULL;
 }
 
-int ebur128_use_speex_resampler(ebur128_state* st) {
+static int ebur128_use_speex_resampler(ebur128_state* st) {
 #if EBUR128_USE_SPEEX_RESAMPLER
   return ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK);
 #else
@@ -336,7 +314,7 @@ int ebur128_use_speex_resampler(ebur128_state* st) {
 #endif
 }
 
-void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
+static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #if EBUR128_USE_SPEEX_RESAMPLER
   size_t c, i;
   spx_uint32_t in_len = (spx_uint32_t) frames;
@@ -364,7 +342,8 @@ void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 }
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
-int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
+static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
+                                  size_t frames) {                             \
   static double scaling_factor = -((double) min_scale) > (double) max_scale ?  \
                                  -((double) min_scale) : (double) max_scale;   \
   double* audio_data = st->d->audio_data + st->d->audio_data_index;            \
@@ -419,15 +398,14 @@ int ebur128_filter_##type(ebur128_state* st, const type* src, size_t frames) { \
     st->d->v[ci][2] = fabs(st->d->v[ci][2]) < 1.0e-15 ? 0.0 : st->d->v[ci][2]; \
     st->d->v[ci][1] = fabs(st->d->v[ci][1]) < 1.0e-15 ? 0.0 : st->d->v[ci][1]; \
   }                                                                            \
-  return 0;                                                                    \
 }
 EBUR128_FILTER(short, SHRT_MIN, SHRT_MAX)
 EBUR128_FILTER(int, INT_MIN, INT_MAX)
 EBUR128_FILTER(float, -1.0f, 1.0f)
 EBUR128_FILTER(double, -1.0, 1.0)
 
-int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
-                              double* optional_output) {
+static int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
+                                     double* optional_output) {
   size_t i, c;
   double sum = 0.0;
   double channel_sum;
@@ -465,16 +443,16 @@ int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
   sum /= (double) frames_per_block;
   if (optional_output) {
     *optional_output = sum;
-    return 0;
+    return EBUR128_SUCCESS;
   } else if (sum >= abs_threshold_energy) {
     struct ebur128_dq_entry* block;
     block = (struct ebur128_dq_entry*) malloc(sizeof(struct ebur128_dq_entry));
-    if (!block) return -1;
+    if (!block) return EBUR128_ERROR_NOMEM;
     block->z = sum;
     SLIST_INSERT_HEAD(&st->d->block_list, block, entries);
-    return 0;
+    return EBUR128_SUCCESS;
   } else {
-    return 1;
+    return EBUR128_SUCCESS;
   }
 }
 
@@ -514,12 +492,12 @@ int ebur128_change_parameters(ebur128_state* st,
 #endif
 
     errcode = ebur128_init_channel_map(st);
-    CHECK_ERROR(errcode, "Could not initialize channel map!\n", 1, exit)
+    CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
 
     st->d->sample_peak = (double*) calloc(channels, sizeof(double));
-    CHECK_ERROR(!st->d->sample_peak, "Could not allocate memory!\n", 1, exit)
+    CHECK_ERROR(!st->d->sample_peak, EBUR128_ERROR_NOMEM, exit)
     st->d->true_peak = (double*) calloc(channels, sizeof(double));
-    CHECK_ERROR(!st->d->true_peak, "Could not allocate memory!\n", 1, exit)
+    CHECK_ERROR(!st->d->true_peak, EBUR128_ERROR_NOMEM, exit)
   }
   if (samplerate != st->samplerate) {
     st->samplerate = samplerate;
@@ -535,7 +513,7 @@ int ebur128_change_parameters(ebur128_state* st,
   st->d->audio_data = (double*) calloc(st->d->audio_data_frames *
                                    st->channels,
                                    sizeof(double));
-  CHECK_ERROR(!st->d->audio_data, "Could not allocate memory!\n", 1, exit)
+  CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
 
   /* the first block needs 400ms of audio data */
   st->d->needed_frames = st->d->samples_in_100ms * 4;
@@ -551,11 +529,10 @@ exit:
 }
 
 
-double ebur128_energy_shortterm(ebur128_state* st);
+static int ebur128_energy_shortterm(ebur128_state* st, double* out);
 #define EBUR128_ADD_FRAMES(type)                                               \
 int ebur128_add_frames_##type(ebur128_state* st,                               \
                               const type* src, size_t frames) {                \
-  int errcode = 0;                                                             \
   size_t src_index = 0;                                                        \
   while (frames > 0) {                                                         \
     if (frames >= st->d->needed_frames) {                                      \
@@ -565,18 +542,19 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       st->d->audio_data_index += st->d->needed_frames * st->channels;          \
       /* calculate the new gating block */                                     \
       if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                     \
-        errcode = ebur128_calc_gating_block(st,                                \
-                                            st->d->samples_in_100ms * 4, NULL);\
-        if (errcode == -1) return 1;                                           \
+        if (ebur128_calc_gating_block(st, st->d->samples_in_100ms * 4, NULL)) {\
+          return EBUR128_ERROR_NOMEM;                                          \
+        }                                                                      \
       }                                                                        \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->d->short_term_frame_counter += st->d->needed_frames;               \
         if (st->d->short_term_frame_counter == st->d->samples_in_100ms * 30) { \
-          double st_energy = ebur128_energy_shortterm(st);                     \
           struct ebur128_dq_entry* block;                                      \
+          double st_energy;                                                    \
+          ebur128_energy_shortterm(st, &st_energy);                            \
           block = (struct ebur128_dq_entry*)                                   \
                   malloc(sizeof(struct ebur128_dq_entry));                     \
-          if (!block) return 1;                                                \
+          if (!block) return EBUR128_ERROR_NOMEM;                              \
           block->z = st_energy;                                                \
           SLIST_INSERT_HEAD(&st->d->short_term_block_list, block, entries);    \
           st->d->short_term_frame_counter = st->d->samples_in_100ms * 20;      \
@@ -598,19 +576,19 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       frames = 0;                                                              \
     }                                                                          \
   }                                                                            \
-  return 0;                                                                    \
+  return EBUR128_SUCCESS;                                                      \
 }
 EBUR128_ADD_FRAMES(short)
 EBUR128_ADD_FRAMES(int)
 EBUR128_ADD_FRAMES(float)
 EBUR128_ADD_FRAMES(double)
 
-double ebur128_energy_to_loudness(double energy) {
+static double ebur128_energy_to_loudness(double energy) {
   return 10 * (log(energy) / log(10.0)) - 0.691;
 }
 
-double ebur128_gated_loudness(ebur128_state** sts, size_t size,
-                              size_t block_count) {
+int ebur128_gated_loudness(ebur128_state** sts, size_t size,
+                           size_t block_count, double* out) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   double gated_loudness = 0.0;
@@ -619,7 +597,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
 
   for (i = 0; i < size; i++) {
     if (sts[i] && (sts[i]->mode & EBUR128_MODE_I) != EBUR128_MODE_I) {
-      return qnan;
+      return EBUR128_ERROR_INVALID_MODE;
     }
   }
 
@@ -631,7 +609,7 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
       relative_threshold += it->z;
     }
   }
-  if (!above_thresh_counter) return ninf;
+  if (!above_thresh_counter) return EBUR128_ERROR_NEGINF;
   relative_threshold /= (double) above_thresh_counter;
   relative_threshold *= relative_gate_factor;
   above_thresh_counter = 0;
@@ -646,39 +624,54 @@ double ebur128_gated_loudness(ebur128_state** sts, size_t size,
       --block_count;
     }
   }
-  if (!above_thresh_counter) return ninf;
+  if (!above_thresh_counter) return EBUR128_ERROR_NEGINF;
   gated_loudness /= (double) above_thresh_counter;
-  return ebur128_energy_to_loudness(gated_loudness);
+  *out = ebur128_energy_to_loudness(gated_loudness);
+  return EBUR128_SUCCESS;
 }
 
-double ebur128_loudness_global(ebur128_state* st) {
-  return ebur128_gated_loudness(&st, 1, (size_t) -1);
+int ebur128_loudness_global(ebur128_state* st, double* out) {
+  return ebur128_gated_loudness(&st, 1, (size_t) -1, out);
 }
 
-double ebur128_loudness_global_multiple(ebur128_state** sts, size_t size) {
-  return ebur128_gated_loudness(sts, size, (size_t) -1);
+int ebur128_loudness_global_multiple(ebur128_state** sts, size_t size,
+                                     double* out) {
+  return ebur128_gated_loudness(sts, size, (size_t) -1, out);
 }
 
-double ebur128_energy_in_interval(ebur128_state* st, size_t interval_frames) {
-  double loudness;
-
-  if (interval_frames > st->d->audio_data_frames) return qnan;
-  ebur128_calc_gating_block(st, interval_frames, &loudness);
-  return loudness;
+static int ebur128_energy_in_interval(ebur128_state* st,
+                                      size_t interval_frames,
+                                      double* out) {
+  if (interval_frames > st->d->audio_data_frames) {
+    return EBUR128_ERROR_INVALID_MODE;
+  }
+  ebur128_calc_gating_block(st, interval_frames, out);
+  return EBUR128_SUCCESS;
 }
 
-double ebur128_loudness_momentary(ebur128_state* st) {
-  double energy = ebur128_energy_in_interval(st, st->d->samples_in_100ms * 4);
-  return ebur128_energy_to_loudness(energy);
+static int ebur128_energy_shortterm(ebur128_state* st, double* out) {
+  return ebur128_energy_in_interval(st, st->d->samples_in_100ms * 30, out);
 }
 
-double ebur128_energy_shortterm(ebur128_state* st) {
-  return ebur128_energy_in_interval(st, st->d->samples_in_100ms * 30);
+int ebur128_loudness_momentary(ebur128_state* st, double* out) {
+  double energy;
+  int error = ebur128_energy_in_interval(st, st->d->samples_in_100ms * 4,
+                                         &energy);
+  if (error) {
+    return error;
+  }
+  *out = ebur128_energy_to_loudness(*out);
+  return EBUR128_SUCCESS;
 }
 
-double ebur128_loudness_shortterm(ebur128_state* st) {
-  double energy = ebur128_energy_shortterm(st);
-  return ebur128_energy_to_loudness(energy);
+int ebur128_loudness_shortterm(ebur128_state* st, double* out) {
+  double energy;
+  int error = ebur128_energy_shortterm(st, &energy);
+  if (error) {
+    return error;
+  }
+  *out = ebur128_energy_to_loudness(*out);
+  return EBUR128_SUCCESS;
 }
 
 static int ebur128_double_cmp(const void *p1, const void *p2) {
@@ -688,7 +681,8 @@ static int ebur128_double_cmp(const void *p1, const void *p2) {
 }
 
 /* EBU - TECH 3342 */
-double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
+int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
+                                    double* out) {
   size_t i, j;
   struct ebur128_dq_entry* it;
   double* stl_vector;
@@ -703,7 +697,7 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
 
   for (i = 0; i < size; ++i) {
     if (sts[i] && (sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
-      return qnan;
+      return EBUR128_ERROR_INVALID_MODE;
     }
   }
 
@@ -713,9 +707,12 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
       ++stl_size;
     }
   }
-  if (!stl_size) return 0.0;
+  if (!stl_size) {
+    *out = 0.0;
+    return EBUR128_SUCCESS;
+  }
   stl_vector = (double*) calloc(stl_size, sizeof(double));
-  if (!stl_vector) return qnan;
+  if (!stl_vector) return EBUR128_ERROR_NOMEM;
   j = 0;
   for (i = 0; i < size; ++i) {
     if (!sts[i]) continue;
@@ -750,31 +747,37 @@ double ebur128_loudness_range_multiple(ebur128_state** sts, size_t size) {
     l_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 +
                                   0.5)];
     free(stl_vector);
-    return ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+    *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+    return EBUR128_SUCCESS;
   } else {
     free(stl_vector);
-    return 0.0;
+    *out = 0.0;
+    return EBUR128_SUCCESS;
   }
 }
 
-double ebur128_loudness_range(ebur128_state* st) {
-  return ebur128_loudness_range_multiple(&st, 1);
+int ebur128_loudness_range(ebur128_state* st, double* out) {
+  return ebur128_loudness_range_multiple(&st, 1, out);
 }
 
-double ebur128_sample_peak(ebur128_state* st, size_t channel_number) {
-  if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK ||
-       channel_number >= st->channels) {
-    return qnan;
+int ebur128_sample_peak(ebur128_state* st, size_t channel_number, double* out) {
+  if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK) {
+    return EBUR128_ERROR_INVALID_MODE;
+  } else if (channel_number >= st->channels) {
+    return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
-  return st->d->sample_peak[channel_number];
+  *out = st->d->sample_peak[channel_number];
+  return EBUR128_SUCCESS;
 }
 
 #if EBUR128_USE_SPEEX_RESAMPLER
-double ebur128_true_peak(ebur128_state* st, size_t channel_number) {
-  if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK ||
-       channel_number >= st->channels) {
-    return qnan;
+int ebur128_true_peak(ebur128_state* st, size_t channel_number, double* out) {
+  if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK) {
+    return EBUR128_ERROR_INVALID_MODE;
+  } else if (channel_number >= st->channels) {
+    return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
-  return st->d->true_peak[channel_number];
+  *out = st->d->true_peak[channel_number];
+  return EBUR128_SUCCESS;
 }
 #endif
