@@ -13,6 +13,7 @@ int main(int ac, const char* av[]) {
   sf_count_t nr_frames_read;
   ebur128_state** sts = NULL;
   double* buffer;
+  double loudness;
   int i;
 
   if (ac < 2) {
@@ -45,7 +46,8 @@ int main(int ac, const char* av[]) {
       ebur128_add_frames_double(sts[i], buffer, (size_t) nr_frames_read);
     }
 
-    fprintf(stderr, "%.2f LUFS, %s\n", ebur128_loudness_global(sts[i]), av[i + 1]);
+    ebur128_loudness_global(sts[i], &loudness);
+    fprintf(stderr, "%.2f LUFS, %s\n", loudness, av[i + 1]);
 
 
     free(buffer);
@@ -56,8 +58,8 @@ int main(int ac, const char* av[]) {
     }
   }
 
-  fprintf(stderr, "-----------\n"
-                  "%.2f LUFS\n", ebur128_loudness_global_multiple(sts, (size_t) ac - 1));
+  ebur128_loudness_global_multiple(sts, (size_t) ac - 1, &loudness);
+  fprintf(stderr, "-----------\n%.2f LUFS\n", loudness);
 
   /* clean up */
   for (i = 0; i < ac - 1; ++i) {

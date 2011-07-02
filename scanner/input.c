@@ -49,6 +49,7 @@ int input_init(const char* forced_plugin) {
   char* exe_dir;
   const char* env_path;
   char** env_path_split;
+  const char* env_path_split_const;
   char** it;
 
   exe_dir = g_path_get_dirname(av0);
@@ -73,7 +74,8 @@ int input_init(const char* forced_plugin) {
     exts = NULL;
     module = NULL;
     search_module_in_paths(*cur_plugin_name, &module, plugin_search_dirs);
-    search_module_in_paths(*cur_plugin_name, &module, (const char**) env_path_split);
+    env_path_split_const = (const char*) *env_path_split;
+    search_module_in_paths(*cur_plugin_name, &module, &env_path_split_const);
     if (!module) {
       /* fprintf(stderr, "%s\n", g_module_error()); */
     } else {

@@ -37,7 +37,7 @@ double test_global_loudness(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
   }
 
-  gated_loudness = ebur128_loudness_global(st);
+  ebur128_loudness_global(st, &gated_loudness);
 
   /* clean up */
   ebur128_destroy(&st);
@@ -81,7 +81,7 @@ double test_loudness_range(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
   }
 
-  loudness_range = ebur128_loudness_range(st);
+  ebur128_loudness_range(st, &loudness_range);
 
   /* clean up */
   ebur128_destroy(&st);
@@ -125,7 +125,7 @@ double test_true_peak(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
   }
 
-  true_peak = ebur128_loudness_range(st);
+  ebur128_loudness_range(st, &true_peak);
 
   /* clean up */
   ebur128_destroy(&st);
