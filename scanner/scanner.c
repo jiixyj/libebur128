@@ -233,7 +233,8 @@ void print_file_result(struct gain_data* gd, size_t i) {
   if (gd->peak &&
       (!strcmp(gd->peak, "dbtp") ||
        !strcmp(gd->peak, "all"))) {
-    double tp_gain = 20.0 * log(gd->segment_true_peaks[i]) / log(10.0);
+    double tp_gain = gd->segment_true_peaks[i] <= 0.0 ? -HUGE_VAL :
+                     20.0 * log(gd->segment_true_peaks[i]) / log(10.0);
     printf(",");
     fflush(stdout);
     fprintf(stderr, " true peak: ");
@@ -330,7 +331,8 @@ void print_result(struct gain_data* gd, double gated_loudness) {
     printf(",");
     fflush(stdout);
     fprintf(stderr, " true peak: ");
-    print_gain_value(20.0 * log(max_peak) / log(10.0), 1);
+    print_gain_value(max_peak <= 0.0 ? -HUGE_VAL :
+                     20.0 * log(max_peak) / log(10.0), 1);
     fflush(stdout);
     fprintf(stderr, " dBTP");
   }
