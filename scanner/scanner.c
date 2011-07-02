@@ -185,10 +185,16 @@ void print_gain_value(double x, int precision) {
   }
 }
 
+double clamp_rg(double x) {
+  if (x < -51.0) return -51.0;
+  else if (x > 51.0) return 51.0;
+  else return x;
+}
+
 void print_file_result(struct gain_data* gd, size_t i) {
   fprintf(stderr, "\r");
   if (gd->tag_rg) {
-    print_gain_value(REFERENCE_LEVEL - gd->segment_loudness[i], 2);
+    print_gain_value(clamp_rg(REFERENCE_LEVEL - gd->segment_loudness[i]), 2);
     fflush(stdout);
     fprintf(stderr, " dB");
   } else {
@@ -259,7 +265,7 @@ void print_result(struct gain_data* gd, double gated_loudness) {
                     "--------------------"
                     "--------------------\n");
   if (gd->tag_rg) {
-    print_gain_value(REFERENCE_LEVEL - gated_loudness, 2);
+    print_gain_value(clamp_rg(REFERENCE_LEVEL - gated_loudness), 2);
     fflush(stdout);
     fprintf(stderr, " dB");
   } else {
@@ -353,10 +359,10 @@ void tag_files(struct gain_data* gd, double gated_loudness) {
                                 -1, NULL, NULL, NULL);
 #endif
       set_rg_info(fn,
-                  REFERENCE_LEVEL - gd->segment_loudness[i],
+                  clamp_rg(REFERENCE_LEVEL - gd->segment_loudness[i]),
                   peaks[i],
                   !strcmp(gd->tag_rg, "album"),
-                  REFERENCE_LEVEL - gated_loudness,
+                  clamp_rg(REFERENCE_LEVEL - gated_loudness),
                   global_peak);
       g_free(fn);
     }
