@@ -1,6 +1,4 @@
 /* See LICENSE file for copyright and license details. */
-#define _POSIX_C_SOURCE 200112L         /* needed for isnan() and isinf() */
-#include <float.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
