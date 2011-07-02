@@ -374,7 +374,7 @@ int loudness_or_lra(struct gain_data* gd) {
   GThreadPool* pool;
 
   if (!gd->file_names->len) {
-    return 2;
+    return 0;
   }
 
   gd->segment_loudness =   calloc(gd->file_names->len, sizeof(double));
