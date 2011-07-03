@@ -37,7 +37,6 @@ void search_module_in_paths(const char* plugin,
     *module = g_module_open(path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
     g_free(path);
     ++search_dir_index;
-    fprintf(stderr, "%d\n", search_dir_index);
   }
 }
 
