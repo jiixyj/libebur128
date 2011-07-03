@@ -534,6 +534,15 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   return errcode;
 }
 
+static int compare_filenames(gconstpointer lhs, gconstpointer rhs) {
+  char* a_key = g_utf8_collate_key_for_filename(*(const char* const*) lhs, -1);
+  char* b_key = g_utf8_collate_key_for_filename(*(const char* const*) rhs, -1);
+  int result = strcmp(a_key, b_key);
+  g_free(a_key);
+  g_free(b_key);
+  return result;
+}
+
 int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
   int errcode = 0;
   size_t i;
@@ -559,6 +568,7 @@ int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
         char* foo = g_build_filename(fn, dir_file, NULL);
         g_array_append_val(files_in_new_dir, foo);
       }
+      g_array_sort(files_in_new_dir, compare_filenames);
       {
         GArray* old_file_names = gdt->file_names;
         gdt->file_names = files_in_new_dir;
