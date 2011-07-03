@@ -69,6 +69,8 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
   if (!file) {
+    fprintf(stderr, "Error opening file '%s'\n",
+                    g_array_index(gd->file_names, char*, i));
     errcode = 1;
     goto endloop;
   }
