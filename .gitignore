@@ -1,5 +1,4 @@
 CMake*
-*.cmake
 *.sln
 *.suo
 *.vc*proj*

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
-  if(USE_TAGLIB AND TAGLIB_FOUND)
+if(GLIB_FOUND)
+  if(USE_TAGLIB)
     if(WIN32)
       add_library(rgtag SHARED rgtag.cpp)
     else()
@@ -30,7 +30,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
   set(SCANNER_LIBS ${SCANNER_LIBS} ebur128 input nproc)
 
   add_executable(r128-scanner ${SCANNER_SRCS})
-  target_link_libraries(r128-scanner ${SCANNER_LIBS} ${GLIB_LIBRARIES} ${GTHREAD_LIBRARIES})
+  target_link_libraries(r128-scanner ${SCANNER_LIBS} ${GLIB_LIBRARIES})
 
   if(SNDFILE_FOUND)
     add_executable(r128-minimal-example minimal_example.c)
@@ -56,24 +56,23 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_FOUND AND INTL_FOUND)
     target_link_libraries(input_musepack ${MPCDEC_LIBRARY})
   endif()
 
-  if(FLAG_STD_C99 AND LIBAVFORMAT_FOUND AND LIBAVCODEC_FOUND AND LIBAVUTIL_FOUND)
+  if(FLAG_STD_C99 AND FFMPEG_FOUND)
     if(LSB_COMPILER_FOUND)
       set(FFMPEG_INPUT input_ffmpeg${FFMPEG_VERSION})
     else()
       set(FFMPEG_INPUT input_ffmpeg)
     endif()
     add_library(${FFMPEG_INPUT} MODULE input_ffmpeg.c)
-    target_link_libraries(${FFMPEG_INPUT} ${LIBAVCODEC_LIBRARIES} ${LIBAVFORMAT_LIBRARIES})
+    target_link_libraries(${FFMPEG_INPUT} ${FFMPEG_LIBRARIES})
     if(WIN32 OR APPLE)
-      target_link_libraries(${FFMPEG_INPUT} ${LIBAVUTIL_LIBRARIES} ${GLIB_LIBRARIES} ebur128)
+      target_link_libraries(${FFMPEG_INPUT} ${GLIB_LIBRARIES} ebur128)
     endif()
     set_target_properties(${FFMPEG_INPUT} PROPERTIES COMPILE_FLAGS "-std=c99")
   endif()
 endif()
 
-if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_LIBRARIES AND INTL_FOUND AND
-   SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND LIBAVFORMAT_FOUND AND
-   LIBAVCODEC_FOUND AND LIBAVUTIL_FOUND AND TAGLIB_FOUND)
+if(GLIB_FOUND AND SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND
+   FFMPEG_FOUND AND TAGLIB_FOUND)
   install(TARGETS r128-scanner ${FFMPEG_INPUT} input_sndfile input_mpg123 input_musepack
           RUNTIME DESTINATION ${FOLDER_BIN}
           LIBRARY DESTINATION ${FOLDER_PLUGIN})
@@ -82,12 +81,12 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_LIBRARIES AND INTL_FOUND AND
                      ${EXECUTABLE_OUTPUT_PATH}/libinput_ffmpeg0.6.2.so DESTINATION ${FOLDER_PLUGIN})
   endif()
   if(WIN32 AND FLAT_INSTALL)
-    get_filename_component(REAL_AVC ${LIBAVCODEC_LIBRARIES} REALPATH)
-    get_filename_component(REAL_AVF ${LIBAVFORMAT_LIBRARIES} REALPATH)
-    get_filename_component(REAL_AVU ${LIBAVUTIL_LIBRARIES} REALPATH)
-    get_filename_component(NAME_AVC ${LIBAVCODEC_LIBRARIES} NAME)
-    get_filename_component(NAME_AVF ${LIBAVFORMAT_LIBRARIES} NAME)
-    get_filename_component(NAME_AVU ${LIBAVUTIL_LIBRARIES} NAME)
+    get_filename_component(REAL_AVC ${LIBAVCODEC_LIBRARY} REALPATH)
+    get_filename_component(REAL_AVF ${LIBAVFORMAT_LIBRARY} REALPATH)
+    get_filename_component(REAL_AVU ${LIBAVUTIL_LIBRARY} REALPATH)
+    get_filename_component(NAME_AVC ${LIBAVCODEC_LIBRARY} NAME)
+    get_filename_component(NAME_AVF ${LIBAVFORMAT_LIBRARY} NAME)
+    get_filename_component(NAME_AVU ${LIBAVUTIL_LIBRARY} NAME)
     install(TARGETS rgtag RUNTIME DESTINATION .
             PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ)
     install(FILES ${REAL_AVC} DESTINATION . RENAME ${NAME_AVC})
@@ -96,10 +95,7 @@ if(GLIB_FOUND AND GTHREAD_FOUND AND GMODULE_LIBRARIES AND INTL_FOUND AND
     install(FILES
             ${MPG123_LIBRARIES}
             ${SNDFILE_LIBRARIES}
-            ${INTL_LIBRARIES}
             ${GLIB_LIBRARIES}
-            ${GTHREAD_LIBRARIES}
-            ${GMODULE_LIBRARIES}
             ${TAGLIB_LIBRARIES}
             ${GCC_SJLJ}
             ${STDCPP}
