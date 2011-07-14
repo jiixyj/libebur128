@@ -1,12 +1,6 @@
 # vim:ft=cmake:
 
 execute_process(
-  COMMAND "${CMAKE_C_COMPILER}" "-v"
-  OUTPUT_VARIABLE COMPILER_TYPE
-  ERROR_VARIABLE COMPILER_TYPE
-)
-
-execute_process(
   COMMAND "${CMAKE_C_COMPILER}" "-dumpversion"
   OUTPUT_VARIABLE COMPILER_VERSION
 )
