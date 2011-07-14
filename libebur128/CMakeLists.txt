@@ -33,6 +33,9 @@ set_property(SOURCE ebur128.c PROPERTY COMPILE_FLAGS ${CMAKE_C_FLAGS_ORIGINAL})
 
 
 add_library(ebur128 ebur128.c speex_resample/resample.c)
+if(EBUR128_LINK_AGAINST_SCANNER)
+  set_target_properties(ebur128 PROPERTIES COMPILE_FLAGS ${CMAKE_SHARED_LIBRARY_C_FLAGS})
+endif()
 
 if(NOT WIN32)
   target_link_libraries(ebur128 m)

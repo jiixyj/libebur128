@@ -15,7 +15,6 @@ include_directories(scanner)
 ##### Library setup              #####
 ######################################
 
-include(FindPkgConfig)
 if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
   set(LSB_COMPILER_FOUND TRUE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--allow-shlib-undefined")
@@ -71,17 +70,20 @@ if(NOT CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
 endif()
 
-include("${CMAKE_MODULE_PATH}/CompilerFlags.txt")  # This sets VALID_FLAGS
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VALID_FLAGS}")
+include(${CMAKE_MODULE_PATH}/WarningFlags.txt)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")
 
-if(NOT WIN32)
-  CHECK_C_COMPILER_FLAG("-ansi" FLAG_ANSI)
-  if(FLAG_ANSI)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi")
-  endif()
+CHECK_C_COMPILER_FLAG("-ansi" FLAG_ANSI)
+if(FLAG_ANSI)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi")
 endif()
 
 CHECK_C_COMPILER_FLAG("-std=c99" FLAG_STD_C99)
+
+CHECK_C_COMPILER_FLAG("-pedantic" FLAG_PEDANTIC)
+if(FLAG_PEDANTIC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic")
+endif()
 
 if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
   CHECK_C_COMPILER_FLAG("-msse2 -mfpmath=sse" FLAG_SSE2_OPT)
@@ -94,33 +96,12 @@ if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
   endif()
 endif()
 
-CHECK_C_COMPILER_FLAG("-isystem /usr/include" FLAG_ISYSTEM)
-if(FLAG_ISYSTEM)
-  set(CMAKE_INCLUDE_SYSTEM_FLAG_C "-isystem ")
-endif()
-
 
 ######################################
 ##### Add libraries/executables  #####
 ######################################
 
 ##### Print status
-macro(_r128_found_var_to_string val)
-  if(${val})
-    set(${val} TRUE)
-  else()
-    set(${val} FALSE)
-  endif()
-endmacro()
-_r128_found_var_to_string(GLIB_FOUND)
-_r128_found_var_to_string(INTL_FOUND)
-_r128_found_var_to_string(SNDFILE_FOUND)
-_r128_found_var_to_string(MPG123_FOUND)
-_r128_found_var_to_string(MPCDEC_FOUND)
-_r128_found_var_to_string(LIBAVFORMAT_FOUND)
-_r128_found_var_to_string(LIBAVCODEC_FOUND)
-_r128_found_var_to_string(LIBAVUTIL_FOUND)
-_r128_found_var_to_string(TAGLIB_FOUND)
 message(STATUS "status --")
 message(STATUS "glib-2.0:       ${GLIB_FOUND}")
 message(STATUS "libsndfile:     ${SNDFILE_FOUND}")
@@ -142,6 +123,7 @@ else()
 endif()
 
 
+set(EBUR128_LINK_AGAINST_SCANNER TRUE)
 add_subdirectory(libebur128)
 add_subdirectory(scanner)
 

@@ -8,8 +8,6 @@ execute_process(
 include(CheckCCompilerFlag)
 
 
-list(APPEND FLAGS "-pedantic")
-
 list(APPEND FLAGS "-Wfatal-errors")
 list(APPEND FLAGS "-Wall")
 list(APPEND FLAGS "-Wextra")
@@ -63,9 +61,7 @@ list(APPEND FLAGS "-Wswitch-enum")
 # list(APPEND FLAGS "-Wold-style-cast")
 # list(APPEND FLAGS "-Wno-pmf-conversions")
 
-list(APPEND FLAGS "-fPIC")
-
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCC)
   if(COMPILER_VERSION STRLESS "4.2.5")
     list(REMOVE_ITEM FLAGS "-Wabi")
     list(REMOVE_ITEM FLAGS "-Wconversion")
@@ -80,15 +76,11 @@ elseif("${CMAKE_C_COMPILER}" MATCHES ".*clang.*")
   list(REMOVE_ITEM FLAGS "-Wcast-align")
 endif()
 
-if(WIN32)
-  list(REMOVE_ITEM FLAGS "-fPIC")
-endif()
-
 foreach(_warning ${FLAGS})
   string(REGEX REPLACE "[^a-zA-Z0-9]" "" __warning ${_warning})
   string(TOUPPER ${__warning} __warning)
   CHECK_C_COMPILER_FLAG(${_warning} ${__warning})
   if(${__warning})
-    set(VALID_FLAGS "${VALID_FLAGS} ${_warning}")
+    set(WARNING_FLAGS "${WARNING_FLAGS} ${_warning}")
   endif()
 endforeach()
