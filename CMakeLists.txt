@@ -88,6 +88,11 @@ if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
   endif()
 endif()
 
+CHECK_C_COMPILER_FLAG("-isystem /usr/include" FLAG_ISYSTEM)
+if(FLAG_ISYSTEM)
+  set(CMAKE_INCLUDE_SYSTEM_FLAG_C "-isystem ")
+endif()
+
 
 ######################################
 ##### Add libraries/executables  #####
