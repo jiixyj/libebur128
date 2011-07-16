@@ -53,16 +53,6 @@ if(USE_TAGLIB)
   endif()
 endif()
 
-include_directories(SYSTEM
-  ${SNDFILE_INCLUDE_DIRS}
-  ${MPG123_INCLUDE_DIRS}
-  ${MPCDEC_INCLUDE_DIRS}
-  ${TAGLIB_INCLUDE_DIRS}
-  ${GLIB_INCLUDE_DIRS}
-  ${FFMPEG_INCLUDE_DIRS}
-)
-
-
 ######################################
 ##### Compiler setup             #####
 ######################################

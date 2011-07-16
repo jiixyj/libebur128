@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
+  include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
+
   list(APPEND SCANNER_SRCS scanner.c nproc.c input.c)
   if(USE_TAGLIB)
+    include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
     list(APPEND SCANNER_SRCS rgtag.cpp)
   endif()
+
   # Enable globbing for MinGW builds
   if(WIN32)
     list(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".o")
@@ -20,6 +24,8 @@ if(GLIB_FOUND)
   target_link_libraries(r128-scanner ebur128 ${GLIB_LIBRARIES} ${TAGLIB_LIBRARIES})
 
   if(SNDFILE_FOUND)
+    include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
+
     add_executable(r128-minimal-example minimal_example.c)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
@@ -31,16 +37,22 @@ if(GLIB_FOUND)
   endif()
 
   if(MPG123_FOUND)
+    include_directories(SYSTEM ${MPG123_INCLUDE_DIRS})
+
     add_library(input_mpg123 MODULE input_mpg123.c)
     target_link_libraries(input_mpg123 ${MPG123_LIBRARIES})
   endif()
 
   if(MPCDEC_FOUND)
+    include_directories(SYSTEM ${MPCDEC_INCLUDE_DIRS})
+
     add_library(input_musepack MODULE input_mpcdec.c)
     target_link_libraries(input_musepack ${MPCDEC_LIBRARY})
   endif()
 
   if(FLAG_STD_C99 AND FFMPEG_FOUND)
+    include_directories(SYSTEM ${FFMPEG_INCLUDE_DIRS})
+
     if(LSB_COMPILER_FOUND)
       set(FFMPEG_INPUT input_ffmpeg${FFMPEG_VERSION})
     else()
