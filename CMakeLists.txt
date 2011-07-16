@@ -27,7 +27,7 @@ find_package(MPCDEC)
 find_package(GLIB)
 find_package(FFMPEG)
 
-set(USE_TAGLIB TRUE CACHE BOOL "Use taglib for ReplayGain compatible tagging")
+set(USE_TAGLIB ${GLIB_FOUND} CACHE BOOL "Use taglib for ReplayGain compatible tagging")
 if(USE_TAGLIB)
   find_package(TAGLIB REQUIRED)
   add_definitions(-DUSE_TAGLIB)
@@ -51,6 +51,8 @@ if(USE_TAGLIB)
       message(FATAL_ERROR "Could not find gcc_s_sjlj-1.dll or stdc++-6.dll")
     endif()
   endif()
+else()
+  set(TAGLIB_FOUND FALSE)
 endif()
 
 ######################################
