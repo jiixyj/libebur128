@@ -55,7 +55,14 @@ int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   g_mutex_lock(ffmpeg_mutex);
   char filename[16];
   g_snprintf(filename, 16, "pipe:%d", fileno(file));
+#if (LIBAVFORMAT_VERSION_MAJOR == 53 && \
+     LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0)) || \
+    (LIBAVFORMAT_VERSION_MAJOR == 52 && \
+     LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+  if (avformat_open_input(&ih->format_context, filename, NULL, NULL) != 0) {
+#else
   if (av_open_input_file(&ih->format_context, filename, NULL, 0, NULL) != 0) {
+#endif
     fprintf(stderr, "Could not open input file!\n");
     g_mutex_unlock(ffmpeg_mutex);
     return 1;
