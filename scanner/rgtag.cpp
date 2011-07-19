@@ -99,7 +99,7 @@ void set_rg_info(const char* filename,
 
   std::string extension = fn.substr(fn.find_last_of(".") + 1);
 
-  if (extension == "mp3") {
+  if (extension == "mp3" || extension == "mp2") {
     TagLib::MPEG::File f(filename);
     TagLib::ID3v2::Tag* id3v2tag = f.ID3v2Tag(true);
 
