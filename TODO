@@ -2,3 +2,4 @@ DONE - search PATH for plugins
 - GUI
 - build Debian packages
 DONE - remove fprintf calls in library
+- error messages when tagging
