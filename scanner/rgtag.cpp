@@ -13,6 +13,8 @@
 #include <mpcfile.h>
 #include <wavpackfile.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <sstream>
 #include <ios>
@@ -97,9 +99,10 @@ void set_rg_info(const char* filename,
   ss << album_peak; ss >> ap; ss.clear();
   ss << track_peak; ss >> tp; ss.clear();
 
-  std::string extension = fn.substr(fn.find_last_of(".") + 1);
+  std::string ext = fn.substr(fn.find_last_of(".") + 1);
+  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-  if (extension == "mp3" || extension == "mp2") {
+  if (ext == "mp3" || ext == "mp2") {
     TagLib::MPEG::File f(filename);
     TagLib::ID3v2::Tag* id3v2tag = f.ID3v2Tag(true);
 
@@ -117,14 +120,14 @@ void set_rg_info(const char* filename,
     }
 
     f.save();
-  } else if (extension == "flac" || extension == "ogg" || extension == "oga") {
+  } else if (ext == "flac" || ext == "ogg" || ext == "oga") {
     TagLib::File* file = NULL;
     TagLib::Ogg::XiphComment* xiph = NULL;
-    if (extension == "flac") {
+    if (ext == "flac") {
       TagLib::FLAC::File* f = new TagLib::FLAC::File(filename);
       xiph = f->xiphComment(true);
       file = f;
-    } else if (extension == "ogg" || extension == "oga") {
+    } else if (ext == "ogg" || ext == "oga") {
       TagLib::Ogg::Vorbis::File* f = new TagLib::Ogg::Vorbis::File(filename);
       xiph = f->tag();
       file = f;
@@ -142,14 +145,14 @@ void set_rg_info(const char* filename,
     }
     file->save();
     delete file;
-  } else if (extension == "mpc" || extension == "wv") {
+  } else if (ext == "mpc" || ext == "wv") {
     TagLib::File* file = NULL;
     TagLib::APE::Tag* ape = NULL;
-    if (extension == "mpc") {
+    if (ext == "mpc") {
       TagLib::MPC::File* f = new TagLib::MPC::File(filename);
       ape = f->APETag(true);
       file = f;
-    } else if (extension == "wv") {
+    } else if (ext == "wv") {
       TagLib::WavPack::File* f = new TagLib::WavPack::File(filename);
       ape = f->APETag(true);
       file = f;
