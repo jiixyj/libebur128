@@ -7,6 +7,12 @@
 
 #include "ebur128.h"
 
+#ifdef _WIN32
+  #define R128EXPORT __declspec(dllexport)
+#else
+  #define R128EXPORT
+#endif
+
 struct input_handle;
 
 struct input_ops {

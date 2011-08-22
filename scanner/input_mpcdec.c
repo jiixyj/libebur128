@@ -98,7 +98,7 @@ void mpcdec_exit_library() {
   return;
 }
 
-struct input_ops ip_ops = {
+R128EXPORT struct input_ops ip_ops = {
   mpcdec_get_channels,
   mpcdec_get_samplerate,
   mpcdec_get_buffer,
@@ -116,4 +116,4 @@ struct input_ops ip_ops = {
   mpcdec_exit_library
 };
 
-const char* ip_exts[] = {"mpc", NULL};
+R128EXPORT const char* ip_exts[] = {"mpc", NULL};

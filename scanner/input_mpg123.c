@@ -154,7 +154,7 @@ void mpg123_exit_library() {
   mpg123_exit();
 }
 
-struct input_ops ip_ops = {
+R128EXPORT struct input_ops ip_ops = {
   mpg123_get_channels,
   mpg123_get_samplerate,
   mpg123_get_buffer,
@@ -172,4 +172,4 @@ struct input_ops ip_ops = {
   mpg123_exit_library
 };
 
-const char* ip_exts[] = {"mp3", "mp2", NULL};
+R128EXPORT const char* ip_exts[] = {"mp3", "mp2", NULL};

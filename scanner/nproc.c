@@ -1,8 +1,9 @@
 /* See LICENSE file for copyright and license details. */
 #include <glib.h>
-#include <unistd.h>
 
-#ifdef G_OS_WIN32
+#if defined(G_OS_UNIX)
+  #include <unistd.h>
+#elif defined(G_OS_WIN32)
   #include <windows.h>
 #endif
 

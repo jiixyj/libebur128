@@ -20,6 +20,10 @@ if(GLIB_FOUND)
     endif()
   endif()
 
+  if(WIN32 AND NOT "${CMAKE_SHARED_MODULE_PREFIX}")
+    set(CMAKE_SHARED_MODULE_PREFIX "lib")
+  endif()
+
   add_executable(r128-scanner ${SCANNER_SRCS})
   target_link_libraries(r128-scanner ebur128 ${GLIB_LIBRARIES} ${TAGLIB_LIBRARIES})
 

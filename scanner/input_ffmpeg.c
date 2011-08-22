@@ -276,7 +276,7 @@ void ffmpeg_exit_library() {
   return;
 }
 
-struct input_ops ip_ops = {
+R128EXPORT struct input_ops ip_ops = {
   ffmpeg_get_channels,
   ffmpeg_get_samplerate,
   ffmpeg_get_buffer,
@@ -294,4 +294,4 @@ struct input_ops ip_ops = {
   ffmpeg_exit_library
 };
 
-const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", NULL};
+R128EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", NULL};
