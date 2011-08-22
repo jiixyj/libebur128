@@ -3,7 +3,7 @@ pkg_check_modules(PC_SNDFILE QUIET sndfile)
 
 find_path(SNDFILE_INCLUDE_DIR sndfile.h
           HINTS ${PC_SNDFILE_INCLUDEDIR} ${PC_SNDFILE_INCLUDE_DIRS})
-find_library(SNDFILE_LIBRARY NAMES sndfile sndfile-1
+find_library(SNDFILE_LIBRARY NAMES sndfile sndfile-1 libsndfile-1
              HINTS ${PC_SNDFILE_LIBDIR} ${PC_SNDFILE_LIBRARY_DIRS})
 
 set(SNDFILE_LIBRARIES ${SNDFILE_LIBRARY})
