@@ -57,6 +57,11 @@
    The latter both reduces CPU time and makes the algorithm more SIMD-friendly.
 */
 
+#if defined(_MSC_VER)
+  #pragma warning(disable:4018)
+  #pragma warning(disable:4244)
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

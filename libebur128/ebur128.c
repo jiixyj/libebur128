@@ -1,4 +1,11 @@
 /* See LICENSE file for copyright and license details. */
+#if defined(_MSC_VER)
+  #pragma warning(disable:4127) /* from queue.h */
+  #pragma warning(disable:4711) /* automatic inline warnings */
+  #pragma warning(disable:4738) /* storing floats to resampler_buffer_input */
+  #pragma warning(disable:4820) /* struct padding warnings */
+#endif
+
 #include "ebur128.h"
 
 #ifndef _USE_MATH_DEFINES
@@ -341,6 +348,7 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #endif
 }
 
+
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
 static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
                                   size_t frames) {                             \
@@ -353,9 +361,9 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
       double max = 0.0;                                                        \
       for (i = 0; i < frames; ++i) {                                           \
         if (src[i * st->channels + c] > max) {                                 \
-          max =  src[i * st->channels + c];                                    \
+          max =        src[i * st->channels + c];                              \
         } else if (-src[i * st->channels + c] > max) {                         \
-          max = -src[i * st->channels + c];                                    \
+          max = -1.0 * src[i * st->channels + c];                              \
         }                                                                      \
       }                                                                        \
       max /= scaling_factor;                                                   \
@@ -366,7 +374,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
     for (c = 0; c < st->channels; ++c) {                                       \
       for (i = 0; i < frames; ++i) {                                           \
         st->d->resampler_buffer_input[i * st->channels + c] =                  \
-                      (float) (src[i * st->channels + c] / scaling_factor);    \
+	              (float) (src[i * st->channels + c] / scaling_factor);    \
       }                                                                        \
     }                                                                          \
     ebur128_check_true_peak(st, frames);                                       \
