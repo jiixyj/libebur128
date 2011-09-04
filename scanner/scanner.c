@@ -585,6 +585,7 @@ int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
     errcode = errcode | loudness_or_lra(gdt);
     gdt->file_names = old_file_names;
   }
+  g_array_free(regular_files, TRUE);
 
   return errcode;
 }
