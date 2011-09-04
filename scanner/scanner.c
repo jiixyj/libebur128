@@ -26,7 +26,7 @@
 extern long nproc();
 
 struct gain_data {
-  GArray* file_names;
+  GPtrArray* file_names;
   int calculate_lra, errcode;
   char* tag_rg;                    /* NULL, "album" or "track" */
   int tag_true_peak;
@@ -60,17 +60,17 @@ void calculate_gain_of_file(void* user, void* user_data) {
 
   gd->segment_loudness[i] = HUGE_VAL;
 
-  ops = input_get_ops(g_array_index(gd->file_names, char*, i));
+  ops = input_get_ops(g_ptr_array_index(gd->file_names, i));
   if (!ops) {
     gd->errcode = 1;
     return;
   }
   ih = ops->handle_init();
 
-  file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
+  file = g_fopen(g_ptr_array_index(gd->file_names, i), "rb");
   if (!file) {
     fprintf(stderr, "Error opening file '%s'\n",
-                    g_array_index(gd->file_names, char*, i));
+                    g_ptr_array_index(gd->file_names, i));
     errcode = 1;
     goto endloop;
   }
@@ -251,9 +251,9 @@ void print_file_result(struct gain_data* gd, size_t i) {
     char* fn;
 #ifdef G_OS_WIN32
     fn = g_win32_locale_filename_from_utf8(
-                              g_array_index(gd->file_names, char*, i));
+                              g_ptr_array_index(gd->file_names, i));
 #else
-    fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
+    fn = g_filename_from_utf8(g_ptr_array_index(gd->file_names, i),
                               -1, NULL, NULL, NULL);
 #endif
     printf("%s\n", fn);
@@ -357,9 +357,9 @@ void tag_files(struct gain_data* gd, double gated_loudness) {
       char* fn;
 #ifdef G_OS_WIN32
       fn = g_win32_locale_filename_from_utf8(
-                                g_array_index(gd->file_names, char*, i));
+                                g_ptr_array_index(gd->file_names, i));
 #else
-      fn = g_filename_from_utf8(g_array_index(gd->file_names, char*, i),
+      fn = g_filename_from_utf8(g_ptr_array_index(gd->file_names, i),
                                 -1, NULL, NULL, NULL);
 #endif
       set_rg_info(fn,
@@ -391,8 +391,7 @@ int loudness_or_lra(struct gain_data* gd) {
   gd->segment_true_peaks = calloc(gd->file_names->len, sizeof(double));
   gd->library_states =     calloc(gd->file_names->len, sizeof(ebur128_state*));
 
-  pool = g_thread_pool_new(calculate_gain_of_file, gd, (int) nproc(),
-                           FALSE, NULL);
+  pool = g_thread_pool_new(calculate_gain_of_file, gd, nproc(), FALSE, NULL);
 
   fprintf(stderr, "\n");
   for (i = 0; i < gd->file_names->len; ++i) {
@@ -440,13 +439,13 @@ int scan_files_interval_loudness(struct gain_data* gd) {
   struct input_handle* ih = NULL;
 
   for (i = 0; i < gd->file_names->len; ++i) {
-    ops = input_get_ops(g_array_index(gd->file_names, char*, i));
+    ops = input_get_ops(g_ptr_array_index(gd->file_names, i));
     if (!ops) {
       continue;
     }
     ih = ops->handle_init();
 
-    file = g_fopen(g_array_index(gd->file_names, char*, i), "rb");
+    file = g_fopen(g_ptr_array_index(gd->file_names, i), "rb");
     if (!file) {
       errcode = 1;
       goto endloop;
@@ -548,14 +547,14 @@ static int compare_filenames(gconstpointer lhs, gconstpointer rhs) {
 int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
   int errcode = 0;
   size_t i;
-  GArray* regular_files = g_array_new(FALSE, TRUE, sizeof(char*));
+  GPtrArray* regular_files = g_ptr_array_new_with_free_func(g_free);
   for (i = 0; i < gdt->file_names->len; ++i) {
-    const char* fn = g_array_index(gdt->file_names, char*, i);
+    const char* fn = g_ptr_array_index(gdt->file_names, i);
     if (g_file_test(fn, G_FILE_TEST_IS_REGULAR)) {
       char* foo = g_strdup(fn);
-      g_array_append_val(regular_files, foo);
+      g_ptr_array_add(regular_files, foo);
     } else if (depth && g_file_test(fn, G_FILE_TEST_IS_DIR)) {
-      GArray* files_in_new_dir = g_array_new(FALSE, TRUE, sizeof(char*));
+      GPtrArray* files_in_new_dir = g_ptr_array_new_with_free_func(g_free);
       GError* err = NULL;
       GDir* dir = g_dir_open(fn, 0, &err);
       const char* dir_file = NULL;
@@ -568,11 +567,11 @@ int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
       }
       while ((dir_file = g_dir_read_name(dir))) {
         char* foo = g_build_filename(fn, dir_file, NULL);
-        g_array_append_val(files_in_new_dir, foo);
+        g_ptr_array_add(files_in_new_dir, foo);
       }
-      g_array_sort(files_in_new_dir, compare_filenames);
+      g_ptr_array_sort(files_in_new_dir, compare_filenames);
       {
-        GArray* old_file_names = gdt->file_names;
+        GPtrArray* old_file_names = gdt->file_names;
         gdt->file_names = files_in_new_dir;
         errcode = scan_files_gated_loudness_or_lra(gdt, depth - 1);
         gdt->file_names = old_file_names;
@@ -580,12 +579,12 @@ int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
     }
   }
   {
-    GArray* old_file_names = gdt->file_names;
+    GPtrArray* old_file_names = gdt->file_names;
     gdt->file_names = regular_files;
     errcode = errcode | loudness_or_lra(gdt);
     gdt->file_names = old_file_names;
   }
-  g_array_free(regular_files, TRUE);
+  g_ptr_array_free(regular_files, TRUE);
 
   return errcode;
 }
@@ -714,21 +713,21 @@ int test_files_in_gd(struct gain_data* gdata, size_t ac, GFileTest test) {
   int errcode = 0;
   size_t i;
   for (i = 0; i < ac; ++i) {
-    if (!g_file_test(g_array_index(gdata->file_names, char*, i),
+    if (!g_file_test(g_ptr_array_index(gdata->file_names, i),
                      test)) {
       errcode = 1;
       switch (test) {
         case G_FILE_TEST_EXISTS:
           fprintf(stderr, "File or directory %s does not exist!\n",
-                          g_array_index(gdata->file_names, char*, i));
+                          g_ptr_array_index(gdata->file_names, i));
           break;
         case G_FILE_TEST_IS_DIR:
           fprintf(stderr, "%s is not a directory!\n",
-                          g_array_index(gdata->file_names, char*, i));
+                          g_ptr_array_index(gdata->file_names, i));
           break;
         case G_FILE_TEST_IS_REGULAR:
           fprintf(stderr, "%s is not a regular file!\n",
-                          g_array_index(gdata->file_names, char*, i));
+                          g_ptr_array_index(gdata->file_names, i));
           break;
         case G_FILE_TEST_IS_SYMLINK:
         case G_FILE_TEST_IS_EXECUTABLE:
@@ -839,10 +838,10 @@ int main(int ac, char* av[]) {
 
   /* Put all filenames in the file name GArray in gd. */
   nr_files = g_strv_length(file_names);
-  gd.file_names = g_array_new(FALSE, TRUE, sizeof(char*));
+  gd.file_names = g_ptr_array_new_with_free_func(g_free);
   for (i = 0; i < nr_files; ++i) {
     char* fn = g_strdup(file_names[i]);
-    g_array_append_val(gd.file_names, fn);
+    g_ptr_array_add(gd.file_names, fn);
   }
 
   if (gd.interval > 0.0) {
@@ -860,10 +859,7 @@ int main(int ac, char* av[]) {
   }
 
   /* Free the file name GArray in gd. */
-  for (i = 0; i < gd.file_names->len; ++i) {
-    g_free(g_array_index(gd.file_names, char*, i));
-  }
-  g_array_free(gd.file_names, TRUE);
+  g_ptr_array_free(gd.file_names, TRUE);
 
   input_deinit();
 
