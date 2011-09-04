@@ -55,11 +55,7 @@ int input_init(const char* forced_plugin) {
   plugin_search_dirs[3] = exe_dir;
 
   env_path = g_getenv("PATH");
-#ifdef G_OS_WIN32
-  env_path_split = g_strsplit(env_path, ";", 0);
-#else
-  env_path_split = g_strsplit(env_path, ":", 0);
-#endif
+  env_path_split = g_strsplit(env_path, G_SEARCHPATH_SEPARATOR_S, 0);
   for (it = env_path_split; *it; ++it) {
     char* r128_path = g_build_filename(*it, "r128", NULL);
     g_free(*it);
