@@ -22,36 +22,36 @@ struct input_handle {
   float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1];
 };
 
-size_t ffmpeg_get_channels(struct input_handle* ih) {
+static size_t ffmpeg_get_channels(struct input_handle* ih) {
   return (size_t) ih->codec_context->channels;
 }
 
-size_t ffmpeg_get_samplerate(struct input_handle* ih) {
+static size_t ffmpeg_get_samplerate(struct input_handle* ih) {
   return (size_t) ih->codec_context->sample_rate;
 }
 
-float* ffmpeg_get_buffer(struct input_handle* ih) {
+static float* ffmpeg_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-size_t ffmpeg_get_buffer_size(struct input_handle* ih) {
+static size_t ffmpeg_get_buffer_size(struct input_handle* ih) {
   (void) ih;
   return (AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1;
 }
 
-struct input_handle* ffmpeg_handle_init() {
+static struct input_handle* ffmpeg_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
   return ret;
 }
 
-void ffmpeg_handle_destroy(struct input_handle** ih) {
+static void ffmpeg_handle_destroy(struct input_handle** ih) {
   free(*ih);
   *ih = NULL;
 }
 
 
-int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
+static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   g_mutex_lock(ffmpeg_mutex);
   char filename[16];
   g_snprintf(filename, 16, "pipe:%d", fileno(file));
@@ -116,7 +116,7 @@ close_file:
   return 1;
 }
 
-int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+static int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   if (ih->codec_context->channel_layout) {
     size_t channel_map_index = 0;
     int bit_counter = 0;
@@ -152,12 +152,12 @@ int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   }
 }
 
-int ffmpeg_allocate_buffer(struct input_handle* ih) {
+static int ffmpeg_allocate_buffer(struct input_handle* ih) {
   (void) ih;
   return 0;
 }
 
-size_t ffmpeg_read_frames(struct input_handle* ih) {
+static size_t ffmpeg_read_frames(struct input_handle* ih) {
   for (;;) {
     if (ih->need_new_frame && av_read_frame(ih->format_context, &ih->packet) < 0) {
       return 0;
@@ -245,18 +245,18 @@ size_t ffmpeg_read_frames(struct input_handle* ih) {
   }
 }
 
-int ffmpeg_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
+static int ffmpeg_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
   (void) ih;
   (void) nr_frames_read_all;
   return 0;
 }
 
-void ffmpeg_free_buffer(struct input_handle* ih) {
+static void ffmpeg_free_buffer(struct input_handle* ih) {
   (void) ih;
   return;
 }
 
-void ffmpeg_close_file(struct input_handle* ih, FILE* file) {
+static void ffmpeg_close_file(struct input_handle* ih, FILE* file) {
   g_mutex_lock(ffmpeg_mutex);
   avcodec_close(ih->codec_context);
   av_close_input_file(ih->format_context);
@@ -264,7 +264,7 @@ void ffmpeg_close_file(struct input_handle* ih, FILE* file) {
   g_mutex_unlock(ffmpeg_mutex);
 }
 
-int ffmpeg_init_library() {
+static int ffmpeg_init_library() {
   // Register all formats and codecs
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
@@ -272,7 +272,7 @@ int ffmpeg_init_library() {
   return 0;
 }
 
-void ffmpeg_exit_library() {
+static void ffmpeg_exit_library() {
   g_mutex_free(ffmpeg_mutex);
   return;
 }
