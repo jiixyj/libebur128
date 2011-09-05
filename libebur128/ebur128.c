@@ -8,7 +8,7 @@
 
 #include "ebur128.h"
 
-#ifndef _USE_MATH_DEFINES
+#if defined(_MSC_VER) && !defined(_USE_MATH_DEFINES)
   /* This is to get the M_PI etc. defines. */
   #define _USE_MATH_DEFINES
 #endif
@@ -53,11 +53,11 @@ struct ebur128_state_internal {
   /** How many frames are needed for a gating block. Will correspond to 400ms
    *  of audio at initialization, and 100ms after the first block (75% overlap
    *  as specified in the 2011 revision of BS1770). */
-  size_t needed_frames;
+  unsigned long needed_frames;
   /** The channel map. Has as many elements as there are channels. */
   int* channel_map;
   /** How many samples fit in 100ms (rounded). */
-  size_t samples_in_100ms;
+  unsigned long samples_in_100ms;
   /** BS.1770 filter coefficients (nominator). */
   double b[5];
   /** BS.1770 filter coefficients (denominator). */
@@ -216,7 +216,9 @@ static void ebur128_destroy_resampler(ebur128_state* st) {
 }
 #endif
 
-ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode) {
+ebur128_state* ebur128_init(unsigned int channels,
+                            unsigned long samplerate,
+                            int mode) {
   int errcode, result;
   ebur128_state* st;
 
@@ -464,7 +466,9 @@ static int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
   }
 }
 
-int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value) {
+int ebur128_set_channel(ebur128_state* st,
+                        unsigned int channel_number,
+                        int value) {
   if (channel_number >= st->channels) {
     return 1;
   }
@@ -478,8 +482,8 @@ int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value) {
 }
 
 int ebur128_change_parameters(ebur128_state* st,
-                              size_t channels,
-                              size_t samplerate) {
+                              unsigned int channels,
+                              unsigned long samplerate) {
   int errcode;
   if (channels == st->channels &&
       samplerate == st->samplerate) {
@@ -595,8 +599,8 @@ static double ebur128_energy_to_loudness(double energy) {
   return 10 * (log(energy) / log(10.0)) - 0.691;
 }
 
-int ebur128_gated_loudness(ebur128_state** sts, size_t size,
-                           size_t block_count, double* out) {
+static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
+                                  size_t block_count, double* out) {
   struct ebur128_dq_entry* it;
   double relative_threshold = 0.0;
   double gated_loudness = 0.0;
@@ -780,7 +784,9 @@ int ebur128_loudness_range(ebur128_state* st, double* out) {
   return ebur128_loudness_range_multiple(&st, 1, out);
 }
 
-int ebur128_sample_peak(ebur128_state* st, size_t channel_number, double* out) {
+int ebur128_sample_peak(ebur128_state* st,
+                        unsigned int channel_number,
+                        double* out) {
   if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK) {
     return EBUR128_ERROR_INVALID_MODE;
   } else if (channel_number >= st->channels) {
@@ -791,7 +797,9 @@ int ebur128_sample_peak(ebur128_state* st, size_t channel_number, double* out) {
 }
 
 #if EBUR128_USE_SPEEX_RESAMPLER
-int ebur128_true_peak(ebur128_state* st, size_t channel_number, double* out) {
+int ebur128_true_peak(ebur128_state* st,
+                      unsigned int channel_number,
+                      double* out) {
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK) {
     return EBUR128_ERROR_INVALID_MODE;
   } else if (channel_number >= st->channels) {

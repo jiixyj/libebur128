@@ -73,8 +73,8 @@ struct ebur128_state_internal;
  */
 typedef struct {
   int mode;                           /**< The current mode. */
-  size_t channels;                    /**< The number of channels. */
-  size_t samplerate;                  /**< The sample rate. */
+  unsigned int channels;              /**< The number of channels. */
+  unsigned long samplerate;           /**< The sample rate. */
   struct ebur128_state_internal* d;   /**< Internal state. */
 } ebur128_state;
 
@@ -85,7 +85,9 @@ typedef struct {
  *  @param mode see the mode enum for possible values.
  *  @return an initialized library state.
  */
-ebur128_state* ebur128_init(size_t channels, size_t samplerate, int mode);
+ebur128_state* ebur128_init(unsigned int channels,
+                            unsigned long samplerate,
+                            int mode);
 
 /** \brief Destroy library state.
  *
@@ -110,7 +112,9 @@ void ebur128_destroy(ebur128_state** st);
  *    - EBUR128_SUCCESS on success.
  *    - EBUR128_ERROR_INVALID_CHANNEL_INDEX if invalid channel index.
  */
-int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value);
+int ebur128_set_channel(ebur128_state* st,
+                        unsigned int channel_number,
+                        int value);
 
 /** \brief Change library parameters.
  *
@@ -127,8 +131,8 @@ int ebur128_set_channel(ebur128_state* st, size_t channel_number, int value);
  *    - EBUR128_ERROR_NO_CHANGE if channels and sample rate were not changed.
  */
 int ebur128_change_parameters(ebur128_state* st,
-                              size_t channels,
-                              size_t samplerate);
+                              unsigned int channels,
+                              unsigned long samplerate);
 
 /** \brief Add frames to be processed.
  *
@@ -175,7 +179,8 @@ int ebur128_loudness_global(ebur128_state* st, double* out);
  *    - EBUR128_SUCCESS on success.
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_I" has not been set.
  */
-int ebur128_loudness_global_multiple(ebur128_state** sts, size_t size,
+int ebur128_loudness_global_multiple(ebur128_state** sts,
+                                     size_t size,
                                      double* out);
 
 /** \brief Get momentary loudness (last 400ms) in LUFS.
@@ -226,7 +231,8 @@ int ebur128_loudness_range(ebur128_state* st, double* out);
  *    - EBUR128_ERROR_NOMEM in case of memory allocation error.
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_LRA" has not been set.
  */
-int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
+int ebur128_loudness_range_multiple(ebur128_state** sts,
+                                    size_t size,
                                     double* out);
 
 /** \brief Get maximum sample peak of selected channel in float format.
@@ -240,7 +246,9 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
  *      been set.
  *    - EBUR128_ERROR_INVALID_CHANNEL_INDEX if invalid channel index.
  */
-int ebur128_sample_peak(ebur128_state* st, size_t channel_number, double* out);
+int ebur128_sample_peak(ebur128_state* st,
+                        unsigned int channel_number,
+                        double* out);
 #if EBUR128_USE_SPEEX_RESAMPLER
 /** \brief Get maximum true peak of selected channel in float format.
  *
@@ -257,7 +265,9 @@ int ebur128_sample_peak(ebur128_state* st, size_t channel_number, double* out);
  *      been set.
  *    - EBUR128_ERROR_INVALID_CHANNEL_INDEX if invalid channel index.
  */
-int ebur128_true_peak(ebur128_state* st, size_t channel_number, double* out);
+int ebur128_true_peak(ebur128_state* st,
+                      unsigned int channel_number,
+                      double* out);
 #endif
 
 #ifdef __cplusplus
