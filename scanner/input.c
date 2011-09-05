@@ -1,8 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 #include "input.h"
 
-#include <gmodule.h>
-
 static const char* plugin_names[] = {
   "input_sndfile",
   "input_mpg123",
@@ -22,11 +20,11 @@ static const char* plugin_search_dirs[] = {
   NULL
 };
 
-static GSList* g_modules = NULL;
-static GSList* plugin_ops = NULL; /*struct input_ops* ops;*/
-static GSList* plugin_exts = NULL;
+static GSList* g_modules;
+static GSList* plugin_ops; /*struct input_ops* ops;*/
+static GSList* plugin_exts;
 
-static int plugin_forced = 0;
+static int plugin_forced;
 
 void search_module_in_paths(const char* plugin,
                             GModule** module,

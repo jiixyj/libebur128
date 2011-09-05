@@ -277,7 +277,7 @@ void ffmpeg_exit_library() {
   return;
 }
 
-R128EXPORT struct input_ops ip_ops = {
+G_MODULE_EXPORT struct input_ops ip_ops = {
   ffmpeg_get_channels,
   ffmpeg_get_samplerate,
   ffmpeg_get_buffer,
@@ -295,4 +295,4 @@ R128EXPORT struct input_ops ip_ops = {
   ffmpeg_exit_library
 };
 
-R128EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", NULL};
+G_MODULE_EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", "m4a", "mp4", NULL};

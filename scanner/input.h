@@ -5,13 +5,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "ebur128.h"
+#include <gmodule.h>
 
-#ifdef _WIN32
-  #define R128EXPORT __declspec(dllexport)
-#else
-  #define R128EXPORT
-#endif
+#include "ebur128.h"
 
 struct input_handle;
 

@@ -135,7 +135,7 @@ void sndfile_exit_library() {
   return;
 }
 
-R128EXPORT struct input_ops ip_ops = {
+G_MODULE_EXPORT struct input_ops ip_ops = {
   sndfile_get_channels,
   sndfile_get_samplerate,
   sndfile_get_buffer,
@@ -153,4 +153,4 @@ R128EXPORT struct input_ops ip_ops = {
   sndfile_exit_library
 };
 
-R128EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", NULL};
+G_MODULE_EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", NULL};
