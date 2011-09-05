@@ -92,6 +92,8 @@ static double minus_twenty_decibels;
 static double abs_threshold_energy;
 
 static void ebur128_init_filter(ebur128_state* st) {
+  int i, j;
+
   double f0 = 1681.974450955533;
   double G  =    3.999843853973347;
   double Q  =    0.7071752369554196;
@@ -136,12 +138,16 @@ static void ebur128_init_filter(ebur128_state* st) {
   st->d->a[3] = pa[1] * ra[2] + pa[2] * ra[1];
   st->d->a[4] = pa[2] * ra[2];
 
-  memset(st->d->v, '\0', 25 * sizeof(double));
+  for (i = 0; i < 5; ++i) {
+    for (j = 0; j < 5; ++j) {
+      st->d->v[i][j] = 0.0;
+    }
+  }
 }
 
 static int ebur128_init_channel_map(ebur128_state* st) {
   size_t i;
-  st->d->channel_map = (int*) calloc(st->channels, sizeof(int));
+  st->d->channel_map = (int*) malloc(st->channels * sizeof(int));
   if (!st->d->channel_map) return EBUR128_ERROR_NOMEM;
   for (i = 0; i < st->channels; ++i) {
     switch (i) {
@@ -173,18 +179,18 @@ static int ebur128_init_resampler(ebur128_state* st) {
   }
 
   st->d->resampler_buffer_input_frames = st->d->samples_in_100ms * 4;
-  st->d->resampler_buffer_input = calloc(st->d->resampler_buffer_input_frames *
+  st->d->resampler_buffer_input = malloc(st->d->resampler_buffer_input_frames *
                                       st->channels *
-                                      sizeof(float), 1);
+                                      sizeof(float));
   CHECK_ERROR(!st->d->resampler_buffer_input, EBUR128_ERROR_NOMEM, exit)
 
   st->d->resampler_buffer_output_frames =
                                     st->d->resampler_buffer_input_frames *
                                     st->d->oversample_factor;
-  st->d->resampler_buffer_output = calloc
+  st->d->resampler_buffer_output = malloc
                                       (st->d->resampler_buffer_output_frames *
                                        st->channels *
-                                       sizeof(float), 1);
+                                       sizeof(float));
   CHECK_ERROR(!st->d->resampler_buffer_output, EBUR128_ERROR_NOMEM, free_input)
 
   st->d->resampler = ebur128_resampler_init
@@ -221,6 +227,7 @@ ebur128_state* ebur128_init(unsigned int channels,
                             int mode) {
   int errcode, result;
   ebur128_state* st;
+  unsigned int i;
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, 0, exit)
@@ -231,10 +238,14 @@ ebur128_state* ebur128_init(unsigned int channels,
   errcode = ebur128_init_channel_map(st);
   CHECK_ERROR(errcode, 0, free_internal)
 
-  st->d->sample_peak = (double*) calloc(channels, sizeof(double));
+  st->d->sample_peak = (double*) malloc(channels * sizeof(double));
   CHECK_ERROR(!st->d->sample_peak, 0, free_channel_map)
-  st->d->true_peak = (double*) calloc(channels, sizeof(double));
+  st->d->true_peak = (double*) malloc(channels * sizeof(double));
   CHECK_ERROR(!st->d->true_peak, 0, free_sample_peak)
+  for (i = 0; i < channels; ++i) {
+    st->d->sample_peak[i] = 0.0;
+    st->d->true_peak[i] = 0.0;
+  }
 
   st->samplerate = samplerate;
   st->d->samples_in_100ms = (st->samplerate + 5) / 10;
@@ -246,9 +257,9 @@ ebur128_state* ebur128_init(unsigned int channels,
   } else {
     return NULL;
   }
-  st->d->audio_data = (double*) calloc(st->d->audio_data_frames *
-                                   st->channels,
-                                   sizeof(double));
+  st->d->audio_data = (double*) malloc(st->d->audio_data_frames *
+                                       st->channels *
+                                       sizeof(double));
   CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
   ebur128_init_filter(st);
 
@@ -376,7 +387,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
     for (c = 0; c < st->channels; ++c) {                                       \
       for (i = 0; i < frames; ++i) {                                           \
         st->d->resampler_buffer_input[i * st->channels + c] =                  \
-	              (float) (src[i * st->channels + c] / scaling_factor);    \
+                      (float) (src[i * st->channels + c] / scaling_factor);    \
       }                                                                        \
     }                                                                          \
     ebur128_check_true_peak(st, frames);                                       \
@@ -493,6 +504,8 @@ int ebur128_change_parameters(ebur128_state* st,
   st->d->audio_data = NULL;
 
   if (channels != st->channels) {
+    unsigned int i;
+
     free(st->d->channel_map); st->d->channel_map = NULL;
     free(st->d->sample_peak); st->d->sample_peak = NULL;
     free(st->d->true_peak);   st->d->true_peak = NULL;
@@ -506,10 +519,14 @@ int ebur128_change_parameters(ebur128_state* st,
     errcode = ebur128_init_channel_map(st);
     CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
 
-    st->d->sample_peak = (double*) calloc(channels, sizeof(double));
+    st->d->sample_peak = (double*) malloc(channels * sizeof(double));
     CHECK_ERROR(!st->d->sample_peak, EBUR128_ERROR_NOMEM, exit)
-    st->d->true_peak = (double*) calloc(channels, sizeof(double));
+    st->d->true_peak = (double*) malloc(channels * sizeof(double));
     CHECK_ERROR(!st->d->true_peak, EBUR128_ERROR_NOMEM, exit)
+    for (i = 0; i < channels; ++i) {
+      st->d->sample_peak[i] = 0.0;
+      st->d->true_peak[i] = 0.0;
+    }
   }
   if (samplerate != st->samplerate) {
     st->samplerate = samplerate;
@@ -522,9 +539,9 @@ int ebur128_change_parameters(ebur128_state* st,
   } else {
     return 1;
   }
-  st->d->audio_data = (double*) calloc(st->d->audio_data_frames *
-                                   st->channels,
-                                   sizeof(double));
+  st->d->audio_data = (double*) malloc(st->d->audio_data_frames *
+                                       st->channels *
+                                       sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
 
   /* the first block needs 400ms of audio data */
@@ -735,10 +752,11 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
     *out = 0.0;
     return EBUR128_SUCCESS;
   }
-  stl_vector = (double*) calloc(stl_size, sizeof(double));
-  if (!stl_vector) return EBUR128_ERROR_NOMEM;
-  j = 0;
-  for (i = 0; i < size; ++i) {
+  stl_vector = (double*) malloc(stl_size * sizeof(double));
+  if (!stl_vector)
+    return EBUR128_ERROR_NOMEM;
+
+  for (j = 0, i = 0; i < size; ++i) {
     if (!sts[i]) continue;
     SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
       stl_vector[j] = it->z;
