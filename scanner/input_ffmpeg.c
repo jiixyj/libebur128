@@ -55,6 +55,7 @@ int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   g_mutex_lock(ffmpeg_mutex);
   char filename[16];
   g_snprintf(filename, 16, "pipe:%d", fileno(file));
+  ih->format_context = NULL;
 #if (LIBAVFORMAT_VERSION_MAJOR == 53 && \
      LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0)) || \
     (LIBAVFORMAT_VERSION_MAJOR == 52 && \
