@@ -1,4 +1,4 @@
-find_path(MPCDEC_INCLUDE_DIR mpcdec.h PATH_SUFFIXES mpc)
+find_path(MPCDEC_INCLUDE_DIR mpc/mpcdec.h)
 find_library(MPCDEC_LIBRARY NAMES mpcdec mpcdec_static)
 
 set(MPCDEC_LIBRARIES ${MPCDEC_LIBRARY})

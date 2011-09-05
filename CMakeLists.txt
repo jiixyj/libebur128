@@ -27,6 +27,14 @@ find_package(MPCDEC)
 find_package(GLIB)
 find_package(FFMPEG)
 
+include_directories(SYSTEM
+  ${SNDFILE_INCLUDE_DIRS}
+  ${MPG123_INCLUDE_DIRS}
+  ${MPCDEC_INCLUDE_DIRS}
+  ${GLIB_INCLUDE_DIRS}
+  ${FFMPEG_INCLUDE_DIRS}
+)
+
 set(USE_TAGLIB ${GLIB_FOUND} CACHE BOOL "Use taglib for ReplayGain compatible tagging")
 if(USE_TAGLIB)
   find_package(TAGLIB REQUIRED)
@@ -62,20 +70,9 @@ if(NOT CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
 endif()
 
-include(${CMAKE_MODULE_PATH}/WarningFlags.txt)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")
-
-CHECK_C_COMPILER_FLAG("-ansi" FLAG_ANSI)
-if(FLAG_ANSI)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi")
-endif()
+include(CheckCCompilerFlag)
 
 CHECK_C_COMPILER_FLAG("-std=c99" FLAG_STD_C99)
-
-CHECK_C_COMPILER_FLAG("-pedantic" FLAG_PEDANTIC)
-if(FLAG_PEDANTIC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic")
-endif()
 
 if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
   CHECK_C_COMPILER_FLAG("-msse2 -mfpmath=sse" FLAG_SSE2_OPT)
@@ -86,11 +83,6 @@ if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_R128}")
     endif()
   endif()
-endif()
-
-CHECK_C_COMPILER_FLAG("-isystem /usr/include" FLAG_ISYSTEM)
-if(FLAG_ISYSTEM)
-  set(CMAKE_INCLUDE_SYSTEM_FLAG_C "-isystem ")
 endif()
 
 

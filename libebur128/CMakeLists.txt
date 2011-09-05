@@ -4,8 +4,7 @@ include_directories(queue)
 include_directories(speex_resample)
 
 set(CMAKE_C_FLAGS_ORIGINAL "${CMAKE_C_FLAGS}")
-set(CMAKE_C_FLAGS)
-
+set(CMAKE_C_FLAGS "")
 
 # set compile definitions/flags for the speex resampler
 set(SPEEX_COMPILE_DEFINITIONS
@@ -24,7 +23,7 @@ set_property(SOURCE speex_resample/resample.c
 if(FLAG_STD_C99)
   set_property(SOURCE speex_resample/resample.c PROPERTY COMPILE_FLAGS "-std=c99 ${CMAKE_C_FLAGS_R128}")
 else()
-  set_property(SOURCE speex_resample/resample.c PROPERTY COMPILE_FLAGS ${CMAKE_C_FLAGS_R128})
+  set_property(SOURCE speex_resample/resample.c PROPERTY COMPILE_FLAGS "${CMAKE_C_FLAGS_R128}")
 endif()
 
 
