@@ -74,8 +74,7 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
     g_mutex_unlock(ffmpeg_mutex);
     goto close_file;
   }
-  // Dump information about file onto standard error
-  // dump_format(format_context, 0, av[1], 0);
+  // av_dump_format(ih->format_context, 0, "blub", 0);
 
   // Find the first audio stream
   ih->audio_stream = -1;
@@ -100,6 +99,9 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   }
   // Get a pointer to the codec context for the audio stream
   ih->codec_context = ih->format_context->streams[ih->audio_stream]->codec;
+  // fprintf(stderr, "%d/%d %ld\n", ih->format_context->streams[ih->audio_stream]->time_base.num,
+  //                                ih->format_context->streams[ih->audio_stream]->time_base.den,
+  //                                ih->format_context->streams[ih->audio_stream]->duration);
 
   // request float output if supported
 #if LIBAVCODEC_VERSION_MAJOR >= 54 || \
@@ -121,7 +123,6 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
     goto close_file;
   }
   g_mutex_unlock(ffmpeg_mutex);
-  printf("%d\n", ih->codec->sample_fmts[0]);
   ih->need_new_frame = TRUE;
   ih->old_data = NULL;
   return 0;
