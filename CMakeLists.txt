@@ -8,6 +8,7 @@ set(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
 
 include_directories(libebur128)
+include_directories(libinputaudio)
 include_directories(scanner)
 
 enable_testing()
@@ -115,6 +116,7 @@ endif()
 
 set(EBUR128_LINK_AGAINST_SCANNER TRUE)
 add_subdirectory(libebur128)
+add_subdirectory(libinputaudio)
 add_subdirectory(scanner)
 add_subdirectory(test)
 
@@ -122,10 +124,11 @@ add_subdirectory(test)
 ######################################
 ##### Install                    #####
 ######################################
-if(INSTALL_READY)
-  install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
-  install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})
+install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
+install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})
 
+if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND AND
+   GLIB_FOUND AND TAGLIB_FOUND)
   set(CPACK_PACKAGE_VERSION_MAJOR "0")
   set(CPACK_PACKAGE_VERSION_MINOR "4")
   set(CPACK_PACKAGE_VERSION_PATCH "0")
