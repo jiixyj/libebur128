@@ -54,7 +54,8 @@ static void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode = 0, result;
   FILE* file;
-  const char* filename, *filename_locale;
+  const char* filename;
+  char* filename_locale;
 
   struct input_ops* ops = NULL;
   struct input_handle* ih = NULL;
@@ -83,7 +84,7 @@ static void calculate_gain_of_file(void* user, void* user_data) {
     errcode = 1;
     goto endloop;
   }
-  // printf("%zu\n", ops->get_total_frames(ih));
+  /* printf("%zu\n", ops->get_total_frames(ih)); */
   if (gd->tag_rg && ops->get_channels(ih) > 2) {
     fprintf(stderr, "ReplayGain tagging support only up to 2 channels!\n");
     errcode = 1;
@@ -439,7 +440,8 @@ static int scan_files_interval_loudness(struct gain_data* gd) {
   size_t nr_frames_read;
   size_t frames_counter = 0, frames_needed;
   FILE* file;
-  const char* filename, *filename_locale;
+  const char* filename;
+  char* filename_locale;
 
   struct input_ops* ops = NULL;
   struct input_handle* ih = NULL;

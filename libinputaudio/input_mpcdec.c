@@ -37,6 +37,8 @@ static struct input_handle* mpcdec_handle_init() {
 
 static int mpcdec_open_file(struct input_handle* ih, FILE* file, const char* filename) {
   int err = mpc_reader_init_stdio_stream(&ih->reader, file);
+  (void) filename;
+
   if (err < 0) {
     return 1;
   }

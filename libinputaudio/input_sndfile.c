@@ -42,6 +42,7 @@ static void sndfile_handle_destroy(struct input_handle** ih) {
 }
 
 static int sndfile_open_file(struct input_handle* ih, FILE* file, const char* filename) {
+  (void) filename;
   memset(&ih->file_info, '\0', sizeof(ih->file_info));
   ih->file = sf_open_fd(fileno(file), SFM_READ, &ih->file_info, 1);
   if (ih->file) {
@@ -102,7 +103,7 @@ static int sndfile_allocate_buffer(struct input_handle* ih) {
 }
 
 static size_t sndfile_get_total_frames(struct input_handle* ih) {
-  return ih->file_info.frames;
+  return (size_t) ih->file_info.frames;
 }
 
 static size_t sndfile_read_frames(struct input_handle* ih) {
