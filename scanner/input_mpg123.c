@@ -104,6 +104,15 @@ static int mpg123_allocate_buffer(struct input_handle* ih) {
   }
 }
 
+static size_t mpg123_get_total_frames(struct input_handle* ih) {
+  off_t length = mpg123_length(ih->mh);
+  if (length == MPG123_ERR) {
+    return 0;
+  } else {
+    return length;
+  }
+}
+
 static size_t mpg123_read_frames(struct input_handle* ih) {
   size_t nr_frames_read;
   int result = mpg123_read(ih->mh, (unsigned char*) ih->buffer,
@@ -164,6 +173,7 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   mpg123_open_file,
   mpg123_set_channel_map,
   mpg123_allocate_buffer,
+  mpg123_get_total_frames,
   mpg123_read_frames,
   mpg123_check_ok,
   mpg123_free_buffer,

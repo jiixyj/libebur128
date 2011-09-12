@@ -83,6 +83,7 @@ static void calculate_gain_of_file(void* user, void* user_data) {
     errcode = 1;
     goto endloop;
   }
+  // printf("%zu\n", ops->get_total_frames(ih));
   if (gd->tag_rg && ops->get_channels(ih) > 2) {
     fprintf(stderr, "ReplayGain tagging support only up to 2 channels!\n");
     errcode = 1;

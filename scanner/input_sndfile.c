@@ -101,6 +101,10 @@ static int sndfile_allocate_buffer(struct input_handle* ih) {
   }
 }
 
+static size_t sndfile_get_total_frames(struct input_handle* ih) {
+  return ih->file_info.frames;
+}
+
 static size_t sndfile_read_frames(struct input_handle* ih) {
   return (size_t) sf_readf_float(ih->file, ih->buffer,
                                  (sf_count_t) ih->file_info.samplerate);
@@ -145,6 +149,7 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   sndfile_open_file,
   sndfile_set_channel_map,
   sndfile_allocate_buffer,
+  sndfile_get_total_frames,
   sndfile_read_frames,
   sndfile_check_ok,
   sndfile_free_buffer,

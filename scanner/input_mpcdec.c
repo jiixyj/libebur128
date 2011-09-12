@@ -64,6 +64,10 @@ static int mpcdec_allocate_buffer(struct input_handle* ih) {
   return 0;
 }
 
+static size_t mpcdec_get_total_frames(struct input_handle* ih) {
+  return ih->si.samples;
+}
+
 static size_t mpcdec_read_frames(struct input_handle* ih) {
   mpc_frame_info frame;
   frame.buffer = ih->buffer;
@@ -108,6 +112,7 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   mpcdec_open_file,
   mpcdec_set_channel_map,
   mpcdec_allocate_buffer,
+  mpcdec_get_total_frames,
   mpcdec_read_frames,
   mpcdec_check_ok,
   mpcdec_free_buffer,

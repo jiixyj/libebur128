@@ -22,6 +22,7 @@ struct input_ops {
                              const char* filename);
   int           (*set_channel_map)(struct input_handle* ih, ebur128_state* st);
   int           (*allocate_buffer)(struct input_handle* ih);
+  size_t        (*get_total_frames)(struct input_handle* ih);
   size_t        (*read_frames)(struct input_handle* ih);
   int           (*check_ok)(struct input_handle* ih, size_t nr_frames_read_all);
   void          (*free_buffer)(struct input_handle* ih);

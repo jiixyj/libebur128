@@ -97,9 +97,6 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file, const char* fil
   }
   // Get a pointer to the codec context for the audio stream
   ih->codec_context = ih->format_context->streams[ih->audio_stream]->codec;
-  // fprintf(stderr, "%d/%d %ld\n", ih->format_context->streams[ih->audio_stream]->time_base.num,
-  //                                ih->format_context->streams[ih->audio_stream]->time_base.den,
-  //                                ih->format_context->streams[ih->audio_stream]->duration);
 
   // request float output if supported
 #if LIBAVCODEC_VERSION_MAJOR >= 54 || \
@@ -171,6 +168,18 @@ static int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
 static int ffmpeg_allocate_buffer(struct input_handle* ih) {
   (void) ih;
   return 0;
+}
+
+static size_t ffmpeg_get_total_frames(struct input_handle* ih) {
+  double tmp = (double) ih->format_context->streams[ih->audio_stream]->duration
+             * (double) ih->format_context->streams[ih->audio_stream]->time_base.num
+             / (double) ih->format_context->streams[ih->audio_stream]->time_base.den
+             * (double) ih->codec_context->sample_rate;
+  if (tmp <= 0.0) {
+    return 0;
+  } else {
+    return (size_t) (tmp + 0.5);
+  }
 }
 
 static size_t ffmpeg_read_frames(struct input_handle* ih) {
@@ -301,6 +310,7 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   ffmpeg_open_file,
   ffmpeg_set_channel_map,
   ffmpeg_allocate_buffer,
+  ffmpeg_get_total_frames,
   ffmpeg_read_frames,
   ffmpeg_check_ok,
   ffmpeg_free_buffer,
