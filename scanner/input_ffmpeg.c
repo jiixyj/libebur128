@@ -100,6 +100,13 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   }
   // Get a pointer to the codec context for the audio stream
   ih->codec_context = ih->format_context->streams[ih->audio_stream]->codec;
+
+  // request float output if supported
+#if LIBAVCODEC_VERSION_MAJOR >= 54 || \
+    (LIBAVCODEC_VERSION_MAJOR == 53 && \
+     LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 4, 0))
+  ih->codec_context->request_sample_fmt = SAMPLE_FMT_FLT;
+#endif
   // Find the decoder for the video stream
   ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
   if (ih->codec == NULL) {
