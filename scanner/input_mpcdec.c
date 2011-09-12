@@ -12,11 +12,11 @@ struct input_handle {
   MPC_SAMPLE_FORMAT buffer[MPC_DECODER_BUFFER_LENGTH];
 };
 
-static size_t mpcdec_get_channels(struct input_handle* ih) {
+static unsigned mpcdec_get_channels(struct input_handle* ih) {
   return ih->si.channels;
 }
 
-static size_t mpcdec_get_samplerate(struct input_handle* ih) {
+static unsigned long mpcdec_get_samplerate(struct input_handle* ih) {
   return ih->si.sample_freq;
 }
 

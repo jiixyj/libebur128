@@ -9,6 +9,7 @@
 
 #include "ebur128.h"
 #include "input.h"
+#include "nproc.h"
 
 #ifdef USE_TAGLIB
   #include "rgtag.h"
@@ -22,8 +23,6 @@
     errcode = (errorcode);                                                     \
     goto goto_point;                                                           \
   }
-
-extern long nproc();
 
 struct gain_data {
   GPtrArray* file_names;
@@ -43,9 +42,10 @@ struct gain_data {
 
 /* Calculates gain and peak of i-th file in the gain_data struct.
  * This function will be in a GThreadPool. */
-void calculate_gain_of_file(void* user, void* user_data) {
+static void calculate_gain_of_file(void* user, void* user_data) {
   struct gain_data* gd = (struct gain_data*) user_data;
-  size_t i = (size_t) user - 1, j;
+  size_t i = (size_t) user - 1;
+  unsigned j;
 
   size_t nr_frames_read, nr_frames_read_all = 0;
 
@@ -173,7 +173,7 @@ endloop:
   gd->errcode = errcode;
 }
 
-void print_gain_value(double x, int precision) {
+static void print_gain_value(double x, int precision) {
   if (x >= HUGE_VAL) {
     printf("nan");
   } else if (x <= -HUGE_VAL) {
@@ -187,13 +187,13 @@ void print_gain_value(double x, int precision) {
   }
 }
 
-double clamp_rg(double x) {
+static double clamp_rg(double x) {
   if (x < -51.0) return -51.0;
   else if (x > 51.0) return 51.0;
   else return x;
 }
 
-void print_file_result(struct gain_data* gd, size_t i) {
+static void print_file_result(struct gain_data* gd, size_t i) {
   fprintf(stderr, "\r");
   if (gd->tag_rg) {
     print_gain_value(clamp_rg(REFERENCE_LEVEL - gd->segment_loudness[i]), 2);
@@ -261,7 +261,7 @@ void print_file_result(struct gain_data* gd, size_t i) {
   }
 }
 
-void print_result(struct gain_data* gd, double gated_loudness) {
+static void print_result(struct gain_data* gd, double gated_loudness) {
   size_t i;
   fprintf(stderr, "\r--------------------"
                     "--------------------"
@@ -341,7 +341,7 @@ void print_result(struct gain_data* gd, double gated_loudness) {
   printf("\n");
 }
 
-void tag_files(struct gain_data* gd, double gated_loudness) {
+static void tag_files(struct gain_data* gd, double gated_loudness) {
 #ifdef USE_TAGLIB
   size_t i;
   double global_peak = 0.0;
@@ -376,7 +376,7 @@ void tag_files(struct gain_data* gd, double gated_loudness) {
 #endif
 }
 
-int loudness_or_lra(struct gain_data* gd) {
+static int loudness_or_lra(struct gain_data* gd) {
   double gated_loudness;
   size_t i;
   GThreadPool* pool;
@@ -426,7 +426,7 @@ int loudness_or_lra(struct gain_data* gd) {
   return 0;
 }
 
-int scan_files_interval_loudness(struct gain_data* gd) {
+static int scan_files_interval_loudness(struct gain_data* gd) {
   int errcode = 0, result;
   size_t i;
   ebur128_state* st = NULL;
@@ -511,7 +511,6 @@ int scan_files_interval_loudness(struct gain_data* gd) {
             default:
               fprintf(stderr, "Invalid mode!\n");
               goto free_buffer;
-              break;
           }
         } else {
           result = ebur128_add_frames_float(st, tmp_buffer, nr_frames_read);
@@ -544,7 +543,7 @@ static int compare_filenames(gconstpointer lhs, gconstpointer rhs) {
   return result;
 }
 
-int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
+static int scan_files_gated_loudness_or_lra(struct gain_data* gdt, int depth) {
   int errcode = 0;
   size_t i;
   GPtrArray* regular_files = g_ptr_array_new_with_free_func(g_free);
@@ -709,7 +708,7 @@ static GOptionEntry entries[] = {
   { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
-int test_files_in_gd(struct gain_data* gdata, size_t ac, GFileTest test) {
+static int test_files_in_gd(struct gain_data* gdata, size_t ac, GFileTest test) {
   int errcode = 0;
   size_t i;
   for (i = 0; i < ac; ++i) {

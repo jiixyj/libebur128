@@ -26,9 +26,9 @@ static GSList* plugin_exts;
 
 static int plugin_forced;
 
-void search_module_in_paths(const char* plugin,
-                            GModule** module,
-                            const char* const* search_dir) {
+static void search_module_in_paths(const char* plugin,
+                                   GModule** module,
+                                   const char* const* search_dir) {
   int search_dir_index = 0;
   while (!*module && search_dir[search_dir_index]) {
     char* path = g_module_build_path(search_dir[search_dir_index], plugin);
@@ -101,7 +101,7 @@ int input_init(const char* forced_plugin) {
   return 0;
 }
 
-int input_deinit() {
+int input_deinit(void) {
   /* unload plugins */
   GSList* ops = plugin_ops;
   GSList* modules = g_modules;

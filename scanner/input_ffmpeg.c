@@ -22,12 +22,12 @@ struct input_handle {
   float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1];
 };
 
-static size_t ffmpeg_get_channels(struct input_handle* ih) {
-  return (size_t) ih->codec_context->channels;
+static unsigned ffmpeg_get_channels(struct input_handle* ih) {
+  return (unsigned) ih->codec_context->channels;
 }
 
-static size_t ffmpeg_get_samplerate(struct input_handle* ih) {
-  return (size_t) ih->codec_context->sample_rate;
+static unsigned long ffmpeg_get_samplerate(struct input_handle* ih) {
+  return (unsigned long) ih->codec_context->sample_rate;
 }
 
 static float* ffmpeg_get_buffer(struct input_handle* ih) {
@@ -121,6 +121,7 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
     goto close_file;
   }
   g_mutex_unlock(ffmpeg_mutex);
+  printf("%d\n", ih->codec->sample_fmts[0]);
   ih->need_new_frame = TRUE;
   ih->old_data = NULL;
   return 0;
@@ -134,9 +135,9 @@ close_file:
 
 static int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   if (ih->codec_context->channel_layout) {
-    size_t channel_map_index = 0;
+    unsigned int channel_map_index = 0;
     int bit_counter = 0;
-    while (channel_map_index < (size_t) ih->codec_context->channels) {
+    while (channel_map_index < (unsigned) ih->codec_context->channels) {
       if (ih->codec_context->channel_layout & (1 << bit_counter)) {
         switch (1 << bit_counter) {
           case CH_FRONT_LEFT:
@@ -213,7 +214,6 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
           case SAMPLE_FMT_U8:
             fprintf(stderr, "8 bit audio not supported by libebur128!\n");
             return 0;
-            break;
           case SAMPLE_FMT_S16:
             nr_frames_read = (size_t) data_size / sizeof(int16_t) /
                              (size_t) ih->codec_context->channels;
@@ -249,7 +249,6 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
           default:
             fprintf(stderr, "Unknown sample format!\n");
             return 0;
-            break;
         }
         return nr_frames_read;
       }

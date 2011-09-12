@@ -13,12 +13,12 @@ struct input_handle {
   float* buffer;
 };
 
-static size_t sndfile_get_channels(struct input_handle* ih) {
-  return (size_t) ih->file_info.channels;
+static unsigned sndfile_get_channels(struct input_handle* ih) {
+  return (unsigned) ih->file_info.channels;
 }
 
-static size_t sndfile_get_samplerate(struct input_handle* ih) {
-  return (size_t) ih->file_info.samplerate;
+static unsigned long sndfile_get_samplerate(struct input_handle* ih) {
+  return (unsigned long) ih->file_info.samplerate;
 }
 
 static float* sndfile_get_buffer(struct input_handle* ih) {
@@ -61,7 +61,7 @@ static int sndfile_set_channel_map(struct input_handle* ih, ebur128_state* st) {
   /* If sndfile found a channel map, set it with
    * ebur128_set_channel_map */
   if (result == SF_TRUE) {
-    size_t j;
+    unsigned j;
     for (j = 0; j < st->channels; ++j) {
       switch (channel_map[j]) {
         case SF_CHANNEL_MAP_INVALID:

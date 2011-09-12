@@ -10,6 +10,7 @@ set(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
 include_directories(libebur128)
 include_directories(scanner)
 
+enable_testing()
 
 ######################################
 ##### Library setup              #####
@@ -115,6 +116,7 @@ endif()
 set(EBUR128_LINK_AGAINST_SCANNER TRUE)
 add_subdirectory(libebur128)
 add_subdirectory(scanner)
+add_subdirectory(test)
 
 
 ######################################

@@ -13,12 +13,12 @@ struct input_handle {
   float* buffer;
 };
 
-static size_t mpg123_get_channels(struct input_handle* ih) {
-  return (size_t) ih->mh_channels;
+static unsigned mpg123_get_channels(struct input_handle* ih) {
+  return (unsigned) ih->mh_channels;
 }
 
-static size_t mpg123_get_samplerate(struct input_handle* ih) {
-  return (size_t) ih->mh_rate;
+static unsigned long mpg123_get_samplerate(struct input_handle* ih) {
+  return (unsigned long) ih->mh_rate;
 }
 
 static float* mpg123_get_buffer(struct input_handle* ih) {

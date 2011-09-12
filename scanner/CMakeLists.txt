@@ -33,9 +33,6 @@ if(GLIB_FOUND)
     add_executable(r128-minimal-example minimal_example.c)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
 
-    add_executable(r128-test-library tests.c)
-    target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
-
     add_library(input_sndfile MODULE input_sndfile.c)
     target_link_libraries(input_sndfile ebur128 ${SNDFILE_LIBRARIES})
   endif()
