@@ -51,10 +51,8 @@ static void ffmpeg_handle_destroy(struct input_handle** ih) {
 }
 
 
-static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
+static int ffmpeg_open_file(struct input_handle* ih, FILE* file, const char* filename) {
   g_mutex_lock(ffmpeg_mutex);
-  char filename[16];
-  g_snprintf(filename, 16, "pipe:%d", fileno(file));
   ih->format_context = NULL;
 #if LIBAVFORMAT_VERSION_MAJOR >= 54 || \
     (LIBAVFORMAT_VERSION_MAJOR == 53 && \

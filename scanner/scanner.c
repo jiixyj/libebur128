@@ -54,6 +54,7 @@ static void calculate_gain_of_file(void* user, void* user_data) {
 
   int errcode = 0, result;
   FILE* file;
+  const char* filename, *filename_locale;
 
   struct input_ops* ops = NULL;
   struct input_handle* ih = NULL;
@@ -67,14 +68,17 @@ static void calculate_gain_of_file(void* user, void* user_data) {
   }
   ih = ops->handle_init();
 
-  file = g_fopen(g_ptr_array_index(gd->file_names, i), "rb");
+  filename = g_ptr_array_index(gd->file_names, i);
+  file = g_fopen(filename, "rb");
   if (!file) {
     fprintf(stderr, "Error opening file '%s'\n",
                     g_ptr_array_index(gd->file_names, i));
     errcode = 1;
     goto endloop;
   }
-  result = ops->open_file(ih, file);
+  filename_locale = g_filename_from_utf8(filename, -1, NULL, NULL, NULL);
+  result = ops->open_file(ih, file, filename_locale);
+  g_free(filename_locale);
   if (result) {
     errcode = 1;
     goto endloop;
@@ -434,6 +438,7 @@ static int scan_files_interval_loudness(struct gain_data* gd) {
   size_t nr_frames_read;
   size_t frames_counter = 0, frames_needed;
   FILE* file;
+  const char* filename, *filename_locale;
 
   struct input_ops* ops = NULL;
   struct input_handle* ih = NULL;
@@ -445,12 +450,15 @@ static int scan_files_interval_loudness(struct gain_data* gd) {
     }
     ih = ops->handle_init();
 
-    file = g_fopen(g_ptr_array_index(gd->file_names, i), "rb");
+    filename = g_ptr_array_index(gd->file_names, i);
+    file = g_fopen(filename, "rb");
     if (!file) {
       errcode = 1;
       goto endloop;
     }
-    result = ops->open_file(ih, file);
+    filename_locale = g_filename_from_utf8(filename, -1, NULL, NULL, NULL);
+    result = ops->open_file(ih, file, filename_locale);
+    g_free(filename_locale);
     if (result) {
       errcode = 1;
       goto endloop;

@@ -40,7 +40,7 @@ static void mpg123_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-static int mpg123_open_file(struct input_handle* ih, FILE* file) {
+static int mpg123_open_file(struct input_handle* ih, FILE* file, const char* filename) {
   int result;
   ih->mh = mpg123_new(NULL, &result);
   if (!ih->mh) {

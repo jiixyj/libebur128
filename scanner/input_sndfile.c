@@ -41,7 +41,7 @@ static void sndfile_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-static int sndfile_open_file(struct input_handle* ih, FILE* file) {
+static int sndfile_open_file(struct input_handle* ih, FILE* file, const char* filename) {
   memset(&ih->file_info, '\0', sizeof(ih->file_info));
   ih->file = sf_open_fd(fileno(file), SFM_READ, &ih->file_info, 1);
   if (ih->file) {
