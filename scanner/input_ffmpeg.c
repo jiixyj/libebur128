@@ -56,7 +56,8 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   char filename[16];
   g_snprintf(filename, 16, "pipe:%d", fileno(file));
   ih->format_context = NULL;
-#if (LIBAVFORMAT_VERSION_MAJOR == 53 && \
+#if LIBAVFORMAT_VERSION_MAJOR >= 54 || \
+    (LIBAVFORMAT_VERSION_MAJOR == 53 && \
      LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0)) || \
     (LIBAVFORMAT_VERSION_MAJOR == 52 && \
      LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
@@ -79,7 +80,15 @@ static int ffmpeg_open_file(struct input_handle* ih, FILE* file) {
   // Find the first audio stream
   ih->audio_stream = -1;
   for (size_t j = 0; j < ih->format_context->nb_streams; ++j) {
-    if (ih->format_context->streams[j]->codec->codec_type == CODEC_TYPE_AUDIO) {
+    if (ih->format_context->streams[j]->codec->codec_type ==
+#if LIBAVCODEC_VERSION_MAJOR >= 53 || \
+    (LIBAVCODEC_VERSION_MAJOR == 52 && \
+     LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 64, 0))
+            AVMEDIA_TYPE_AUDIO
+#else
+            CODEC_TYPE_AUDIO
+#endif
+        ) {
       ih->audio_stream = (int) j;
       break;
     }
@@ -174,9 +183,9 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
       }
       while (ih->packet.size > 0) {
         int data_size = sizeof(ih->audio_buf);
-#if LIBAVCODEC_VERSION_MAJOR >= 52 &&  \
-    LIBAVCODEC_VERSION_MINOR >= 26 &&  \
-    LIBAVCODEC_VERSION_MICRO >= 0
+#if LIBAVCODEC_VERSION_MAJOR >= 53 || \
+    (LIBAVCODEC_VERSION_MAJOR == 52 && \
+     LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 23, 0))
         int len = avcodec_decode_audio3(ih->codec_context, (int16_t*) ih->audio_buf,
                                         &data_size, &ih->packet);
 #else
