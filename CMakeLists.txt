@@ -28,18 +28,29 @@ find_package(MPG123)
 find_package(MPCDEC)
 find_package(GLIB)
 find_package(FFMPEG)
+find_package(TAGLIB)
 
-include_directories(SYSTEM
-  ${SNDFILE_INCLUDE_DIRS}
-  ${MPG123_INCLUDE_DIRS}
-  ${MPCDEC_INCLUDE_DIRS}
-  ${GLIB_INCLUDE_DIRS}
-  ${FFMPEG_INCLUDE_DIRS}
-)
+if(SNDFILE_FOUND)
+include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
+endif()
+if(MPG123_FOUND)
+include_directories(SYSTEM ${MPG123_INCLUDE_DIRS})
+endif()
+if(MPCDEC_FOUND)
+include_directories(SYSTEM ${MPCDEC_INCLUDE_DIRS})
+endif()
+if(GLIB_FOUND)
+include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
+endif()
+if(FFMPEG_FOUND)
+include_directories(SYSTEM ${FFMPEG_INCLUDE_DIRS})
+endif()
+if(TAGLIB_FOUND)
+include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
+endif()
 
-set(USE_TAGLIB ${GLIB_FOUND} CACHE BOOL "Use taglib for ReplayGain compatible tagging")
+set(USE_TAGLIB ${TAGLIB_FOUND} CACHE BOOL "Use taglib for ReplayGain compatible tagging")
 if(USE_TAGLIB)
-  find_package(TAGLIB REQUIRED)
   add_definitions(-DUSE_TAGLIB)
   if(WIN32)
     find_library(GCC_SJLJ_LIBRARY gcc_s_sjlj-1)

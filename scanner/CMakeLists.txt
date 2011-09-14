@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
   list(APPEND SCANNER_SRCS scanner.c nproc.c)
-  if(USE_TAGLIB)
-    include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
+  if(TAGLIB_FOUND)
     list(APPEND SCANNER_SRCS rgtag.cpp)
   endif()
 
@@ -19,7 +18,10 @@ if(GLIB_FOUND)
   endif()
 
   add_executable(r128-scanner ${SCANNER_SRCS})
-  target_link_libraries(r128-scanner ebur128 input ${GLIB_LIBRARIES} ${TAGLIB_LIBRARIES})
+  target_link_libraries(r128-scanner ebur128 input ${GLIB_LIBRARIES})
+  if(TAGLIB_FOUND)
+    target_link_libraries(r128-scanner ${TAGLIB_LIBRARIES})
+  endif()
 
   if(SNDFILE_FOUND)
     add_executable(r128-minimal-example minimal_example.c)
