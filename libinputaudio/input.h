@@ -31,7 +31,7 @@ struct input_ops {
   void          (*exit_library)();
 };
 
-int input_init(const char* forced_plugin);
+int input_init(char* exe_name, const char* forced_plugin);
 int input_deinit(void);
 struct input_ops* input_get_ops(const char* filename);
 

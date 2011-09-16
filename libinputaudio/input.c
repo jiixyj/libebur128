@@ -11,7 +11,6 @@ static const char* plugin_names[] = {
   NULL
 };
 
-extern char* av0;
 static const char* plugin_search_dirs[] = {
   ".",
   "r128",
@@ -38,7 +37,7 @@ static void search_module_in_paths(const char* plugin,
   }
 }
 
-int input_init(const char* forced_plugin) {
+int input_init(char* exe_name, const char* forced_plugin) {
   int plugin_found = 0;
   const char** cur_plugin_name = plugin_names;
   struct input_ops* ops;
@@ -49,7 +48,7 @@ int input_init(const char* forced_plugin) {
   char** env_path_split;
   char** it;
 
-  exe_dir = g_path_get_dirname(av0);
+  exe_dir = g_path_get_dirname(exe_name);
   plugin_search_dirs[3] = exe_dir;
 
   env_path = g_getenv("PATH");

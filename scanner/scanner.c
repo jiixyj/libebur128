@@ -749,8 +749,6 @@ static int test_files_in_gd(struct gain_data* gdata, size_t ac, GFileTest test) 
   return errcode;
 }
 
-char* av0;
-
 int main(int ac, char* av[]) {
   int errcode = 0;
   size_t i = 0, nr_files = 0;
@@ -760,8 +758,6 @@ int main(int ac, char* av[]) {
   GOptionGroup* tagging_group;
 #endif
   GOptionGroup* r128_group;
-
-  av0 = av[0];
 
   g_thread_init(NULL);
 
@@ -797,7 +793,7 @@ int main(int ac, char* av[]) {
 
   g_option_context_parse(context, &ac, &av, &error);
 
-  if (input_init(forced_plugin)) {
+  if (input_init(av[0], forced_plugin)) {
     return 1;
   }
 
