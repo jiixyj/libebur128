@@ -136,9 +136,11 @@ static size_t mpg123_read_frames(struct input_handle* ih) {
 }
 
 static int mpg123_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  (void) ih;
-  (void) nr_frames_read_all;
-  return 0;
+  if (mpg123_get_total_frames(ih) != nr_frames_read_all) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 static void mpg123_free_buffer(struct input_handle* ih) {

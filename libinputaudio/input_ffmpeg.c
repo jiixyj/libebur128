@@ -270,9 +270,11 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
 }
 
 static int ffmpeg_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  (void) ih;
-  (void) nr_frames_read_all;
-  return 0;
+  if (ffmpeg_get_total_frames(ih) != nr_frames_read_all) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 static void ffmpeg_free_buffer(struct input_handle* ih) {

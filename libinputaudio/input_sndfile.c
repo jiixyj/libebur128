@@ -112,7 +112,7 @@ static size_t sndfile_read_frames(struct input_handle* ih) {
 }
 
 static int sndfile_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  if (ih->file && (size_t) ih->file_info.frames != nr_frames_read_all) {
+  if (ih->file && sndfile_get_total_frames(ih) != nr_frames_read_all) {
     return 1;
   } else {
     return 0;

@@ -80,9 +80,11 @@ static size_t mpcdec_read_frames(struct input_handle* ih) {
 }
 
 static int mpcdec_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  (void) ih;
-  (void) nr_frames_read_all;
-  return 0;
+  if (mpcdec_get_total_frames(ih) != nr_frames_read_all) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 static void mpcdec_free_buffer(struct input_handle* ih) {
