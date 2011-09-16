@@ -761,15 +761,6 @@ int main(int ac, char* av[]) {
 
   g_thread_init(NULL);
 
-  gd.calculate_lra = 0;
-  gd.tag_rg = NULL;
-  gd.tag_true_peak = 0;
-  gd.interval = 0.0;
-  gd.mode = 0;
-  gd.file_names = NULL;
-  gd.recursive_scan = FALSE;
-  gd.peak = NULL;
-
   context = g_option_context_new("- analyse loudness of audio files");
   g_option_context_add_main_entries(context, entries, NULL);
 
