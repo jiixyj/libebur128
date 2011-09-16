@@ -128,6 +128,7 @@ endif()
 set(EBUR128_LINK_AGAINST_SCANNER TRUE)
 add_subdirectory(libebur128)
 add_subdirectory(libinputaudio)
+add_subdirectory(libfilewalk)
 add_subdirectory(scanner)
 add_subdirectory(test)
 
