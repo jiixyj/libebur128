@@ -9,6 +9,17 @@
 
 static struct file_data empty;
 
+static gboolean lra = FALSE;
+static gchar *peak = NULL;
+
+static GOptionEntry entries[] =
+{
+    { "lra", 'l', 0, G_OPTION_ARG_NONE, &lra, NULL, NULL },
+    { "peak", 'p', 0, G_OPTION_ARG_STRING, &peak, NULL, NULL },
+    { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
+};
+
+
 static int open_plugin(const char *raw, const char *display,
                        struct input_ops **ops,
                        struct input_handle **ih,
@@ -196,4 +207,39 @@ void loudness_scan(GSList *files)
 
     g_slist_foreach(files, print_file_data, NULL);
     g_slist_foreach(files, destroy_state, NULL);
+
+    g_free(peak);
+}
+
+static void shift_arguments(int *argc, char **argv[])
+{
+    int i;
+    for (i = 1; i < *argc; ++i) {
+        (*argv)[i] = (*argv)[i+1];
+    }
+    --(*argc);
+}
+
+gboolean loudness_scan_parse(int *argc, char **argv[])
+{
+    GError *error = NULL;
+    GOptionContext *context = g_option_context_new(NULL);
+
+    shift_arguments(argc, argv);
+
+    g_option_context_add_main_entries(context, entries, NULL);
+    g_option_context_set_help_enabled(context, FALSE);
+    if (!g_option_context_parse(context, argc, argv, &error)) {
+        g_print("%s\n", error->message);
+        g_option_context_free(context);
+        return FALSE;
+    }
+    if (*argc == 1) {
+        g_option_context_free(context);
+        return FALSE;
+    }
+    g_option_context_free(context);
+    if (!strcmp((*argv)[1], "--"))
+        shift_arguments(argc, argv);
+    return TRUE;
 }

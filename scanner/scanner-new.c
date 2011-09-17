@@ -60,6 +60,7 @@ static gboolean recursive = FALSE;
 static gboolean follow_symlinks = FALSE;
 static gboolean no_sort = FALSE;
 static gchar *forced_plugin = NULL;
+static gboolean help = FALSE;
 
 static GOptionEntry entries[] =
 {
@@ -67,6 +68,7 @@ static GOptionEntry entries[] =
     { "follow-symlinks", 'L', 0, G_OPTION_ARG_NONE, &follow_symlinks, NULL, NULL },
     { "no-sort", 0, 0, G_OPTION_ARG_NONE, &no_sort, NULL, NULL },
     { "force-plugin", 0, 0, G_OPTION_ARG_STRING, &forced_plugin, NULL, NULL },
+    { "help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL },
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
@@ -81,20 +83,21 @@ int main(int argc, char *argv[])
 {
     GSList *errors = NULL, *files = NULL;
     Filetree tree;
-    int mode;
+    int mode = 0, mode_parsed = FALSE;
 
-    if (parse_global_args(&argc, &argv, entries, TRUE) || argc < 2) {
+    if (parse_global_args(&argc, &argv, entries, TRUE) || argc < 2 || help) {
         print_help();
         exit(EXIT_FAILURE);
     }
     if (!strcmp(argv[1], "scan")) {
         mode = LOUDNESS_MODE_SCAN;
+        mode_parsed = loudness_scan_parse(&argc, &argv);
     } else if (!strcmp(argv[1], "tag")) {
         mode = LOUDNESS_MODE_TAG;
     } else if (!strcmp(argv[1], "dump")) {
         mode = LOUDNESS_MODE_DUMP;
-    } else {
-        print_help();
+    }
+    if (!mode_parsed) {
         exit(EXIT_FAILURE);
     }
     g_thread_init(NULL);
@@ -103,7 +106,7 @@ int main(int argc, char *argv[])
 
     setlocale(LC_COLLATE, "");
     setlocale(LC_CTYPE, "");
-    tree = filetree_init(&argv[2], (size_t) (argc - 2),
+    tree = filetree_init(&argv[1], (size_t) (argc - 1),
                          recursive, follow_symlinks, no_sort, &errors);
 
     g_slist_foreach(errors, filetree_print_error, NULL);
@@ -127,6 +130,7 @@ int main(int argc, char *argv[])
 
     filetree_destroy(tree);
     input_deinit();
+    g_free(forced_plugin);
 
     return EXIT_SUCCESS;
 }

@@ -15,5 +15,6 @@ struct file_data
 };
 
 void loudness_scan(GSList *files);
+gboolean loudness_scan_parse(int *argc, char **argv[]);
 
 #endif /* end of include guard: SCANNER_SCAN_H */

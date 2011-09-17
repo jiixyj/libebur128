@@ -26,6 +26,7 @@ int parse_global_args(int *argc, char ***argv,
 
     g_option_context_add_main_entries(context, entries, NULL);
     g_option_context_set_ignore_unknown_options(context, ignore_unknown);
+    g_option_context_set_help_enabled(context, FALSE);
     if (!g_option_context_parse(context, argc, argv, &error)) {
         g_print("%s\n", error->message);
         g_option_context_free(context);
