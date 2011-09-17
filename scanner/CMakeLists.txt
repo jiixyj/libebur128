@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
+  add_library(parse_global_args parse_global_args)
+
   list(APPEND SCANNER_SRCS scanner-new.c nproc.c)
   if(TAGLIB_FOUND)
     list(APPEND SCANNER_SRCS rgtag.cpp)
@@ -17,10 +19,10 @@ if(GLIB_FOUND)
     endif()
   endif()
 
-  add_executable(r128-scanner ${SCANNER_SRCS})
-  target_link_libraries(r128-scanner ebur128 input ${GLIB_LIBRARIES})
+  add_executable(loudness ${SCANNER_SRCS})
+  target_link_libraries(loudness ebur128 input filetree parse_global_args ${GLIB_LIBRARIES})
   if(TAGLIB_FOUND)
-    target_link_libraries(r128-scanner ${TAGLIB_LIBRARIES})
+    target_link_libraries(loudness ${TAGLIB_LIBRARIES})
   endif()
 
   if(SNDFILE_FOUND)
@@ -28,7 +30,7 @@ if(GLIB_FOUND)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
   endif()
 
-  install(TARGETS r128-scanner
+  install(TARGETS loudness
           RUNTIME DESTINATION ${FOLDER_BIN}
           LIBRARY DESTINATION ${FOLDER_PLUGIN})
 endif()

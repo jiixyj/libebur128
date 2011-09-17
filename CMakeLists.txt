@@ -9,6 +9,7 @@ set(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR})
 
 include_directories(libebur128)
 include_directories(libinputaudio)
+include_directories(libfilewalk)
 include_directories(scanner)
 
 enable_testing()
