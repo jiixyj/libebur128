@@ -5,6 +5,7 @@
 
 #include "filetree.h"
 #include "input.h"
+#include "nproc.h"
 
 static struct file_data empty;
 
@@ -60,7 +61,7 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
     if (ih) ops->handle_destroy(&ih);
 }
 
-void init_state_and_scan(gpointer user, gpointer user_data)
+static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
 {
     struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
@@ -103,6 +104,12 @@ void init_state_and_scan(gpointer user, gpointer user_data)
     if (ih) ops->handle_destroy(&ih);
 }
 
+void init_state_and_scan(gpointer user, gpointer user_data)
+{
+    GThreadPool *pool = (GThreadPool *) user_data;
+    g_thread_pool_push(pool, user, NULL);
+}
+
 void destroy_state(gpointer user, gpointer user_data)
 {
     struct filename_list_node *fln = (struct filename_list_node *) user;
@@ -123,4 +130,17 @@ void print_file_data(gpointer user, gpointer user_data)
     (void) user_data;
     print_utf8_string(fln->fr->display);
     g_print(", %" G_GUINT64_FORMAT ", %f\n", fd->number_of_frames, fd->loudness);
+}
+
+void loudness_scan(GSList *files)
+{
+    GThreadPool *pool = g_thread_pool_new(init_state_and_scan_work_item,
+                                          NULL, nproc(), FALSE, NULL);
+
+    g_slist_foreach(files, init_and_get_number_of_frames, NULL);
+    g_slist_foreach(files, init_state_and_scan, pool);
+    g_thread_pool_free(pool, FALSE, TRUE);
+
+    g_slist_foreach(files, print_file_data, NULL);
+    g_slist_foreach(files, destroy_state, NULL);
 }

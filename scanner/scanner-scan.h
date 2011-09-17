@@ -17,5 +17,6 @@ void init_state_and_scan(gpointer user, gpointer user_data);
 void print_file_data(gpointer user, gpointer user_data);
 void destroy_state(gpointer user, gpointer user_data);
 
+void loudness_scan(GSList *files);
 
 #endif /* end of include guard: SCANNER_SCAN_H */

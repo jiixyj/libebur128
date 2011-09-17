@@ -105,21 +105,26 @@ int main(int argc, char *argv[])
     setlocale(LC_CTYPE, "");
     tree = filetree_init(&argv[2], (size_t) (argc - 2),
                          recursive, follow_symlinks, no_sort, &errors);
-    /* filetree_print(tree); */
 
     g_slist_foreach(errors, filetree_print_error, NULL);
     g_slist_foreach(errors, filetree_free_error, NULL);
     g_slist_free(errors);
 
     filetree_file_list(tree, &files);
-    g_slist_foreach(files, init_and_get_number_of_frames, NULL);
-    g_slist_foreach(files, init_state_and_scan, NULL);
-    g_slist_foreach(files, print_file_data, NULL);
-    g_slist_foreach(files, destroy_state, NULL);
+
+    switch (mode) {
+        case LOUDNESS_MODE_SCAN:
+        loudness_scan(files);
+        break;
+        case LOUDNESS_MODE_TAG:
+        break;
+        case LOUDNESS_MODE_DUMP:
+        break;
+    }
+
     g_slist_foreach(files, filetree_free_list_entry, NULL);
     g_slist_free(files);
 
-  free:
     filetree_destroy(tree);
     input_deinit();
 
