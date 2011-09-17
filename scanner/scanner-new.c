@@ -35,6 +35,7 @@ static void print_help(void) {
     printf(" Global options:\n");
     printf("  -r, --recursive            recursively scan files in subdirectories\n");
     printf("  -L, --follow-symlinks      follow symbolic links (*nix only)\n");
+    printf("  -v, --verbose              verbose error output\n");
     printf("  --no-sort                  do not sort command line arguments alphabetically\n");
     printf("  --force-plugin=PLUGIN      force input plugin; PLUGIN is one of:\n");
     printf("                             sndfile, mpg123, musepack, ffmpeg\n");
@@ -59,6 +60,7 @@ static void print_help(void) {
 static gboolean recursive = FALSE;
 static gboolean follow_symlinks = FALSE;
 static gboolean no_sort = FALSE;
+       gboolean verbose = FALSE;
 static gchar *forced_plugin = NULL;
 static gboolean help = FALSE;
 
@@ -67,6 +69,7 @@ static GOptionEntry entries[] =
     { "recursive", 'r', 0, G_OPTION_ARG_NONE, &recursive, NULL, NULL },
     { "follow-symlinks", 'L', 0, G_OPTION_ARG_NONE, &follow_symlinks, NULL, NULL },
     { "no-sort", 0, 0, G_OPTION_ARG_NONE, &no_sort, NULL, NULL },
+    { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, NULL, NULL },
     { "force-plugin", 0, 0, G_OPTION_ARG_STRING, &forced_plugin, NULL, NULL },
     { "help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL },
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
@@ -111,7 +114,7 @@ int main(int argc, char *argv[])
     tree = filetree_init(&argv[1], (size_t) (argc - 1),
                          recursive, follow_symlinks, no_sort, &errors);
 
-    g_slist_foreach(errors, filetree_print_error, NULL);
+    g_slist_foreach(errors, filetree_print_error, &verbose);
     g_slist_foreach(errors, filetree_free_error, NULL);
     g_slist_free(errors);
 

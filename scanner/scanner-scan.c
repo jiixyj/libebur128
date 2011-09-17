@@ -10,6 +10,7 @@
 
 static struct file_data empty;
 
+extern gboolean verbose;
 static gboolean lra = FALSE;
 static gchar *peak = NULL;
 
@@ -30,19 +31,19 @@ static int open_plugin(const char *raw, const char *display,
 
     *ops = input_get_ops(raw);
     if (!(*ops)) {
-        fprintf(stderr, "No plugin found for file '%s'\n", display);
+        if (verbose) fprintf(stderr, "No plugin found for file '%s'\n", display);
         return 1;
     }
     *ih = (*ops)->handle_init();
 
     *file = g_fopen(raw, "rb");
     if (!(*file)) {
-        fprintf(stderr, "Error opening file '%s'\n", display);
+        if (verbose) fprintf(stderr, "Error opening file '%s'\n", display);
         return 1;
     }
     result = (*ops)->open_file(*ih, *file, raw);
     if (result) {
-        fprintf(stderr, "Error opening file '%s'\n", display);
+        if (verbose) fprintf(stderr, "Error opening file '%s'\n", display);
         return 1;
     }
     return 0;
@@ -123,8 +124,8 @@ static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     }
     g_mutex_lock(fd->mutex);
     if (fd->number_of_elapsed_frames != fd->number_of_frames) {
-        fprintf(stderr, "Warning: Could not read full file"
-                        " or determine right length!\n");
+        if (verbose) fprintf(stderr, "Warning: Could not read full file"
+                                     " or determine right length!\n");
         fd->number_of_frames = fd->number_of_elapsed_frames;
     }
     g_mutex_unlock(fd->mutex);
