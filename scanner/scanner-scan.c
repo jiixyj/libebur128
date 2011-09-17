@@ -222,6 +222,59 @@ static void print_file_data(gpointer user, gpointer user_data)
     }
 }
 
+static void get_state(gpointer user, gpointer user_data)
+{
+    struct filename_list_node *fln = (struct filename_list_node *) user;
+    struct file_data *fd = (struct file_data *) fln->d;
+    GPtrArray *states = (GPtrArray *) user_data;
+
+    if (fd->scanned) {
+       g_ptr_array_add(states, fd->st);
+    }
+}
+
+static void get_max_peaks(gpointer user, gpointer user_data)
+{
+    struct filename_list_node *fln = (struct filename_list_node *) user;
+    struct file_data *fd = (struct file_data *) fln->d;
+    struct file_data *result = (struct file_data *) user_data;
+
+    if (fd->scanned) {
+        if (fd->peak > result->peak) result->peak = fd->peak;
+        if (fd->true_peak > result->true_peak) result->true_peak = fd->true_peak;
+    }
+}
+
+static void print_summary(GSList *files)
+{
+    int i;
+    GPtrArray *states = g_ptr_array_new();
+    struct filename_list_node n;
+    struct filename_representations fr;
+    struct file_data result;
+    memcpy(&result, &empty, sizeof empty);
+
+    g_slist_foreach(files, get_state, states);
+    ebur128_loudness_global_multiple((ebur128_state **) states->pdata,
+                                     states->len, &result.loudness);
+    if (lra) {
+        ebur128_loudness_range_multiple((ebur128_state **) states->pdata,
+                                        states->len, &result.lra);
+    }
+    if (peak) {
+        g_slist_foreach(files, get_max_peaks, &result);
+    }
+
+    result.scanned = TRUE;
+    n.fr = &fr;
+    n.fr->display = "";
+    n.d = &result;
+    for (i = 0; i < 80; ++i) { putchar('-'); }; putchar('\n');
+    print_file_data(&n, NULL);
+
+    g_ptr_array_free(states, TRUE);
+}
+
 static gpointer print_progress_bar(gpointer data)
 {
     GSList *files = (GSList *) data;
@@ -264,6 +317,7 @@ void loudness_scan(GSList *files)
     g_thread_join(progress_bar_thread);
 
     g_slist_foreach(files, print_file_data, NULL);
+    print_summary(files);
     g_slist_foreach(files, destroy_state, NULL);
 
     g_free(peak);
