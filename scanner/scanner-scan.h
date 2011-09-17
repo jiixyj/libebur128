@@ -13,6 +13,8 @@ struct file_data
     GMutex *mutex;
     double loudness;
     double lra;
+    double peak;
+    double true_peak;
     gboolean scanned;
 };
 

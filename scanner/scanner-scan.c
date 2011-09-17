@@ -97,6 +97,8 @@ static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     struct input_ops* ops = NULL;
     struct input_handle* ih = NULL;
     FILE *file = NULL;
+    int r128_mode = EBUR128_MODE_I;
+    unsigned int i;
 
     int result;
     float *buffer = NULL;
@@ -107,9 +109,19 @@ static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
         goto free;
     }
 
+    if (lra)
+        r128_mode |= EBUR128_MODE_LRA;
+    if (peak) {
+        if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
+            r128_mode |= EBUR128_MODE_SAMPLE_PEAK;
+        if (!strcmp(peak, "true") || !strcmp(peak, "dbtp") ||
+            !strcmp(peak, "all"))
+            r128_mode |= EBUR128_MODE_TRUE_PEAK;
+    }
+
     fd->st = ebur128_init(ops->get_channels(ih),
                           ops->get_samplerate(ih),
-                          EBUR128_MODE_I | (lra ? EBUR128_MODE_LRA : 0));
+                          r128_mode);
 
     result = ops->allocate_buffer(ih);
     if (result) abort();
@@ -133,6 +145,25 @@ static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     if (lra) {
         result = ebur128_loudness_range(fd->st, &fd->lra);
         if (result) abort();
+    }
+
+    if ((fd->st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {
+        for (i = 0; i < fd->st->channels; ++i) {
+            double sp;
+            ebur128_sample_peak(fd->st, i, &sp);
+            if (sp > fd->peak) {
+                fd->peak = sp;
+            }
+        }
+    }
+    if ((fd->st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {
+        for (i = 0; i < fd->st->channels; ++i) {
+            double tp;
+            ebur128_true_peak(fd->st, i, &tp);
+            if (tp > fd->true_peak) {
+                fd->true_peak = tp;
+            }
+        }
     }
     fd->scanned = TRUE;
 
@@ -174,6 +205,18 @@ static void print_file_data(gpointer user, gpointer user_data)
             g_print("%5.1f LUFS, ", fd->loudness);
         }
         if (lra) g_print("LRA: %4.1f LU, ", fd->lra);
+        if (peak) {
+            if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
+                g_print("sample peak: %.8f, ", fd->peak);
+            if (!strcmp(peak, "true") || !strcmp(peak, "all"))
+                g_print("true peak: %.8f, ", fd->true_peak);
+            if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
+                if (fd->true_peak < DBL_MIN)
+                    g_print("true peak:  -inf dBTP, ");
+                else
+                    g_print("true peak: %5.1f dBTP, ",
+                            20.0 * log(fd->true_peak) / log(10.0));
+        }
     } else {
         g_print("            ");
         if (lra) g_print("              ");
