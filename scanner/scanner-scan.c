@@ -217,12 +217,9 @@ static void print_file_data(gpointer user, gpointer user_data)
                     g_print("true peak: %5.1f dBTP, ",
                             20.0 * log(fd->true_peak) / log(10.0));
         }
-    } else {
-        g_print("            ");
-        if (lra) g_print("              ");
+        print_utf8_string(fln->fr->display);
+        putchar('\n');
     }
-    print_utf8_string(fln->fr->display);
-    putchar('\n');
 }
 
 static gpointer print_progress_bar(gpointer data)
