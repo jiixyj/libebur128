@@ -2,6 +2,7 @@
 
 #include <glib/gstdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "filetree.h"
 #include "input.h"
@@ -107,7 +108,7 @@ static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
 
     fd->st = ebur128_init(ops->get_channels(ih),
                           ops->get_samplerate(ih),
-                          EBUR128_MODE_I);
+                          EBUR128_MODE_I | (lra ? EBUR128_MODE_LRA : 0));
 
     result = ops->allocate_buffer(ih);
     if (result) abort();
@@ -128,6 +129,11 @@ static void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     }
     g_mutex_unlock(fd->mutex);
     ebur128_loudness_global(fd->st, &fd->loudness);
+    if (lra) {
+        result = ebur128_loudness_range(fd->st, &fd->lra);
+        if (result) abort();
+    }
+    fd->scanned = TRUE;
 
   free:
     if (ih) ops->free_buffer(ih);
@@ -160,8 +166,19 @@ static void print_file_data(gpointer user, gpointer user_data)
     struct file_data *fd = (struct file_data *) fln->d;
 
     (void) user_data;
+    if (fd->scanned) {
+        if (fd->loudness < -HUGE_VAL) {
+            g_print(" -inf LUFS, ");
+        } else {
+            g_print("%5.1f LUFS, ", fd->loudness);
+        }
+        if (lra) g_print("LRA: %4.1f LU, ", fd->lra);
+    } else {
+        g_print("            ");
+        if (lra) g_print("              ");
+    }
     print_utf8_string(fln->fr->display);
-    g_print(", %" G_GUINT64_FORMAT ", %f\n", fd->number_of_frames, fd->loudness);
+    putchar('\n');
 }
 
 static gpointer print_progress_bar(gpointer data)
@@ -175,8 +192,8 @@ static gpointer print_progress_bar(gpointer data)
         fc[0] = fc[1] = 0;
         g_slist_foreach(files, sum_frames, &fc);
         if (fc[1] == 0) break;
-        bars = fc[0] * 73 / fc[1];
-        percent = fc[0] * 100 / fc[1];
+        bars = (int) (fc[0] * G_GUINT64_CONSTANT(73) / fc[1]);
+        percent = (int) (fc[0] * G_GUINT64_CONSTANT(100) / fc[1]);
         progress_bar[0] = '[';
         for (i = 1; i <= bars; ++i) {
             progress_bar[i] = '#';

@@ -12,6 +12,8 @@ struct file_data
     size_t number_of_elapsed_frames;
     GMutex *mutex;
     double loudness;
+    double lra;
+    gboolean scanned;
 };
 
 void loudness_scan(GSList *files);
