@@ -10,6 +10,7 @@ struct file_data
     ebur128_state *st;
     size_t number_of_frames;
     size_t number_of_elapsed_frames;
+    GMutex *mutex;
     double loudness;
 };
 
