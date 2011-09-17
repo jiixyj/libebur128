@@ -11,48 +11,8 @@
 #include "filetree.h"
 #include "input.h"
 #include "parse_global_args.h"
+#include "scanner-scan.h"
 
-static void get_number_of_frames(gpointer user, gpointer user_data)
-{
-    struct filename_list_node *fln = (struct filename_list_node *) user;
-    size_t *number_of_frames;
-
-    struct input_ops* ops = NULL;
-    struct input_handle* ih = NULL;
-    FILE *file = NULL;
-    int result;
-
-
-    (void) user_data;
-    fln->d = g_malloc(sizeof(size_t));
-    number_of_frames = (size_t *) fln->d;
-    *number_of_frames = 0;
-
-
-    ops = input_get_ops(fln->fr->raw);
-    if (!ops) {
-        fprintf(stderr, "No plugin found for file '%s'\n", fln->fr->display);
-        goto free;
-    }
-    ih = ops->handle_init();
-
-    file = g_fopen(fln->fr->raw, "rb");
-    if (!file) {
-        fprintf(stderr, "Error opening file '%s'\n", fln->fr->display);
-        goto free;
-    }
-    result = ops->open_file(ih, file, fln->fr->raw);
-    if (result) {
-        fprintf(stderr, "Error opening file '%s'\n", fln->fr->display);
-        goto free;
-    }
-
-    *number_of_frames = ops->get_total_frames(ih);
-
-  free:
-    if (file) ops->close_file(ih, file);
-    if (ih) ops->handle_destroy(&ih);
-}
 
 static void print_help(void) {
     printf("Usage: loudness scan|tag|dump [OPTION...] [FILE|DIRECTORY]...\n");
@@ -110,12 +70,30 @@ static GOptionEntry entries[] =
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
+enum modes
+{
+    LOUDNESS_MODE_SCAN,
+    LOUDNESS_MODE_TAG,
+    LOUDNESS_MODE_DUMP
+};
+
 int main(int argc, char *argv[])
 {
     GSList *errors = NULL, *files = NULL;
     Filetree tree;
+    int mode;
 
-    if (parse_global_args(&argc, &argv, entries, TRUE)) {
+    if (parse_global_args(&argc, &argv, entries, TRUE) || argc < 2) {
+        print_help();
+        exit(EXIT_FAILURE);
+    }
+    if (!strcmp(argv[1], "scan")) {
+        mode = LOUDNESS_MODE_SCAN;
+    } else if (!strcmp(argv[1], "tag")) {
+        mode = LOUDNESS_MODE_TAG;
+    } else if (!strcmp(argv[1], "dump")) {
+        mode = LOUDNESS_MODE_DUMP;
+    } else {
         print_help();
         exit(EXIT_FAILURE);
     }
@@ -125,7 +103,7 @@ int main(int argc, char *argv[])
 
     setlocale(LC_COLLATE, "");
     setlocale(LC_CTYPE, "");
-    tree = filetree_init(&argv[1], (size_t) (argc - 1),
+    tree = filetree_init(&argv[2], (size_t) (argc - 2),
                          recursive, follow_symlinks, no_sort, &errors);
     /* filetree_print(tree); */
 
@@ -134,11 +112,14 @@ int main(int argc, char *argv[])
     g_slist_free(errors);
 
     filetree_file_list(tree, &files);
-    g_slist_foreach(files, get_number_of_frames, NULL);
-    g_slist_foreach(files, filetree_print_file_size, NULL);
+    g_slist_foreach(files, init_and_get_number_of_frames, NULL);
+    g_slist_foreach(files, init_state_and_scan, NULL);
+    g_slist_foreach(files, print_file_data, NULL);
+    g_slist_foreach(files, destroy_state, NULL);
     g_slist_foreach(files, filetree_free_list_entry, NULL);
     g_slist_free(files);
 
+  free:
     filetree_destroy(tree);
     input_deinit();
 
