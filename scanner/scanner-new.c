@@ -96,6 +96,8 @@ int main(int argc, char *argv[])
         mode = LOUDNESS_MODE_TAG;
     } else if (!strcmp(argv[1], "dump")) {
         mode = LOUDNESS_MODE_DUMP;
+    } else {
+        fprintf(stderr, "Unknown mode '%s'\n", argv[1]);
     }
     if (!mode_parsed) {
         exit(EXIT_FAILURE);

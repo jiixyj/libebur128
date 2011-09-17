@@ -214,7 +214,7 @@ void loudness_scan(GSList *files)
 static void shift_arguments(int *argc, char **argv[])
 {
     int i;
-    for (i = 1; i < *argc; ++i) {
+    for (i = 1; i < *argc - 1; ++i) {
         (*argv)[i] = (*argv)[i+1];
     }
     --(*argc);
@@ -234,12 +234,12 @@ gboolean loudness_scan_parse(int *argc, char **argv[])
         g_option_context_free(context);
         return FALSE;
     }
+    g_option_context_free(context);
+    if (*argc > 1 && !strcmp((*argv)[1], "--"))
+        shift_arguments(argc, argv);
     if (*argc == 1) {
-        g_option_context_free(context);
+        fprintf(stderr, "Missing arguments\n");
         return FALSE;
     }
-    g_option_context_free(context);
-    if (!strcmp((*argv)[1], "--"))
-        shift_arguments(argc, argv);
     return TRUE;
 }
