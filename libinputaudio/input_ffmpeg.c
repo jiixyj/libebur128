@@ -204,7 +204,6 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
       }
       while (ih->packet.size > 0) {
         int data_size = sizeof(ih->audio_buf);
-        printf("%d\n", data_size);
 #if LIBAVCODEC_VERSION_MAJOR >= 53 || \
     (LIBAVCODEC_VERSION_MAJOR == 52 && \
      LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 23, 0))
