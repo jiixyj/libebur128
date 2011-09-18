@@ -36,19 +36,6 @@ static void print_file_data(gpointer user, gpointer user_data)
                 track_gain,
                 fd->peak_album,
                 fd->peak);
-        // if (lra) g_print("LRA: %4.1f LU, ", fd->lra);
-        // if (peak) {
-        //     if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
-        //         g_print("sample peak: %.8f, ", fd->peak);
-        //     if (!strcmp(peak, "true") || !strcmp(peak, "all"))
-        //         g_print("true peak: %.8f, ", fd->true_peak);
-        //     if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
-        //         if (fd->true_peak < DBL_MIN)
-        //             g_print("true peak:  -inf dBTP, ");
-        //         else
-        //             g_print("true peak: %5.1f dBTP, ",
-        //                     20.0 * log(fd->true_peak) / log(10.0));
-        // }
         if (fln->fr->display[0]) {
             g_print(", ");
             print_utf8_string(fln->fr->display);
