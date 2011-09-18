@@ -1,5 +1,8 @@
 #include "parse_global_args.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #ifdef G_OS_WIN32
 #include <windows.h>
 typedef struct __startupinfo
@@ -44,4 +47,38 @@ int parse_global_args(int *argc, char ***argv,
     }
     g_option_context_free(context);
     return 0;
+}
+
+static void shift_arguments(int *argc, char **argv[])
+{
+    int i;
+    for (i = 1; i < *argc - 1; ++i) {
+        (*argv)[i] = (*argv)[i+1];
+    }
+    --(*argc);
+}
+
+gboolean parse_mode_args(int *argc, char **argv[],
+                         GOptionEntry *entries)
+{
+    GError *error = NULL;
+    GOptionContext *context = g_option_context_new(NULL);
+
+    shift_arguments(argc, argv);
+
+    g_option_context_add_main_entries(context, entries, NULL);
+    g_option_context_set_help_enabled(context, FALSE);
+    if (!g_option_context_parse(context, argc, argv, &error)) {
+        g_print("%s\n", error->message);
+        g_option_context_free(context);
+        return FALSE;
+    }
+    g_option_context_free(context);
+    if (*argc > 1 && !strcmp((*argv)[1], "--"))
+        shift_arguments(argc, argv);
+    if (*argc == 1) {
+        fprintf(stderr, "Missing arguments\n");
+        return FALSE;
+    }
+    return TRUE;
 }

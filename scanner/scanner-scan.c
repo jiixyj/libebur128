@@ -7,6 +7,7 @@
 #include "filetree.h"
 #include "input.h"
 #include "nproc.h"
+#include "parse_global_args.h"
 
 static struct file_data empty;
 
@@ -324,34 +325,13 @@ void loudness_scan(GSList *files)
     g_free(peak);
 }
 
-static void shift_arguments(int *argc, char **argv[])
-{
-    int i;
-    for (i = 1; i < *argc - 1; ++i) {
-        (*argv)[i] = (*argv)[i+1];
-    }
-    --(*argc);
-}
-
 gboolean loudness_scan_parse(int *argc, char **argv[])
 {
-    GError *error = NULL;
-    GOptionContext *context = g_option_context_new(NULL);
-
-    shift_arguments(argc, argv);
-
-    g_option_context_add_main_entries(context, entries, NULL);
-    g_option_context_set_help_enabled(context, FALSE);
-    if (!g_option_context_parse(context, argc, argv, &error)) {
-        g_print("%s\n", error->message);
-        g_option_context_free(context);
-        return FALSE;
-    }
-    g_option_context_free(context);
-    if (*argc > 1 && !strcmp((*argv)[1], "--"))
-        shift_arguments(argc, argv);
-    if (*argc == 1) {
-        fprintf(stderr, "Missing arguments\n");
+    gboolean success = parse_mode_args(argc, argv, entries);
+    if (!success) return FALSE;
+    if (peak && strcmp(peak, "sample") && strcmp(peak, "true")
+             && strcmp(peak, "dbtp") && strcmp(peak, "all")) {
+        fprintf(stderr, "Invalid argument to --peak!\n");
         return FALSE;
     }
     return TRUE;
