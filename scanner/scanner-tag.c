@@ -90,11 +90,17 @@ static void print_file_data(gpointer user, gpointer user_data)
 
     (void) user_data;
     if (fd->scanned) {
-        g_print("%7.2f dB, %7.2f dB, %10.6f, %10.6f",
-                fd->gain_album,
-                clamp_rg(REFERENCE_LEVEL - fd->loudness),
-                fd->peak_album,
-                fd->peak);
+        if (!track) {
+            g_print("%7.2f dB, %7.2f dB, %10.6f, %10.6f",
+                    fd->gain_album,
+                    clamp_rg(REFERENCE_LEVEL - fd->loudness),
+                    fd->peak_album,
+                    fd->peak);
+        } else {
+            g_print("%7.2f dB, %10.6f",
+                    clamp_rg(REFERENCE_LEVEL - fd->loudness),
+                    fd->peak);
+        }
         if (fln->fr->display[0]) {
             g_print(", ");
             print_utf8_string(fln->fr->display);
@@ -134,15 +140,23 @@ void loudness_tag(GSList *files)
     g_thread_pool_free(pool, FALSE, TRUE);
     g_thread_join(progress_bar_thread);
 
-    g_slist_foreach(files, calculate_album_gain_and_peak, NULL);
-    calculate_album_gain_and_peak_last_dir();
+    if (!track) {
+        g_slist_foreach(files, calculate_album_gain_and_peak, NULL);
+        calculate_album_gain_and_peak_last_dir();
+    }
 
     clear_line();
-    fprintf(stderr, "Album gain, Track gain, Album peak, Track peak\n");
+    if (!track) {
+        fprintf(stderr, "Album gain, Track gain, Album peak, Track peak\n");
+    } else {
+        fprintf(stderr, "Track gain, Track peak\n");
+    }
     g_slist_foreach(files, print_file_data, NULL);
-    fprintf(stderr, "Tagging");
-    g_slist_foreach(files, tag_files, NULL);
-    fputc('\n', stderr);
+    if (!dry_run) {
+        fprintf(stderr, "Tagging");
+        g_slist_foreach(files, tag_files, NULL);
+        fputc('\n', stderr);
+    }
     g_slist_foreach(files, destroy_state, NULL);
 }
 
