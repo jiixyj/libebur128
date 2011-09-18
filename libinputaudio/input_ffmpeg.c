@@ -10,6 +10,10 @@
 
 static GMutex* ffmpeg_mutex;
 
+struct _buffer {
+  uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+} __attribute__ ((aligned (8)));
+
 struct input_handle {
   AVFormatContext* format_context;
   AVCodecContext* codec_context;
@@ -18,7 +22,7 @@ struct input_handle {
   int need_new_frame;
   int audio_stream;
   uint8_t* old_data;
-  uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+  struct _buffer audio_buf;
   float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1];
 };
 
@@ -190,23 +194,24 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
     }
     ih->need_new_frame = FALSE;
     if (ih->packet.stream_index == ih->audio_stream) {
-      int16_t* data_short =  (int16_t*) ih->audio_buf;
-      int32_t* data_int =    (int32_t*) ih->audio_buf;
-      float*   data_float =  (float*)   ih->audio_buf;
-      double*  data_double = (double*)  ih->audio_buf;
+      int16_t* data_short =  (int16_t*) &ih->audio_buf;
+      int32_t* data_int =    (int32_t*) &ih->audio_buf;
+      float*   data_float =  (float*)   &ih->audio_buf;
+      double*  data_double = (double*)  &ih->audio_buf;
 
       if (!ih->old_data) {
         ih->old_data = ih->packet.data;
       }
       while (ih->packet.size > 0) {
         int data_size = sizeof(ih->audio_buf);
+        printf("%d\n", data_size);
 #if LIBAVCODEC_VERSION_MAJOR >= 53 || \
     (LIBAVCODEC_VERSION_MAJOR == 52 && \
      LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 23, 0))
-        int len = avcodec_decode_audio3(ih->codec_context, (int16_t*) ih->audio_buf,
+        int len = avcodec_decode_audio3(ih->codec_context, (int16_t*) &ih->audio_buf,
                                         &data_size, &ih->packet);
 #else
-        int len = avcodec_decode_audio2(ih->codec_context, (int16_t*) ih->audio_buf,
+        int len = avcodec_decode_audio2(ih->codec_context, (int16_t*) &ih->audio_buf,
                                         &data_size, ih->packet.data, ih->packet.size);
 #endif
         if (len < 0) {
