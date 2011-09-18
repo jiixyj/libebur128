@@ -1,6 +1,7 @@
 #include "scanner-common.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <glib/gstdio.h>
 
 extern gboolean verbose;
@@ -226,4 +227,12 @@ gpointer print_progress_bar(gpointer data)
         g_usleep(G_USEC_PER_SEC / 10);
     }
     return NULL;
+}
+
+void clear_line(void) {
+    int i;
+    for (i = 0; i < 80; ++i) {
+        fputc(' ', stderr);
+    }
+    fputc('\r', stderr);
 }

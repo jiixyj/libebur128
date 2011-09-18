@@ -4,6 +4,8 @@
 #include "scanner-common.h"
 #include "nproc.h"
 
+#define REFERENCE_LEVEL -18.0
+
 extern gboolean verbose;
 static gboolean track = FALSE;
 static gboolean dry_run = FALSE;
@@ -15,9 +17,49 @@ static GOptionEntry entries[] =
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
+static double clamp_rg(double x) {
+  if (x < -51.0) return -51.0;
+  else if (x > 51.0) return 51.0;
+  else return x;
+}
+
+static void print_file_data(gpointer user, gpointer user_data)
+{
+    struct filename_list_node *fln = (struct filename_list_node *) user;
+    struct file_data *fd = (struct file_data *) fln->d;
+
+    (void) user_data;
+    if (fd->scanned) {
+        double track_gain = clamp_rg(REFERENCE_LEVEL - fd->loudness);
+        g_print("%7.2f dB, %7.2f dB, %10.6f, %10.6f",
+                fd->gain_album,
+                track_gain,
+                fd->peak_album,
+                fd->peak);
+        // if (lra) g_print("LRA: %4.1f LU, ", fd->lra);
+        // if (peak) {
+        //     if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
+        //         g_print("sample peak: %.8f, ", fd->peak);
+        //     if (!strcmp(peak, "true") || !strcmp(peak, "all"))
+        //         g_print("true peak: %.8f, ", fd->true_peak);
+        //     if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
+        //         if (fd->true_peak < DBL_MIN)
+        //             g_print("true peak:  -inf dBTP, ");
+        //         else
+        //             g_print("true peak: %5.1f dBTP, ",
+        //                     20.0 * log(fd->true_peak) / log(10.0));
+        // }
+        if (fln->fr->display[0]) {
+            g_print(", ");
+            print_utf8_string(fln->fr->display);
+        }
+        putchar('\n');
+    }
+}
+
 void loudness_tag(GSList *files)
 {
-    struct scan_opts opts = {FALSE, NULL};
+    struct scan_opts opts = {FALSE, "sample"};
     GThreadPool *pool;
     GThread *progress_bar_thread;
 
@@ -30,7 +72,10 @@ void loudness_tag(GSList *files)
     g_thread_pool_free(pool, FALSE, TRUE);
     g_thread_join(progress_bar_thread);
 
-    // g_slist_foreach(files, print_file_data, NULL);
+    // g_slist_foreach(files, calculate_album_gain_and_peak, NULL);
+    clear_line();
+    fprintf(stderr, "Album gain, Track gain, Album peak, Track peak\n");
+    g_slist_foreach(files, print_file_data, NULL);
     // print_summary(files);
     g_slist_foreach(files, destroy_state, NULL);
 }

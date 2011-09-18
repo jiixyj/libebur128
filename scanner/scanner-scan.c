@@ -29,24 +29,27 @@ static void print_file_data(gpointer user, gpointer user_data)
     (void) user_data;
     if (fd->scanned) {
         if (fd->loudness <= -HUGE_VAL) {
-            g_print(" -inf LUFS, ");
+            g_print(" -inf LUFS");
         } else {
-            g_print("%5.1f LUFS, ", fd->loudness);
+            g_print("%5.1f LUFS", fd->loudness);
         }
-        if (lra) g_print("LRA: %4.1f LU, ", fd->lra);
+        if (lra) g_print(", %4.1f LU", fd->lra);
         if (peak) {
             if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
-                g_print("sample peak: %.8f, ", fd->peak);
+                g_print(", %11.6f", fd->peak);
             if (!strcmp(peak, "true") || !strcmp(peak, "all"))
-                g_print("true peak: %.8f, ", fd->true_peak);
+                g_print(", %11.6f", fd->true_peak);
             if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
                 if (fd->true_peak < DBL_MIN)
-                    g_print("true peak:  -inf dBTP, ");
+                    g_print(",  -inf dBTP");
                 else
-                    g_print("true peak: %5.1f dBTP, ",
+                    g_print(", %5.1f dBTP",
                             20.0 * log(fd->true_peak) / log(10.0));
         }
-        print_utf8_string(fln->fr->display);
+        if (fln->fr->display[0]) {
+            g_print(", ");
+            print_utf8_string(fln->fr->display);
+        }
         putchar('\n');
     }
 }
@@ -95,6 +98,19 @@ void loudness_scan(GSList *files)
                                           files, TRUE, NULL);
     g_thread_pool_free(pool, FALSE, TRUE);
     g_thread_join(progress_bar_thread);
+
+    clear_line();
+    fprintf(stderr, "  Loudness");
+    if (lra) fprintf(stderr, ",      LRA");
+    if (peak) {
+        if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
+            fprintf(stderr, ", Sample peak");
+        if (!strcmp(peak, "true") || !strcmp(peak, "all"))
+            fprintf(stderr, ",   True peak");
+        if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
+            fprintf(stderr, ",  True peak");
+    }
+    fprintf(stderr, "\n");
 
     g_slist_foreach(files, print_file_data, NULL);
     print_summary(files);

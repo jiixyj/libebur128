@@ -17,6 +17,10 @@ struct file_data
     double lra;
     double peak;
     double true_peak;
+
+    double gain_album;
+    double peak_album;
+
     gboolean scanned;
 };
 
@@ -38,5 +42,6 @@ void destroy_state(gpointer user, gpointer user_data);
 void get_state(gpointer user, gpointer user_data);
 void get_max_peaks(gpointer user, gpointer user_data);
 gpointer print_progress_bar(gpointer data);
+void clear_line(void);
 
 #endif /* end of include guard: SCANNER_COMMON_H */
