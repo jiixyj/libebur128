@@ -125,11 +125,11 @@ static void sndfile_free_buffer(struct input_handle* ih) {
 }
 
 static void sndfile_close_file(struct input_handle* ih, FILE* file) {
-  (void) file;
   if (sf_close(ih->file)) {
     fprintf(stderr, "Could not close input file!\n");
   }
   ih->file = NULL;
+  if (file) fclose(file);
 }
 
 static int sndfile_init_library() {

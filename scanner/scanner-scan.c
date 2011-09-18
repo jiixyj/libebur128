@@ -44,6 +44,7 @@ static int open_plugin(const char *raw, const char *display,
     result = (*ops)->open_file(*ih, *file, raw);
     if (result) {
         if (verbose) fprintf(stderr, "Error opening file '%s'\n", display);
+        fclose(*file);
         return 1;
     }
     return 0;
