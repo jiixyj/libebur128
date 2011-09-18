@@ -1,4 +1,4 @@
-#include "./rgtag.h"
+#include "rgtag.h"
 
 #include <id3v2tag.h>
 #include <textidentificationframe.h>
@@ -82,12 +82,12 @@ void clear_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name) {
   }
 }
 
-void set_rg_info(const char* filename,
-                 double track_gain,
-                 double track_peak,
-                 int album_mode,
-                 double album_gain,
-                 double album_peak) {
+int set_rg_info(const char* filename,
+                double track_gain,
+                double track_peak,
+                int album_mode,
+                double album_gain,
+                double album_peak) {
   std::string fn(filename);
   std::string ag, tg, ap, tp;
   std::stringstream ss;
@@ -95,7 +95,7 @@ void set_rg_info(const char* filename,
   ss << std::fixed;
   ss << album_gain; ss >> ag; ss.clear();
   ss << track_gain; ss >> tg; ss.clear();
-  ss.precision(8);
+  ss.precision(6);
   ss << album_peak; ss >> ap; ss.clear();
   ss << track_peak; ss >> tp; ss.clear();
 
@@ -119,7 +119,7 @@ void set_rg_info(const char* filename,
       clear_rva2_tag(id3v2tag, "album");
     }
 
-    f.save();
+    return !f.save();
   } else if (ext == "flac" || ext == "ogg" || ext == "oga") {
     TagLib::File* file = NULL;
     TagLib::Ogg::XiphComment* xiph = NULL;
@@ -143,8 +143,9 @@ void set_rg_info(const char* filename,
       xiph->removeField("REPLAYGAIN_ALBUM_GAIN");
       xiph->removeField("REPLAYGAIN_ALBUM_PEAK");
     }
-    file->save();
+    bool success = file->save();
     delete file;
+    return !success;
   } else if (ext == "mpc" || ext == "wv") {
     TagLib::File* file = NULL;
     TagLib::APE::Tag* ape = NULL;
@@ -168,23 +169,11 @@ void set_rg_info(const char* filename,
       ape->removeItem("REPLAYGAIN_ALBUM_GAIN");
       ape->removeItem("REPLAYGAIN_ALBUM_PEAK");
     }
-    file->save();
+    bool success = file->save();
     delete file;
+    return !success;
+  } else {
+    return 1;
   }
-
-}
-
-#if 0
-int main(int argc, char* argv[]) {
-  double track_gain, track_peak, album_gain, album_peak;
-  int album_mode = atoi(argv[2]);
-  track_gain = atof(argv[3]);
-  track_peak = atof(argv[4]);
-  album_gain = atof(argv[5]);
-  album_peak = atof(argv[6]);
-
-  set_rg_info(argv[1], track_gain, track_peak, album_mode,
-                       album_gain, album_peak);
   return 0;
 }
-#endif

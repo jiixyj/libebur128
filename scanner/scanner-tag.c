@@ -3,6 +3,7 @@
 #include "parse_args.h"
 #include "scanner-common.h"
 #include "nproc.h"
+#include "rgtag.h"
 
 #define REFERENCE_LEVEL -18.0
 
@@ -89,10 +90,9 @@ static void print_file_data(gpointer user, gpointer user_data)
 
     (void) user_data;
     if (fd->scanned) {
-        double track_gain = clamp_rg(REFERENCE_LEVEL - fd->loudness);
         g_print("%7.2f dB, %7.2f dB, %10.6f, %10.6f",
                 fd->gain_album,
-                track_gain,
+                clamp_rg(REFERENCE_LEVEL - fd->loudness),
                 fd->peak_album,
                 fd->peak);
         if (fln->fr->display[0]) {
@@ -101,6 +101,22 @@ static void print_file_data(gpointer user, gpointer user_data)
         }
         putchar('\n');
     }
+}
+
+static void tag_files(gpointer user, gpointer user_data)
+{
+    struct filename_list_node *fln = (struct filename_list_node *) user;
+    struct file_data *fd = (struct file_data *) fln->d;
+    int error;
+
+    (void) user_data;
+    error = set_rg_info(fln->fr->raw,
+                        clamp_rg(REFERENCE_LEVEL - fd->loudness),
+                        fd->peak,
+                        !track,
+                        fd->gain_album,
+                        fd->peak_album);
+    fputc(error ? 'x' : '.', stderr);
 }
 
 void loudness_tag(GSList *files)
@@ -124,7 +140,9 @@ void loudness_tag(GSList *files)
     clear_line();
     fprintf(stderr, "Album gain, Track gain, Album peak, Track peak\n");
     g_slist_foreach(files, print_file_data, NULL);
-    // print_summary(files);
+    fprintf(stderr, "Tagging");
+    g_slist_foreach(files, tag_files, NULL);
+    fputc('\n', stderr);
     g_slist_foreach(files, destroy_state, NULL);
 }
 

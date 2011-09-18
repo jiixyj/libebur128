@@ -6,12 +6,12 @@
 extern "C" {
 #endif
 
-void set_rg_info(const char* filename,
-                 double track_gain,
-                 double track_peak,
-                 int album_mode,
-                 double album_gain,
-                 double album_peak);
+int set_rg_info(const char* filename,
+                double track_gain,
+                double track_peak,
+                int album_mode,
+                double album_gain,
+                double album_peak);
 
 #ifdef __cplusplus
 }
