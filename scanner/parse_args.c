@@ -77,7 +77,6 @@ gboolean parse_mode_args(int *argc, char **argv[],
     if (*argc > 1 && !strcmp((*argv)[1], "--"))
         shift_arguments(argc, argv);
     if (*argc == 1) {
-        fprintf(stderr, "Missing arguments\n");
         return FALSE;
     }
     return TRUE;

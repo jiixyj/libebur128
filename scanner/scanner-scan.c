@@ -106,10 +106,13 @@ void loudness_scan(GSList *files)
 gboolean loudness_scan_parse(int *argc, char **argv[])
 {
     gboolean success = parse_mode_args(argc, argv, entries);
-    if (!success) return FALSE;
     if (peak && strcmp(peak, "sample") && strcmp(peak, "true")
              && strcmp(peak, "dbtp") && strcmp(peak, "all")) {
         fprintf(stderr, "Invalid argument to --peak!\n");
+        return FALSE;
+    }
+    if (!success) {
+        if (*argc == 1) fprintf(stderr, "Missing arguments\n");
         return FALSE;
     }
     return TRUE;
