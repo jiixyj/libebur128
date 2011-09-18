@@ -12,6 +12,7 @@
 #include "input.h"
 #include "parse_args.h"
 #include "scanner-scan.h"
+#include "scanner-tag.h"
 
 
 static void print_help(void) {
@@ -97,6 +98,7 @@ int main(int argc, char *argv[])
         mode_parsed = loudness_scan_parse(&argc, &argv);
     } else if (!strcmp(argv[1], "tag")) {
         mode = LOUDNESS_MODE_TAG;
+        mode_parsed = loudness_tag_parse(&argc, &argv);
     } else if (!strcmp(argv[1], "dump")) {
         mode = LOUDNESS_MODE_DUMP;
     } else {
@@ -125,6 +127,7 @@ int main(int argc, char *argv[])
         loudness_scan(files);
         break;
         case LOUDNESS_MODE_TAG:
+        loudness_tag(files);
         break;
         case LOUDNESS_MODE_DUMP:
         break;
