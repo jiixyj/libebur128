@@ -200,7 +200,7 @@ static void print_file_data(gpointer user, gpointer user_data)
 
     (void) user_data;
     if (fd->scanned) {
-        if (fd->loudness < -HUGE_VAL) {
+        if (fd->loudness <= -HUGE_VAL) {
             g_print(" -inf LUFS, ");
         } else {
             g_print("%5.1f LUFS, ", fd->loudness);
@@ -270,7 +270,7 @@ static void print_summary(GSList *files)
     n.fr = &fr;
     n.fr->display = "";
     n.d = &result;
-    for (i = 0; i < 80; ++i) { putchar('-'); }; putchar('\n');
+    for (i = 0; i < 79; ++i) { putchar('-'); }; putchar('\n');
     print_file_data(&n, NULL);
 
     g_ptr_array_free(states, TRUE);
@@ -287,17 +287,17 @@ static gpointer print_progress_bar(gpointer data)
         fc[0] = fc[1] = 0;
         g_slist_foreach(files, sum_frames, &fc);
         if (fc[1] == 0) break;
-        bars = (int) (fc[0] * G_GUINT64_CONSTANT(73) / fc[1]);
+        bars = (int) (fc[0] * G_GUINT64_CONSTANT(72) / fc[1]);
         percent = (int) (fc[0] * G_GUINT64_CONSTANT(100) / fc[1]);
         progress_bar[0] = '[';
         for (i = 1; i <= bars; ++i) {
             progress_bar[i] = '#';
         }
-        for (; i < 74; ++i) {
+        for (; i < 73; ++i) {
             progress_bar[i] = ' ';
         }
         if (percent >= 0 && percent <= 100)
-            sprintf(&progress_bar[74], "] %3d%%", percent);
+            sprintf(&progress_bar[73], "] %3d%%", percent);
         fprintf(stderr, "%s\r", progress_bar);
         g_usleep(G_USEC_PER_SEC / 10);
     }
