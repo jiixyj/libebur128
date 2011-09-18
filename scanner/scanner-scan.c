@@ -7,7 +7,7 @@
 #include "filetree.h"
 #include "input.h"
 #include "nproc.h"
-#include "parse_global_args.h"
+#include "parse_args.h"
 
 static struct file_data empty;
 

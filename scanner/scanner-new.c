@@ -10,7 +10,7 @@
 
 #include "filetree.h"
 #include "input.h"
-#include "parse_global_args.h"
+#include "parse_args.h"
 #include "scanner-scan.h"
 
 

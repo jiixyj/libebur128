@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
-  add_library(parse_global_args parse_global_args)
+  add_library(parse_args parse_args)
 
   list(APPEND SCANNER_SRCS scanner-new.c nproc.c scanner-scan.c)
   if(TAGLIB_FOUND)
@@ -20,7 +20,7 @@ if(GLIB_FOUND)
   endif()
 
   add_executable(loudness ${SCANNER_SRCS})
-  target_link_libraries(loudness ebur128 input filetree parse_global_args ${GLIB_LIBRARIES})
+  target_link_libraries(loudness ebur128 input filetree parse_args ${GLIB_LIBRARIES})
   if(TAGLIB_FOUND)
     target_link_libraries(loudness ${TAGLIB_LIBRARIES})
   endif()
