@@ -119,7 +119,7 @@ int set_rg_info(const char* filename,
       clear_rva2_tag(id3v2tag, "album");
     }
 
-    return !f.save();
+    return !f.save(TagLib::MPEG::File::ID3v2, false);
   } else if (ext == "flac" || ext == "ogg" || ext == "oga") {
     TagLib::File* file = NULL;
     TagLib::Ogg::XiphComment* xiph = NULL;
