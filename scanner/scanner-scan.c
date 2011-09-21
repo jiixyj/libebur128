@@ -78,7 +78,7 @@ static void print_summary(GSList *files)
     n.fr = &fr;
     n.fr->display = "";
     n.d = &result;
-    for (i = 0; i < 79; ++i) { putchar('-'); }; putchar('\n');
+    for (i = 0; i < 79; ++i) { fputc('-', stderr); }; fputc('\n', stderr);
     print_file_data(&n, NULL);
 
     g_ptr_array_free(states, TRUE);
