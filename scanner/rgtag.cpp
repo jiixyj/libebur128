@@ -12,12 +12,40 @@
 #include <vorbisfile.h>
 #include <mpcfile.h>
 #include <wavpackfile.h>
+#include <mp4file.h>
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstring>
 #include <sstream>
 #include <ios>
+
+bool clear_txxx_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
+  TagLib::ID3v2::FrameList l = tag->frameList("TXXX");
+  for (TagLib::ID3v2::FrameList::Iterator it = l.begin(); it != l.end(); ++it) {
+    TagLib::ID3v2::UserTextIdentificationFrame* fr =
+                dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
+    if (fr && fr->description().upper() == tag_name) {
+      tag->removeFrame(fr);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool clear_rva2_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
+  TagLib::ID3v2::FrameList l = tag->frameList("RVA2");
+  for (TagLib::ID3v2::FrameList::Iterator it = l.begin(); it != l.end(); ++it) {
+    TagLib::ID3v2::RelativeVolumeFrame* fr =
+                         dynamic_cast<TagLib::ID3v2::RelativeVolumeFrame*>(*it);
+    if (fr && fr->identification().upper() == tag_name) {
+      tag->removeFrame(fr);
+      return true;
+    }
+  }
+  return false;
+}
 
 void set_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, std::string value) {
   TagLib::ID3v2::UserTextIdentificationFrame* txxx = TagLib::ID3v2::UserTextIdentificationFrame::find(tag, tag_name);
@@ -27,13 +55,6 @@ void set_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, std::string val
     tag->addFrame(txxx);
   }
   txxx->setText(value);
-}
-
-void clear_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name) {
-  TagLib::ID3v2::UserTextIdentificationFrame* txxx = TagLib::ID3v2::UserTextIdentificationFrame::find(tag, tag_name);
-  if (txxx) {
-    tag->removeFrame(txxx);
-  }
 }
 
 void set_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, double gain, double peak) {
@@ -65,115 +86,133 @@ void set_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, double gain, do
   rva2->setPeakVolume(peak_volume);
 }
 
-void clear_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name) {
-  TagLib::ID3v2::RelativeVolumeFrame* rva2 = NULL;
-  TagLib::ID3v2::FrameList rva2_frame_list = tag->frameList("RVA2");
-  TagLib::ID3v2::FrameList::ConstIterator it = rva2_frame_list.begin();
-  for (; it != rva2_frame_list.end(); ++it) {
-    TagLib::ID3v2::RelativeVolumeFrame* fr =
-                         dynamic_cast<TagLib::ID3v2::RelativeVolumeFrame*>(*it);
-    if (fr->identification() == tag_name) {
-      rva2 = fr;
-      break;
-    }
+struct gain_data_strings {
+  gain_data_strings(struct gain_data* gd) {
+    std::stringstream ss;
+    ss.precision(2);
+    ss << std::fixed;
+    ss << gd->album_gain << " dB"; album_gain = ss.str(); ss.str(std::string()); ss.clear();
+    ss << gd->track_gain << " dB"; track_gain = ss.str(); ss.str(std::string()); ss.clear();
+    ss.precision(6);
+    ss << gd->album_peak; ss >> album_peak; ss.str(std::string()); ss.clear();
+    ss << gd->track_peak; ss >> track_peak; ss.str(std::string()); ss.clear();
   }
-  if (rva2) {
-    tag->removeFrame(rva2);
+  std::string track_gain, track_peak, album_gain, album_peak;
+};
+
+static bool tag_id3v2(const char* filename,
+                      struct gain_data* gd,
+                      struct gain_data_strings* gds) {
+  TagLib::MPEG::File f(filename);
+  TagLib::ID3v2::Tag* id3v2tag = f.ID3v2Tag(true);
+
+  while (clear_txxx_tag(id3v2tag, TagLib::String("replaygain_album_gain").upper()));
+  while (clear_txxx_tag(id3v2tag, TagLib::String("replaygain_album_peak").upper()));
+  while (clear_rva2_tag(id3v2tag, TagLib::String("album").upper()));
+  while (clear_txxx_tag(id3v2tag, TagLib::String("replaygain_track_gain").upper()));
+  while (clear_txxx_tag(id3v2tag, TagLib::String("replaygain_track_peak").upper()));
+  while (clear_rva2_tag(id3v2tag, TagLib::String("track").upper()));
+  set_txxx_tag(id3v2tag, "replaygain_track_gain", gds->track_gain);
+  set_txxx_tag(id3v2tag, "replaygain_track_peak", gds->track_peak);
+  set_rva2_tag(id3v2tag, "track", gd->track_gain, gd->track_peak);
+  if (gd->album_mode) {
+    set_txxx_tag(id3v2tag, "replaygain_album_gain", gds->album_gain);
+    set_txxx_tag(id3v2tag, "replaygain_album_peak", gds->album_peak);
+    set_rva2_tag(id3v2tag, "album", gd->album_gain, gd->album_peak);
   }
+
+  return !f.save(TagLib::MPEG::File::ID3v2, false);
+}
+
+static bool tag_vorbis_comment(const char* filename,
+                               const char* extension,
+                               struct gain_data* gd,
+                               struct gain_data_strings* gds) {
+  TagLib::File* file = NULL;
+  TagLib::Ogg::XiphComment* xiph = NULL;
+  if (!::strcmp(extension, "flac")) {
+    TagLib::FLAC::File* f = new TagLib::FLAC::File(filename);
+    xiph = f->xiphComment(true);
+    file = f;
+  } else if (!::strcmp(extension, "ogg") || !::strcmp(extension, "oga")) {
+    TagLib::Ogg::Vorbis::File* f = new TagLib::Ogg::Vorbis::File(filename);
+    xiph = f->tag();
+    file = f;
+  }
+  xiph->addField("REPLAYGAIN_TRACK_GAIN", gds->track_gain);
+  xiph->addField("REPLAYGAIN_TRACK_PEAK", gds->track_peak);
+  if (gd->album_mode) {
+    xiph->addField("REPLAYGAIN_ALBUM_GAIN", gds->album_gain);
+    xiph->addField("REPLAYGAIN_ALBUM_PEAK", gds->album_peak);
+  } else {
+    xiph->removeField("REPLAYGAIN_ALBUM_GAIN");
+    xiph->removeField("REPLAYGAIN_ALBUM_PEAK");
+  }
+  bool success = file->save();
+  delete file;
+  return !success;
+}
+
+static bool tag_ape(const char* filename,
+                    const char* extension,
+                    struct gain_data* gd,
+                    struct gain_data_strings* gds) {
+  TagLib::File* file = NULL;
+  TagLib::APE::Tag* ape = NULL;
+  if (!::strcmp(extension, "mpc")) {
+    TagLib::MPC::File* f = new TagLib::MPC::File(filename);
+    ape = f->APETag(true);
+    file = f;
+  } else if (!::strcmp(extension, "wv")) {
+    TagLib::WavPack::File* f = new TagLib::WavPack::File(filename);
+    ape = f->APETag(true);
+    file = f;
+  }
+  ape->addValue("replaygain_track_gain", gds->track_gain);
+  ape->addValue("replaygain_track_peak", gds->track_peak);
+  if (gd->album_mode) {
+    ape->addValue("replaygain_album_gain", gds->album_gain);
+    ape->addValue("replaygain_album_peak", gds->album_peak);
+  } else {
+    ape->removeItem("replaygain_album_gain");
+    ape->removeItem("replaygain_album_peak");
+  }
+  bool success = file->save();
+  delete file;
+  return !success;
+}
+
+static bool tag_mp4(const char* filename,
+                    struct gain_data* gd,
+                    struct gain_data_strings* gds) {
+  TagLib::MP4::File f(filename);
+  TagLib::MP4::Tag* t = f.tag();
+  TagLib::MP4::ItemListMap& ilm = t->itemListMap();
+  ilm["----:com.apple.iTunes:replaygain_track_gain"] = TagLib::MP4::Item(TagLib::StringList(gds->track_gain));
+  ilm["----:com.apple.iTunes:replaygain_track_peak"] = TagLib::MP4::Item(TagLib::StringList(gds->track_peak));
+  if (gd->album_mode) {
+    ilm["----:com.apple.iTunes:replaygain_album_gain"] = TagLib::MP4::Item(TagLib::StringList(gds->album_gain));
+    ilm["----:com.apple.iTunes:replaygain_album_peak"] = TagLib::MP4::Item(TagLib::StringList(gds->album_peak));
+  } else {
+    ilm.erase("----:com.apple.iTunes:replaygain_album_gain");
+    ilm.erase("----:com.apple.iTunes:replaygain_album_peak");
+  }
+  return !f.save();
 }
 
 int set_rg_info(const char* filename,
-                double track_gain,
-                double track_peak,
-                int album_mode,
-                double album_gain,
-                double album_peak) {
-  std::string fn(filename);
-  std::string ag, tg, ap, tp;
-  std::stringstream ss;
-  ss.precision(2);
-  ss << std::fixed;
-  ss << album_gain; ss >> ag; ss.clear();
-  ss << track_gain; ss >> tg; ss.clear();
-  ss.precision(6);
-  ss << album_peak; ss >> ap; ss.clear();
-  ss << track_peak; ss >> tp; ss.clear();
+                const char* extension,
+                struct gain_data* gd) {
+  struct gain_data_strings gds(gd);
 
-  std::string ext = fn.substr(fn.find_last_of(".") + 1);
-  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-
-  if (ext == "mp3" || ext == "mp2") {
-    TagLib::MPEG::File f(filename);
-    TagLib::ID3v2::Tag* id3v2tag = f.ID3v2Tag(true);
-
-    set_txxx_tag(id3v2tag, "replaygain_track_gain", tg + " dB");
-    set_txxx_tag(id3v2tag, "replaygain_track_peak", tp);
-    set_rva2_tag(id3v2tag, "track", track_gain, track_peak);
-    if (album_mode) {
-      set_txxx_tag(id3v2tag, "replaygain_album_gain", ag + " dB");
-      set_txxx_tag(id3v2tag, "replaygain_album_peak", ap);
-      set_rva2_tag(id3v2tag, "album", album_gain, album_peak);
-    } else {
-      clear_txxx_tag(id3v2tag, "replaygain_album_gain");
-      clear_txxx_tag(id3v2tag, "replaygain_album_peak");
-      clear_rva2_tag(id3v2tag, "album");
-    }
-
-    return !f.save(TagLib::MPEG::File::ID3v2, false);
-  } else if (ext == "flac" || ext == "ogg" || ext == "oga") {
-    TagLib::File* file = NULL;
-    TagLib::Ogg::XiphComment* xiph = NULL;
-    if (ext == "flac") {
-      TagLib::FLAC::File* f = new TagLib::FLAC::File(filename);
-      xiph = f->xiphComment(true);
-      file = f;
-    } else if (ext == "ogg" || ext == "oga") {
-      TagLib::Ogg::Vorbis::File* f = new TagLib::Ogg::Vorbis::File(filename);
-      xiph = f->tag();
-      file = f;
-    }
-    xiph->addField("replaygain_track_gain", tg + " dB");
-    xiph->addField("replaygain_track_peak", tp);
-    if (album_mode) {
-      xiph->addField("replaygain_album_gain", ag + " dB");
-      xiph->addField("replaygain_album_peak", ap);
-    } else {
-      xiph->removeField("replaygain_album_gain");
-      xiph->removeField("replaygain_album_peak");
-      xiph->removeField("REPLAYGAIN_ALBUM_GAIN");
-      xiph->removeField("REPLAYGAIN_ALBUM_PEAK");
-    }
-    bool success = file->save();
-    delete file;
-    return !success;
-  } else if (ext == "mpc" || ext == "wv") {
-    TagLib::File* file = NULL;
-    TagLib::APE::Tag* ape = NULL;
-    if (ext == "mpc") {
-      TagLib::MPC::File* f = new TagLib::MPC::File(filename);
-      ape = f->APETag(true);
-      file = f;
-    } else if (ext == "wv") {
-      TagLib::WavPack::File* f = new TagLib::WavPack::File(filename);
-      ape = f->APETag(true);
-      file = f;
-    }
-    ape->addValue("replaygain_track_gain", tg + " dB");
-    ape->addValue("replaygain_track_peak", tp);
-    if (album_mode) {
-      ape->addValue("replaygain_album_gain", ag + " dB");
-      ape->addValue("replaygain_album_peak", ap);
-    } else {
-      ape->removeItem("replaygain_album_gain");
-      ape->removeItem("replaygain_album_peak");
-      ape->removeItem("REPLAYGAIN_ALBUM_GAIN");
-      ape->removeItem("REPLAYGAIN_ALBUM_PEAK");
-    }
-    bool success = file->save();
-    delete file;
-    return !success;
-  } else {
-    return 1;
+  if (!::strcmp(extension, "mp3") || !::strcmp(extension, "mp2")) {
+    return tag_id3v2(filename, gd, &gds);
+  } else if (!::strcmp(extension, "flac") || !::strcmp(extension, "ogg") || !::strcmp(extension, "oga")) {
+    return tag_vorbis_comment(filename, extension, gd, &gds);
+  } else if (!::strcmp(extension, "mpc") || !::strcmp(extension, "wv")) {
+    return tag_ape(filename, extension, gd, &gds);
+  } else if (!::strcmp(extension, "mp4") || !::strcmp(extension, "m4a")) {
+    return tag_mp4(filename, gd, &gds);
   }
   return 0;
 }

@@ -114,15 +114,28 @@ static void tag_files(gpointer user, gpointer user_data)
     struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
     int error;
+    char *basename, *extension, *filename;
+    struct gain_data gd = { clamp_rg(REFERENCE_LEVEL - fd->loudness),
+                            fd->peak,
+                            !track,
+                            fd->gain_album,
+                            fd->peak_album };
 
     (void) user_data;
-    error = set_rg_info(fln->fr->raw,
-                        clamp_rg(REFERENCE_LEVEL - fd->loudness),
-                        fd->peak,
-                        !track,
-                        fd->gain_album,
-                        fd->peak_album);
+    basename = g_path_get_basename(fln->fr->raw);
+    extension = strrchr(basename, '.');
+    if (extension) ++extension;
+    else extension = "";
+#ifdef G_OS_WIN32
+    filename = g_utf8_to_utf16(fln->fr->raw, -1, NULL, NULL, NULL);
+#else
+    filename = g_strdup(fln->fr->raw);
+#endif
+
+    error = set_rg_info(filename, extension, &gd);
     fputc(error ? 'x' : '.', stderr);
+    g_free(basename);
+    g_free(filename);
 }
 
 void loudness_tag(GSList *files)

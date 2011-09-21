@@ -6,12 +6,17 @@
 extern "C" {
 #endif
 
+struct gain_data {
+  double track_gain;
+  double track_peak;
+  int album_mode;
+  double album_gain;
+  double album_peak;
+};
+
 int set_rg_info(const char* filename,
-                double track_gain,
-                double track_peak,
-                int album_mode,
-                double album_gain,
-                double album_peak);
+                const char* extension,
+                struct gain_data* gd);
 
 #ifdef __cplusplus
 }
