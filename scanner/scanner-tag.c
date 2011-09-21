@@ -1,5 +1,7 @@
 #include "scanner-tag.h"
 
+#include <stdlib.h>
+
 #include "parse_args.h"
 #include "scanner-common.h"
 #include "nproc.h"
@@ -12,11 +14,13 @@ static struct file_data empty;
 extern gboolean verbose;
 static gboolean track = FALSE;
 static gboolean dry_run = FALSE;
+static gboolean tag_tp = FALSE;
 
 static GOptionEntry entries[] =
 {
     { "track", 't', 0, G_OPTION_ARG_NONE, &track, NULL, NULL },
     { "dry-run", 'n', 0, G_OPTION_ARG_NONE, &dry_run, NULL, NULL },
+    { "tag-tp", 0, 0, G_OPTION_ARG_NONE, &tag_tp, NULL, NULL },
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
@@ -52,7 +56,7 @@ static void calculate_album_gain_and_peak_last_dir(void)
                                          states->len, &album_data[0]);
         album_data[0] = clamp_rg(REFERENCE_LEVEL - album_data[0]);
         g_slist_foreach(files_in_current_dir, get_max_peaks, &result);
-        album_data[1] = result.peak;
+        album_data[1] = tag_tp ? result.true_peak : result.peak;
         g_slist_foreach(files_in_current_dir, fill_album_data, album_data);
 
         g_ptr_array_free(states, TRUE);
@@ -95,11 +99,11 @@ static void print_file_data(gpointer user, gpointer user_data)
                     fd->gain_album,
                     clamp_rg(REFERENCE_LEVEL - fd->loudness),
                     fd->peak_album,
-                    fd->peak);
+                    tag_tp ? fd->true_peak : fd->peak);
         } else {
             g_print("%7.2f dB, %10.6f",
                     clamp_rg(REFERENCE_LEVEL - fd->loudness),
-                    fd->peak);
+                    tag_tp ? fd->true_peak : fd->peak);
         }
         if (fln->fr->display[0]) {
             g_print(", ");
@@ -109,6 +113,7 @@ static void print_file_data(gpointer user, gpointer user_data)
     }
 }
 
+static int tag_output_state = 0;
 static void tag_files(gpointer user, gpointer user_data)
 {
     struct filename_list_node *fln = (struct filename_list_node *) user;
@@ -121,7 +126,7 @@ static void tag_files(gpointer user, gpointer user_data)
                             fd->gain_album,
                             fd->peak_album };
 
-    (void) user_data;
+    int *ret = (int *) user_data;
     basename = g_path_get_basename(fln->fr->raw);
     extension = strrchr(basename, '.');
     if (extension) ++extension;
@@ -133,44 +138,61 @@ static void tag_files(gpointer user, gpointer user_data)
 #endif
 
     error = set_rg_info(filename, extension, &gd);
-    fputc(error ? 'x' : '.', stderr);
+    if (error) {
+        if (tag_output_state == 0) {
+            fflush(stderr);
+            fputc('\n', stderr);
+            tag_output_state = 1;
+        }
+        g_message("Error tagging %s", fln->fr->display);
+        *ret = EXIT_FAILURE;
+    } else {
+        fputc('.', stderr);
+        tag_output_state = 0;
+    }
+
     g_free(basename);
     g_free(filename);
 }
 
-void loudness_tag(GSList *files)
+int loudness_tag(GSList *files)
 {
-    struct scan_opts opts = {FALSE, "sample"};
+    struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample"};
     GThreadPool *pool;
     GThread *progress_bar_thread;
+    int ret = 0, do_scan = 0;
 
-    pool = g_thread_pool_new(init_state_and_scan_work_item,
-                             &opts, nproc(), FALSE, NULL);
-    g_slist_foreach(files, init_and_get_number_of_frames, NULL);
-    g_slist_foreach(files, init_state_and_scan, pool);
-    progress_bar_thread = g_thread_create(print_progress_bar,
-                                          files, TRUE, NULL);
-    g_thread_pool_free(pool, FALSE, TRUE);
-    g_thread_join(progress_bar_thread);
+    g_slist_foreach(files, init_and_get_number_of_frames, &do_scan);
+    if (do_scan) {
+        pool = g_thread_pool_new(init_state_and_scan_work_item,
+                                &opts, nproc(), FALSE, NULL);
+        g_slist_foreach(files, init_state_and_scan, pool);
+        progress_bar_thread = g_thread_create(print_progress_bar,
+                                            files, TRUE, NULL);
+        g_thread_pool_free(pool, FALSE, TRUE);
+        g_thread_join(progress_bar_thread);
 
-    if (!track) {
-        g_slist_foreach(files, calculate_album_gain_and_peak, NULL);
-        calculate_album_gain_and_peak_last_dir();
-    }
+        if (!track) {
+            g_slist_foreach(files, calculate_album_gain_and_peak, NULL);
+            calculate_album_gain_and_peak_last_dir();
+        }
 
-    clear_line();
-    if (!track) {
-        fprintf(stderr, "Album gain, Track gain, Album peak, Track peak\n");
-    } else {
-        fprintf(stderr, "Track gain, Track peak\n");
-    }
-    g_slist_foreach(files, print_file_data, NULL);
-    if (!dry_run) {
-        fprintf(stderr, "Tagging");
-        g_slist_foreach(files, tag_files, NULL);
-        fputc('\n', stderr);
+        clear_line();
+        if (!track) {
+            fprintf(stderr, "Album gain, Track gain, Album peak, Track peak\n");
+        } else {
+            fprintf(stderr, "Track gain, Track peak\n");
+        }
+        g_slist_foreach(files, print_file_data, NULL);
+        if (!dry_run) {
+            fprintf(stderr, "Tagging");
+            g_slist_foreach(files, tag_files, &ret);
+            if (!ret) fprintf(stderr, " Success!");
+            fputc('\n', stderr);
+        }
     }
     g_slist_foreach(files, destroy_state, NULL);
+    return ret;
 }
 
 gboolean loudness_tag_parse(int *argc, char **argv[])

@@ -45,7 +45,7 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
     struct input_handle *ih = NULL;
     FILE *file = NULL;
 
-    (void) user_data;
+    int *do_scan = (int *) user_data;
     fln->d = g_malloc(sizeof(struct file_data));
     memcpy(fln->d, &empty, sizeof empty);
     fd = (struct file_data *) fln->d;
@@ -56,6 +56,7 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
         goto free;
     }
 
+    *do_scan = TRUE;
     fd->number_of_frames = ops->get_total_frames(ih);
 
   free:

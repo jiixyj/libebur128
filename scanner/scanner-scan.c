@@ -89,31 +89,34 @@ void loudness_scan(GSList *files)
     struct scan_opts opts = {lra, peak};
     GThreadPool *pool;
     GThread *progress_bar_thread;
+    int do_scan = FALSE;
 
-    pool = g_thread_pool_new(init_state_and_scan_work_item,
-                             &opts, nproc(), FALSE, NULL);
-    g_slist_foreach(files, init_and_get_number_of_frames, NULL);
-    g_slist_foreach(files, init_state_and_scan, pool);
-    progress_bar_thread = g_thread_create(print_progress_bar,
-                                          files, TRUE, NULL);
-    g_thread_pool_free(pool, FALSE, TRUE);
-    g_thread_join(progress_bar_thread);
+    g_slist_foreach(files, init_and_get_number_of_frames, &do_scan);
+    if (do_scan) {
+        pool = g_thread_pool_new(init_state_and_scan_work_item,
+                                 &opts, nproc(), FALSE, NULL);
+        g_slist_foreach(files, init_state_and_scan, pool);
+        progress_bar_thread = g_thread_create(print_progress_bar,
+                                            files, TRUE, NULL);
+        g_thread_pool_free(pool, FALSE, TRUE);
+        g_thread_join(progress_bar_thread);
 
-    clear_line();
-    fprintf(stderr, "  Loudness");
-    if (lra) fprintf(stderr, ",      LRA");
-    if (peak) {
-        if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
-            fprintf(stderr, ", Sample peak");
-        if (!strcmp(peak, "true") || !strcmp(peak, "all"))
-            fprintf(stderr, ",   True peak");
-        if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
-            fprintf(stderr, ",  True peak");
+        clear_line();
+        fprintf(stderr, "  Loudness");
+        if (lra) fprintf(stderr, ",      LRA");
+        if (peak) {
+            if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
+                fprintf(stderr, ", Sample peak");
+            if (!strcmp(peak, "true") || !strcmp(peak, "all"))
+                fprintf(stderr, ",   True peak");
+            if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
+                fprintf(stderr, ",  True peak");
+        }
+        fprintf(stderr, "\n");
+
+        g_slist_foreach(files, print_file_data, NULL);
+        print_summary(files);
     }
-    fprintf(stderr, "\n");
-
-    g_slist_foreach(files, print_file_data, NULL);
-    print_summary(files);
     g_slist_foreach(files, destroy_state, NULL);
 
     g_free(peak);

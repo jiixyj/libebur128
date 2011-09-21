@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 {
     GSList *errors = NULL, *files = NULL;
     Filetree tree;
-    int mode = 0, mode_parsed = FALSE;
+    int mode = 0, mode_parsed = FALSE, ret = 0;
 
     if (parse_global_args(&argc, &argv, entries, TRUE) || argc < 2 || help) {
         print_help();
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
         loudness_scan(files);
         break;
         case LOUDNESS_MODE_TAG:
-        loudness_tag(files);
+        ret = loudness_tag(files);
         break;
         case LOUDNESS_MODE_DUMP:
         break;
@@ -140,5 +140,5 @@ int main(int argc, char *argv[])
     input_deinit();
     g_free(forced_plugin);
 
-    return EXIT_SUCCESS;
+    return ret;
 }

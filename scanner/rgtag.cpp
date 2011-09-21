@@ -214,5 +214,5 @@ int set_rg_info(const char* filename,
   } else if (!::strcmp(extension, "mp4") || !::strcmp(extension, "m4a")) {
     return tag_mp4(filename, gd, &gds);
   }
-  return 0;
+  return 1;
 }
