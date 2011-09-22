@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6.4)
 if(GLIB_FOUND)
   add_library(parse_args parse_args)
 
-  list(APPEND SCANNER_SRCS scanner-new.c nproc.c
+  list(APPEND SCANNER_SRCS scanner.c nproc.c
                            scanner-scan.c scanner-tag.c scanner-dump.c
                            scanner-common.c)
   if(TAGLIB_FOUND)
