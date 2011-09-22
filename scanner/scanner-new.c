@@ -101,6 +101,7 @@ int main(int argc, char *argv[])
         mode_parsed = loudness_tag_parse(&argc, &argv);
     } else if (!strcmp(argv[1], "dump")) {
         mode = LOUDNESS_MODE_DUMP;
+        mode_parsed = loudness_dump_parse(&argc, &argv);
     } else {
         fprintf(stderr, "Unknown mode '%s'\n", argv[1]);
     }
@@ -130,6 +131,7 @@ int main(int argc, char *argv[])
         ret = loudness_tag(files);
         break;
         case LOUDNESS_MODE_DUMP:
+        ret = loudness_dump(files);
         break;
     }
 

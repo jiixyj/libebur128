@@ -698,7 +698,7 @@ int ebur128_loudness_momentary(ebur128_state* st, double* out) {
     *out = -HUGE_VAL;
     return EBUR128_SUCCESS;
   }
-  *out = ebur128_energy_to_loudness(*out);
+  *out = ebur128_energy_to_loudness(energy);
   return EBUR128_SUCCESS;
 }
 
@@ -711,7 +711,7 @@ int ebur128_loudness_shortterm(ebur128_state* st, double* out) {
     *out = -HUGE_VAL;
     return EBUR128_SUCCESS;
   }
-  *out = ebur128_energy_to_loudness(*out);
+  *out = ebur128_energy_to_loudness(energy);
   return EBUR128_SUCCESS;
 }
 
