@@ -18,9 +18,8 @@ static void exit_program(void)
     exit(0);
 }
 
-struct work_data
-{
-    gchar **filenames;
+struct work_data {
+    gchar **files;
     guint length;
     int success;
 };
@@ -35,8 +34,7 @@ static gpointer do_work(gpointer data)
 
     Filetree tree;
     GSList *errors = NULL, *files = NULL;
-    tree = filetree_init(wd->filenames, wd->length,
-                         TRUE, FALSE, FALSE, &errors);
+    tree = filetree_init(wd->files, wd->length, TRUE, FALSE, FALSE, &errors);
 
     g_slist_foreach(errors, filetree_print_error, &verbose);
     g_slist_foreach(errors, filetree_free_error, NULL);
@@ -48,7 +46,12 @@ static gpointer do_work(gpointer data)
     if (result) {
         gdk_threads_enter();
         GtkWidget *dialog;
-        dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_OK, "Some files could not be tagged!");
+        dialog =
+            gtk_message_dialog_new(NULL,
+                                   GTK_DIALOG_MODAL |
+                                   GTK_DIALOG_DESTROY_WITH_PARENT,
+                                   GTK_MESSAGE_WARNING, GTK_BUTTONS_OK,
+                                   "Some files could not be tagged!");
         gtk_dialog_run(GTK_DIALOG(dialog));
         gtk_widget_destroy(dialog);
         gdk_threads_leave();
@@ -58,7 +61,7 @@ static gpointer do_work(gpointer data)
     g_slist_free(files);
     filetree_destroy(tree);
 
-    g_free(wd->filenames);
+    g_free(wd->files);
     g_free(wd);
 
     g_static_mutex_lock(&thread_mutex);
@@ -67,6 +70,7 @@ static gpointer do_work(gpointer data)
 
     return NULL;
 }
+
 static gboolean update_bar_waiting;
 static gpointer update_bar(gpointer data)
 {
@@ -77,7 +81,10 @@ static gpointer update_bar(gpointer data)
         g_cond_wait(progress_cond, progress_mutex);
         if (total_frames > 0) {
             gdk_threads_enter();
-            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar), CLAMP((double) elapsed_frames / (double) total_frames, 0.0, 1.0));
+            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar),
+                                          CLAMP((double) elapsed_frames /
+                                                (double) total_frames,
+                                                0.0, 1.0));
             gdk_threads_leave();
         }
         if (total_frames == elapsed_frames) {
@@ -95,13 +102,12 @@ static gpointer update_bar(gpointer data)
 }
 
 static void handle_data_received(GtkWidget *widget,
-                                 GdkDragContext *drag_context, gint x,
-                                 gint y, GtkSelectionData *data,
-                                 guint info, guint time,
-                                 gpointer progress_bar)
+                                 GdkDragContext *drag_context, gint x, gint y,
+                                 GtkSelectionData *data, guint info,
+                                 guint time, gpointer progress_bar)
 {
     guint i, no_uris;
-    gchar **uris, **filenames;
+    gchar **uris, **files;
     struct work_data *sl;
 
     g_static_mutex_lock(&thread_mutex);
@@ -114,22 +120,24 @@ static void handle_data_received(GtkWidget *widget,
     uris = g_uri_list_extract_uris((const gchar *)
                                    gtk_selection_data_get_data(data));
     no_uris = g_strv_length(uris);
-    filenames = g_new(gchar *, no_uris);
+    files = g_new(gchar *, no_uris);
 
     for (i = 0; i < no_uris; ++i) {
-        filenames[i] = g_filename_from_uri(uris[i], NULL, NULL);
+        files[i] = g_filename_from_uri(uris[i], NULL, NULL);
     }
     g_strfreev(uris);
 
     update_bar_waiting = FALSE;
     bar_thread = g_thread_create(update_bar, progress_bar, FALSE, NULL);
     /* make sure the update_bar thread is waiting */
-    while (!update_bar_waiting) g_thread_yield();
+    while (!update_bar_waiting) {
+        g_thread_yield();
+    }
     g_mutex_lock(progress_mutex);
     g_mutex_unlock(progress_mutex);
 
     sl = g_new(struct work_data, 1);
-    sl->filenames = filenames;
+    sl->files = files;
     sl->length = no_uris;
     worker_thread = g_thread_create(do_work, sl, FALSE, NULL);
 
@@ -170,8 +178,7 @@ int main(int argc, char *argv[])
     progress_bar = gtk_progress_bar_new();
     gtk_container_add(GTK_CONTAINER(window), progress_bar);
 
-    gtk_drag_dest_set(window, GTK_DEST_DEFAULT_ALL, NULL, 0,
-                      GDK_ACTION_COPY);
+    gtk_drag_dest_set(window, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
     gtk_drag_dest_add_uri_targets(window);
 
     g_signal_connect(window, "drag-data-received",
