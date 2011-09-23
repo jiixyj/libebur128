@@ -225,7 +225,6 @@ void get_max_peaks(gpointer user, gpointer user_data)
 
 gpointer print_progress_bar(gpointer data)
 {
-    GSList *files = (GSList *) data;
     int percent, bars, i;
     static char progress_bar[81];
 

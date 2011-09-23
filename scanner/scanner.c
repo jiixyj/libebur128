@@ -11,8 +11,11 @@
 #include "filetree.h"
 #include "input.h"
 #include "parse_args.h"
+
 #include "scanner-scan.h"
 #include "scanner-tag.h"
+#include "scanner-dump.h"
+#include "scanner-common.h"
 
 
 static void print_help(void) {

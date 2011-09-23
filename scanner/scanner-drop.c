@@ -7,6 +7,8 @@
 
 #include "input.h"
 #include "filetree.h"
+
+#include "scanner-tag.h"
 #include "scanner-common.h"
 
 gboolean verbose = TRUE;

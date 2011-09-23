@@ -6,8 +6,6 @@
 #include "scanner-common.h"
 #include "nproc.h"
 
-static struct file_data empty;
-
 extern gboolean verbose;
 static double momentary;
 static double shortterm;
@@ -25,10 +23,9 @@ static double interval;
 static int r128_mode;
 static ebur128_state *st;
 
-void dump_loudness_info(gpointer user, gpointer user_data)
+static void dump_loudness_info(gpointer user, gpointer user_data)
 {
     struct filename_list_node *fln = (struct filename_list_node *) user;
-    struct file_data *fd = (struct file_data *) fln->d;
 
     struct input_ops* ops = NULL;
     struct input_handle* ih = NULL;

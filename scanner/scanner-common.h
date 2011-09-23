@@ -39,6 +39,7 @@ int open_plugin(const char *raw, const char *display,
                 struct input_handle **ih,
                 FILE **file);
 void scanner_init_common(void);
+void scanner_reset_common(void);
 void init_and_get_number_of_frames(gpointer user, gpointer user_data);
 void sum_frames(gpointer user, gpointer user_data);
 void init_state_and_scan_work_item(gpointer user, gpointer user_data);
