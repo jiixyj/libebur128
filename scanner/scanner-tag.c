@@ -62,6 +62,7 @@ static void calculate_album_gain_and_peak_last_dir(void)
         g_ptr_array_free(states, TRUE);
 
         g_free(current_dir);
+        current_dir = NULL;
         g_slist_free(files_in_current_dir);
         files_in_current_dir = NULL;
 }
@@ -120,6 +121,7 @@ static void tag_files(gpointer user, gpointer user_data)
     struct file_data *fd = (struct file_data *) fln->d;
     int error;
     char *basename, *extension, *filename;
+    if (!fd->scanned) return;
     struct gain_data gd = { clamp_rg(REFERENCE_LEVEL - fd->loudness),
                             fd->peak,
                             !track,
@@ -192,6 +194,7 @@ int loudness_tag(GSList *files)
         }
     }
     g_slist_foreach(files, destroy_state, NULL);
+    scanner_reset_common();
     return ret;
 }
 

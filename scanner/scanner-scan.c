@@ -118,6 +118,7 @@ void loudness_scan(GSList *files)
         print_summary(files);
     }
     g_slist_foreach(files, destroy_state, NULL);
+    scanner_reset_common();
 
     g_free(peak);
 }

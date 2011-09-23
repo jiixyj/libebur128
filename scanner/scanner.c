@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     }
     g_thread_init(NULL);
     input_init(argv[0], forced_plugin);
-
+    scanner_init_common();
 
     setlocale(LC_COLLATE, "");
     setlocale(LC_CTYPE, "");

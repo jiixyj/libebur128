@@ -8,6 +8,31 @@ extern gboolean verbose;
 
 static struct file_data empty;
 
+GMutex *progress_mutex = NULL;
+GCond *progress_cond = NULL;
+guint64 elapsed_frames = 0;
+guint64 total_frames = 0;
+
+void scanner_init_common(void)
+{
+    total_frames = 0;
+    elapsed_frames = 0;
+    if (!progress_mutex) {
+        progress_mutex = g_mutex_new();
+    }
+    if (!progress_cond) {
+        progress_cond = g_cond_new();
+    }
+}
+
+void scanner_reset_common(void)
+{
+    g_mutex_lock(progress_mutex);
+    total_frames = elapsed_frames = 0;
+    g_cond_broadcast(progress_cond);
+    g_mutex_unlock(progress_mutex);
+}
+
 int open_plugin(const char *raw, const char *display,
                        struct input_ops **ops,
                        struct input_handle **ih,
@@ -31,6 +56,7 @@ int open_plugin(const char *raw, const char *display,
     if (result) {
         if (verbose) fprintf(stderr, "Error opening file '%s'\n", display);
         fclose(*file);
+        *file = NULL;
         return 1;
     }
     return 0;
@@ -50,32 +76,21 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
     memcpy(fln->d, &empty, sizeof empty);
     fd = (struct file_data *) fln->d;
 
-    fd->mutex = g_mutex_new();
-
     if (open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih, &file)) {
         goto free;
     }
 
     *do_scan = TRUE;
     fd->number_of_frames = ops->get_total_frames(ih);
+    g_mutex_lock(progress_mutex);
+    total_frames += fd->number_of_frames;
+    g_cond_broadcast(progress_cond);
+    g_mutex_unlock(progress_mutex);
 
   free:
     if (file) ops->close_file(ih, file);
     if (ih) ops->handle_destroy(&ih);
 }
-
-void sum_frames(gpointer user, gpointer user_data)
-{
-    struct filename_list_node *fln = (struct filename_list_node *) user;
-    struct file_data *fd = (struct file_data *) fln->d;
-    guint64 *fc = (guint64 *) user_data;
-
-    g_mutex_lock(fd->mutex);
-    fc[0] += fd->number_of_elapsed_frames;
-    fc[1] += fd->number_of_frames;
-    g_mutex_unlock(fd->mutex);
-}
-
 
 void init_state_and_scan_work_item(gpointer user, gpointer user_data)
 {
@@ -94,6 +109,10 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     size_t nr_frames_read;
 
     if (open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih, &file)) {
+        g_mutex_lock(progress_mutex);
+        elapsed_frames += fd->number_of_frames;
+        g_cond_broadcast(progress_cond);
+        g_mutex_unlock(progress_mutex);
         goto free;
     }
 
@@ -116,19 +135,22 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     buffer = ops->get_buffer(ih);
 
     while ((nr_frames_read = ops->read_frames(ih))) {
-        g_mutex_lock(fd->mutex);
+        g_mutex_lock(progress_mutex);
+        elapsed_frames += nr_frames_read;
+        g_cond_broadcast(progress_cond);
+        g_mutex_unlock(progress_mutex);
         fd->number_of_elapsed_frames += nr_frames_read;
-        g_mutex_unlock(fd->mutex);
         result = ebur128_add_frames_float(fd->st, buffer, nr_frames_read);
         if (result) abort();
     }
-    g_mutex_lock(fd->mutex);
     if (fd->number_of_elapsed_frames != fd->number_of_frames) {
         if (verbose) fprintf(stderr, "Warning: Could not read full file"
                                      " or determine right length!\n");
-        fd->number_of_frames = fd->number_of_elapsed_frames;
+        g_mutex_lock(progress_mutex);
+        elapsed_frames += fd->number_of_frames - fd->number_of_elapsed_frames;
+        g_cond_broadcast(progress_cond);
+        g_mutex_unlock(progress_mutex);
     }
-    g_mutex_unlock(fd->mutex);
     ebur128_loudness_global(fd->st, &fd->loudness);
     if (opts->lra) {
         result = ebur128_loudness_range(fd->st, &fd->lra);
@@ -155,8 +177,8 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     }
     fd->scanned = TRUE;
 
-  free:
     if (ih) ops->free_buffer(ih);
+  free:
     if (file) ops->close_file(ih, file);
     if (ih) ops->handle_destroy(&ih);
 }
@@ -176,7 +198,6 @@ void destroy_state(gpointer user, gpointer user_data)
     if (fd->st) {
         ebur128_destroy(&fd->st);
     }
-    g_mutex_free(fd->mutex);
 }
 
 void get_state(gpointer user, gpointer user_data)
@@ -205,16 +226,14 @@ void get_max_peaks(gpointer user, gpointer user_data)
 gpointer print_progress_bar(gpointer data)
 {
     GSList *files = (GSList *) data;
-    guint64 fc[] = {0, 1};
     int percent, bars, i;
     static char progress_bar[81];
 
-    while (fc[0] != fc[1]) {
-        fc[0] = fc[1] = 0;
-        g_slist_foreach(files, sum_frames, &fc);
-        if (fc[1] == 0) break;
-        bars = (int) (fc[0] * G_GUINT64_CONSTANT(72) / fc[1]);
-        percent = (int) (fc[0] * G_GUINT64_CONSTANT(100) / fc[1]);
+    for (;;) {
+        g_mutex_lock(progress_mutex);
+        g_cond_wait(progress_cond, progress_mutex);
+        bars = (int) (elapsed_frames * G_GUINT64_CONSTANT(72) / total_frames);
+        percent = (int) (elapsed_frames * G_GUINT64_CONSTANT(100) / total_frames);
         progress_bar[0] = '[';
         for (i = 1; i <= bars; ++i) {
             progress_bar[i] = '#';
@@ -225,7 +244,11 @@ gpointer print_progress_bar(gpointer data)
         if (percent >= 0 && percent <= 100)
             sprintf(&progress_bar[73], "] %3d%%", percent);
         fprintf(stderr, "%s\r", progress_bar);
-        g_usleep(G_USEC_PER_SEC / 10);
+        if (total_frames == elapsed_frames) {
+            g_mutex_unlock(progress_mutex);
+            break;
+        }
+        g_mutex_unlock(progress_mutex);
     }
     return NULL;
 }
