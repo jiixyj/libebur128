@@ -225,6 +225,9 @@ struct expose_data {
     double scale_factor;
 };
 
+#define DRAW_WIDTH 130.0
+#define DRAW_HEIGHT 115.0
+
 static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 {
     static double padding_factor = 0.8;
@@ -235,12 +238,12 @@ static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, gpointer
     new_width = ed->scale_factor * padding_factor * ed->rdd.width;
     new_height = ed->scale_factor * padding_factor * ed->rdd.height;
 
-    cairo_translate(cr,  130.0 / 2.0,  115.0 / 2.0);
+    cairo_translate(cr,  DRAW_WIDTH / 2.0,  DRAW_HEIGHT / 2.0);
     cairo_rotate(cr, rotation_state);
-    cairo_translate(cr, -130.0 / 2.0, -115.0 / 2.0);
+    cairo_translate(cr, -DRAW_WIDTH / 2.0, -DRAW_HEIGHT / 2.0);
 
-    cairo_translate(cr, (130.0 - new_width) / 2.0,
-                        (115.0 - new_height) / 2.0);
+    cairo_translate(cr, (DRAW_WIDTH - new_width) / 2.0,
+                        (DRAW_HEIGHT - new_height) / 2.0);
     cairo_scale(cr, ed->scale_factor * padding_factor,
                     ed->scale_factor * padding_factor);
 
@@ -292,11 +295,11 @@ int main(int argc, char *argv[])
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
     drawing_area = gtk_drawing_area_new();
-    gtk_widget_set_size_request(drawing_area, 130, 115);
+    gtk_widget_set_size_request(drawing_area, (int) DRAW_WIDTH, (int) DRAW_HEIGHT);
 
     ed.rh = rsvg_handle_new_from_data(test_svg, test_svg_len, NULL);
     rsvg_handle_get_dimensions(ed.rh, &(ed.rdd));
-    ed.scale_factor = MIN(115.0 / ed.rdd.width, 115.0 / ed.rdd.height);
+    ed.scale_factor = MIN(DRAW_HEIGHT / ed.rdd.width, DRAW_HEIGHT / ed.rdd.height);
     g_signal_connect(drawing_area, "expose-event",
                      G_CALLBACK(handle_expose), &ed);
 
