@@ -1,5 +1,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
+#include <librsvg-2/librsvg/rsvg.h>
+#include <librsvg-2/librsvg/rsvg-cairo.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +12,8 @@
 
 #include "scanner-tag.h"
 #include "scanner-common.h"
+
+#include "logo.h"
 
 gboolean verbose = TRUE;
 
@@ -157,9 +161,6 @@ struct popup_data {
     GdkEventButton *event;
 };
 
-static void test(void) {
-    fprintf(stderr, "test\n");}
-
 static void handle_popup(GtkWidget *widget, struct popup_data *pd)
 {
     GtkWidget *menu, *menu_item;
@@ -209,11 +210,53 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
     return FALSE;
 }
 
+static double rotation_state;
+
+static gboolean rotate_logo(gpointer data) {
+    rotation_state += G_PI / 20;
+    if (rotation_state >= 2.0 * G_PI) rotation_state = 0.0;
+    gtk_widget_queue_draw(GTK_WIDGET(data));
+    return TRUE;
+}
+
+struct expose_data {
+    RsvgHandle *rh;
+    RsvgDimensionData rdd;
+    double scale_factor;
+};
+
+static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
+{
+    static double padding_factor = 0.8;
+    double new_width, new_height, scale_factor;
+    cairo_t *cr = gdk_cairo_create(widget->window);
+    struct expose_data *ed = (struct expose_data *) data;
+
+    new_width = ed->scale_factor * padding_factor * ed->rdd.width;
+    new_height = ed->scale_factor * padding_factor * ed->rdd.height;
+
+    cairo_translate(cr,  130.0 / 2.0,  115.0 / 2.0);
+    cairo_rotate(cr, rotation_state);
+    cairo_translate(cr, -130.0 / 2.0, -115.0 / 2.0);
+
+    cairo_translate(cr, (130.0 - new_width) / 2.0,
+                        (115.0 - new_height) / 2.0);
+    cairo_scale(cr, ed->scale_factor * padding_factor,
+                    ed->scale_factor * padding_factor);
+
+    rsvg_handle_render_cairo(ed->rh, cr);
+
+    cairo_destroy(cr);
+    return TRUE;
+}
+
 int main(int argc, char *argv[])
 {
     GtkWidget *window, *vbox, *drawing_area, *progress_bar;
     GtkAccelGroup *accel_group;
     struct popup_data pd;
+    struct expose_data ed;
+    RsvgDimensionData rdd;
 
     g_thread_init(NULL);
     gdk_threads_init();
@@ -249,18 +292,25 @@ int main(int argc, char *argv[])
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
     drawing_area = gtk_drawing_area_new();
-    gtk_widget_set_size_request(drawing_area, 130, 114);
+    gtk_widget_set_size_request(drawing_area, 130, 115);
+
+    ed.rh = rsvg_handle_new_from_data(test_svg, test_svg_len, NULL);
+    rsvg_handle_get_dimensions(ed.rh, &(ed.rdd));
+    ed.scale_factor = MIN(115.0 / ed.rdd.width, 115.0 / ed.rdd.height);
+    g_signal_connect(drawing_area, "expose-event",
+                     G_CALLBACK(handle_expose), &ed);
 
     progress_bar = gtk_progress_bar_new();
-    gtk_widget_set_size_request(progress_bar, 130, 16);
+    gtk_widget_set_size_request(progress_bar, 130, 15);
     g_signal_connect(window, "drag-data-received",
                      G_CALLBACK(handle_data_received), progress_bar);
 
     gtk_box_pack_start(GTK_BOX(vbox), drawing_area, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), progress_bar, TRUE, TRUE, 0);
 
-
+    g_timeout_add(40, rotate_logo, window);
     gtk_widget_show_all(window);
+    rotate_logo(window);
     gtk_main();
     gdk_threads_leave();
     return 0;
