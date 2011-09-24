@@ -29,10 +29,13 @@ struct work_data {
     guint length;
     int success;
     GtkWidget *progress_bar;
+    GtkWidget *drawing_area;
 };
 
 static GStaticMutex thread_mutex = G_STATIC_MUTEX_INIT;
 static GThread *worker_thread, *bar_thread;
+
+static gboolean rotation_active;
 
 static gpointer do_work(gpointer data)
 {
@@ -73,6 +76,7 @@ static gpointer do_work(gpointer data)
 
     gdk_threads_enter();
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(wd->progress_bar), 0.0);
+    rotation_active = FALSE;
     gdk_threads_leave();
 
     g_static_mutex_lock(&thread_mutex);
@@ -112,14 +116,21 @@ static gpointer update_bar(gpointer data)
     return NULL;
 }
 
+struct received_data {
+    GtkWidget *progress_bar, *drawing_area;
+};
+
+static gboolean rotate_logo(gpointer data);
+
 static void handle_data_received(GtkWidget *widget,
                                  GdkDragContext *drag_context, gint x, gint y,
                                  GtkSelectionData *data, guint info,
-                                 guint time, gpointer progress_bar)
+                                 guint time, gpointer user_data)
 {
     guint i, no_uris;
     gchar **uris, **files;
     struct work_data *sl;
+    struct received_data *rd = (struct received_data *) user_data;
 
     g_static_mutex_lock(&thread_mutex);
     if (worker_thread || bar_thread) {
@@ -139,7 +150,7 @@ static void handle_data_received(GtkWidget *widget,
     g_strfreev(uris);
 
     update_bar_waiting = FALSE;
-    bar_thread = g_thread_create(update_bar, progress_bar, FALSE, NULL);
+    bar_thread = g_thread_create(update_bar, rd->progress_bar, FALSE, NULL);
     /* make sure the update_bar thread is waiting */
     while (!update_bar_waiting) {
         g_thread_yield();
@@ -150,8 +161,13 @@ static void handle_data_received(GtkWidget *widget,
     sl = g_new(struct work_data, 1);
     sl->files = files;
     sl->length = no_uris;
-    sl->progress_bar = progress_bar;
+    sl->progress_bar = rd->progress_bar;
+    sl->drawing_area = rd->drawing_area;
     worker_thread = g_thread_create(do_work, sl, FALSE, NULL);
+
+    rotation_active = TRUE;
+    g_timeout_add(40, rotate_logo, widget);
+    rotate_logo(widget);
 
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
 }
@@ -216,7 +232,11 @@ static gboolean rotate_logo(gpointer data) {
     rotation_state += G_PI / 20;
     if (rotation_state >= 2.0 * G_PI) rotation_state = 0.0;
     gtk_widget_queue_draw(GTK_WIDGET(data));
-    return TRUE;
+    if (!rotation_active) {
+        rotation_state = 0.0;
+        gtk_widget_queue_draw(GTK_WIDGET(data));
+    }
+    return rotation_active;
 }
 
 struct expose_data {
@@ -259,6 +279,7 @@ int main(int argc, char *argv[])
     GtkAccelGroup *accel_group;
     struct popup_data pd;
     struct expose_data ed;
+    struct received_data rd;
     RsvgDimensionData rdd;
 
     g_thread_init(NULL);
@@ -295,25 +316,28 @@ int main(int argc, char *argv[])
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
     drawing_area = gtk_drawing_area_new();
-    gtk_widget_set_size_request(drawing_area, (int) DRAW_WIDTH, (int) DRAW_HEIGHT);
+    gtk_widget_set_size_request(drawing_area, (int) DRAW_WIDTH,
+                                              (int) DRAW_HEIGHT);
 
     ed.rh = rsvg_handle_new_from_data(test_svg, test_svg_len, NULL);
     rsvg_handle_get_dimensions(ed.rh, &(ed.rdd));
-    ed.scale_factor = MIN(DRAW_HEIGHT / ed.rdd.width, DRAW_HEIGHT / ed.rdd.height);
+    ed.scale_factor = MIN(DRAW_HEIGHT / ed.rdd.width,
+                          DRAW_HEIGHT / ed.rdd.height);
     g_signal_connect(drawing_area, "expose-event",
                      G_CALLBACK(handle_expose), &ed);
 
     progress_bar = gtk_progress_bar_new();
     gtk_widget_set_size_request(progress_bar, 130, 15);
+    rd.progress_bar = progress_bar;
+    rd.drawing_area = drawing_area;
     g_signal_connect(window, "drag-data-received",
-                     G_CALLBACK(handle_data_received), progress_bar);
+                     G_CALLBACK(handle_data_received), &rd);
 
     gtk_box_pack_start(GTK_BOX(vbox), drawing_area, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), progress_bar, TRUE, TRUE, 0);
 
-    g_timeout_add(40, rotate_logo, window);
     gtk_widget_show_all(window);
-    rotate_logo(window);
+
     gtk_main();
     gdk_threads_leave();
     return 0;
