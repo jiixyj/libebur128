@@ -146,6 +146,51 @@ static void handle_data_received(GtkWidget *widget,
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
 }
 
+struct popup_data {
+    GtkAccelGroup *accel_group;
+    GdkEventButton *event;
+};
+
+static void test(void) {
+    fprintf(stderr, "test\n");}
+
+static void handle_popup(GtkWidget *widget, struct popup_data *pd)
+{
+    GtkWidget *menu, *menu_item;
+
+    menu = gtk_menu_new();
+    gtk_menu_set_accel_group(GTK_MENU(menu), pd->accel_group);
+
+    /* ... add menu items ... */
+    menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, pd->accel_group);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+    g_signal_connect(menu_item, "activate", gtk_main_quit, NULL);
+
+    gtk_widget_show_all(menu);
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+                   (pd->event != NULL) ? pd->event->button : 0,
+                   gdk_event_get_time((GdkEvent *) pd->event));
+}
+
+static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event,
+                                    GtkAccelGroup *accel_group)
+{
+    if (event->type == GDK_BUTTON_PRESS) {
+        if (event->button == 1) {
+            gtk_window_begin_move_drag(GTK_WINDOW
+                                       (gtk_widget_get_toplevel(widget)),
+                                       (int) event->button, (int) event->x_root,
+                                       (int) event->y_root, event->time);
+        } else if (event->button == 3) {
+            struct popup_data pd = { accel_group, event };
+            handle_popup(widget, &pd);
+        }
+    }
+
+    return FALSE;
+}
+
+
 static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
                                  gpointer callback_data)
 {
@@ -161,6 +206,8 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
 int main(int argc, char *argv[])
 {
     GtkWidget *window, *progress_bar;
+    GtkAccelGroup *accel_group;
+    struct popup_data pd;
 
     g_thread_init(NULL);
     gdk_threads_init();
@@ -171,22 +218,32 @@ int main(int argc, char *argv[])
     setlocale(LC_COLLATE, "");
     setlocale(LC_CTYPE, "");
 
+    accel_group = gtk_accel_group_new();
+
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Loudness Drop");
-    gtk_window_set_default_size(GTK_WINDOW(window), 250, 250);
+    gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+    gtk_window_set_default_size(GTK_WINDOW(window), 130, 130);
+    gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+    gtk_window_set_keep_above(GTK_WINDOW(window), TRUE);
+    gtk_widget_add_events(window, GDK_BUTTON_PRESS_MASK);
+    gtk_drag_dest_set(window, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
+    gtk_drag_dest_add_uri_targets(window);
+    gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
     g_signal_connect(window, "delete-event", exit_program, NULL);
     g_signal_connect(window, "destroy", exit_program, NULL);
+    g_signal_connect(window, "button-press-event",
+                     G_CALLBACK(handle_button_press), accel_group);
+    g_signal_connect(window, "key-press-event",
+                     G_CALLBACK(handle_key_press), NULL);
+    pd.accel_group = accel_group;
+    pd.event = NULL;
+    g_signal_connect(window, "popup-menu", G_CALLBACK(handle_popup), &pd);
 
     progress_bar = gtk_progress_bar_new();
     gtk_container_add(GTK_CONTAINER(window), progress_bar);
-
-    gtk_drag_dest_set(window, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
-    gtk_drag_dest_add_uri_targets(window);
-
+    gtk_widget_set_size_request(progress_bar, 130, 130);
     g_signal_connect(window, "drag-data-received",
                      G_CALLBACK(handle_data_received), progress_bar);
-    g_signal_connect(window, "key-press-event",
-                     G_CALLBACK(handle_key_press), NULL);
 
     gtk_widget_show_all(window);
     gtk_main();
