@@ -24,6 +24,7 @@ struct work_data {
     gchar **files;
     guint length;
     int success;
+    GtkWidget *progress_bar;
 };
 
 static GStaticMutex thread_mutex = G_STATIC_MUTEX_INIT;
@@ -65,6 +66,10 @@ static gpointer do_work(gpointer data)
 
     g_free(wd->files);
     g_free(wd);
+
+    gdk_threads_enter();
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(wd->progress_bar), 0.0);
+    gdk_threads_leave();
 
     g_static_mutex_lock(&thread_mutex);
     worker_thread = NULL;
@@ -141,6 +146,7 @@ static void handle_data_received(GtkWidget *widget,
     sl = g_new(struct work_data, 1);
     sl->files = files;
     sl->length = no_uris;
+    sl->progress_bar = progress_bar;
     worker_thread = g_thread_create(do_work, sl, FALSE, NULL);
 
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
@@ -205,7 +211,7 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
 
 int main(int argc, char *argv[])
 {
-    GtkWidget *window, *progress_bar;
+    GtkWidget *window, *vbox, *drawing_area, *progress_bar;
     GtkAccelGroup *accel_group;
     struct popup_data pd;
 
@@ -239,11 +245,20 @@ int main(int argc, char *argv[])
     pd.event = NULL;
     g_signal_connect(window, "popup-menu", G_CALLBACK(handle_popup), &pd);
 
+    vbox = gtk_vbox_new(FALSE, 0);
+    gtk_container_add(GTK_CONTAINER(window), vbox);
+
+    drawing_area = gtk_drawing_area_new();
+    gtk_widget_set_size_request(drawing_area, 130, 114);
+
     progress_bar = gtk_progress_bar_new();
-    gtk_container_add(GTK_CONTAINER(window), progress_bar);
-    gtk_widget_set_size_request(progress_bar, 130, 130);
+    gtk_widget_set_size_request(progress_bar, 130, 16);
     g_signal_connect(window, "drag-data-received",
                      G_CALLBACK(handle_data_received), progress_bar);
+
+    gtk_box_pack_start(GTK_BOX(vbox), drawing_area, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), progress_bar, TRUE, TRUE, 0);
+
 
     gtk_widget_show_all(window);
     gtk_main();

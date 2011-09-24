@@ -170,7 +170,7 @@ int loudness_tag(GSList *files)
                                 &opts, nproc(), FALSE, NULL);
         g_slist_foreach(files, init_state_and_scan, pool);
         progress_bar_thread = g_thread_create(print_progress_bar,
-                                            NULL, TRUE, NULL);
+                                              NULL, TRUE, NULL);
         g_thread_pool_free(pool, FALSE, TRUE);
         g_thread_join(progress_bar_thread);
 
