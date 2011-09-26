@@ -10,9 +10,16 @@
 
 static GMutex* ffmpeg_mutex;
 
+#define BUFFER_SIZE (AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE)
+
 struct _buffer {
-  uint8_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+  uint8_t audio_buf[BUFFER_SIZE];
 } __attribute__ ((aligned (8)));
+
+struct buffer_list_node {
+  guint8 *data;
+  size_t size;
+};
 
 struct input_handle {
   AVFormatContext* format_context;
@@ -23,7 +30,11 @@ struct input_handle {
   int audio_stream;
   uint8_t* old_data;
   struct _buffer audio_buf;
-  float buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1];
+  float buffer[BUFFER_SIZE / 2 + 1];
+
+  GSList *buffer_list;
+  size_t current_bytes;
+
 };
 
 static unsigned ffmpeg_get_channels(struct input_handle* ih) {
@@ -46,6 +57,9 @@ static size_t ffmpeg_get_buffer_size(struct input_handle* ih) {
 static struct input_handle* ffmpeg_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
+
+  ret->buffer_list = NULL;
+  ret->current_bytes = 0;
   return ret;
 }
 
@@ -187,7 +201,7 @@ static size_t ffmpeg_get_total_frames(struct input_handle* ih) {
   }
 }
 
-static size_t ffmpeg_read_frames(struct input_handle* ih) {
+static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
   for (;;) {
     if (ih->need_new_frame && av_read_frame(ih->format_context, &ih->packet) < 0) {
       return 0;
@@ -271,6 +285,40 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
     av_free_packet(&ih->packet);
     ih->need_new_frame = TRUE;
   }
+}
+
+static int ffmpeg_read_frames(struct input_handle* ih) {
+    size_t buf_pos = 0, nr_frames_read, buffer_size;
+    GSList *next;
+    struct buffer_list_node *buf_node;
+
+    while (ih->current_bytes < BUFFER_SIZE) {
+        nr_frames_read = ffmpeg_read_one_packet(ih);
+        if (!nr_frames_read) {
+            break;
+        }
+        buf_node = g_new(struct buffer_list_node, 1);
+        buf_node->size = nr_frames_read * ffmpeg_get_channels(ih) * sizeof(float);
+        buf_node->data = g_memdup(ih->buffer, buf_node->size);
+        ih->buffer_list = g_slist_append(ih->buffer_list, buf_node);
+        ih->current_bytes += buf_node->size;
+    }
+
+    while (ih->buffer_list &&
+           ((struct buffer_list_node *) ih->buffer_list->data)->size + buf_pos <= BUFFER_SIZE) {
+        memcpy((guint8 *) ih->buffer + buf_pos,
+               ((struct buffer_list_node *) ih->buffer_list->data)->data,
+               ((struct buffer_list_node *) ih->buffer_list->data)->size);
+        buf_pos           += ((struct buffer_list_node *) ih->buffer_list->data)->size;
+        ih->current_bytes -= ((struct buffer_list_node *) ih->buffer_list->data)->size;
+
+        g_free(((struct buffer_list_node *) ih->buffer_list->data)->data);
+        next = ih->buffer_list->next;
+        g_slist_free_1(ih->buffer_list);
+        ih->buffer_list = next;
+    }
+
+    return buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
 }
 
 static int ffmpeg_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
