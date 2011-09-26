@@ -6,8 +6,7 @@ static const char* plugin_names[] = {
   "input_mpg123",
   "input_musepack",
   "input_ffmpeg",
-  "input_ffmpeg0.5.2",
-  "input_ffmpeg0.6.2",
+  "input_gstreamer",
   NULL
 };
 
@@ -124,6 +123,7 @@ struct input_ops* input_get_ops(const char* filename) {
   GSList* ops = plugin_ops;
   GSList* exts = plugin_exts;
   char* filename_ext = strrchr(filename, '.');
+
   if (filename_ext) {
     ++filename_ext;
   } else {
@@ -132,6 +132,9 @@ struct input_ops* input_get_ops(const char* filename) {
   while (ops && exts) {
     if (ops->data && exts->data) {
       const char** cur_exts = exts->data;
+      if (!(*cur_exts)) {
+        return (struct input_ops*) ops->data;
+      }
       while (*cur_exts) {
         if (!g_ascii_strcasecmp(filename_ext, *cur_exts) || plugin_forced) {
           return (struct input_ops*) ops->data;

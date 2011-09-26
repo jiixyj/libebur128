@@ -144,8 +144,12 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
         if (result) abort();
     }
     if (fd->number_of_elapsed_frames != fd->number_of_frames) {
-        if (verbose) fprintf(stderr, "Warning: Could not read full file"
-                                     " or determine right length!\n");
+        if (verbose) {
+            fprintf(stderr, "Warning: Could not read full file"
+                            " or determine right length: "
+                            "Expected: %lu Got: %lu",
+                            fd->number_of_frames, fd->number_of_elapsed_frames);
+        }
         g_mutex_lock(progress_mutex);
         elapsed_frames += fd->number_of_frames - fd->number_of_elapsed_frames;
         g_cond_broadcast(progress_cond);
@@ -231,8 +235,14 @@ gpointer print_progress_bar(gpointer data)
     for (;;) {
         g_mutex_lock(progress_mutex);
         g_cond_wait(progress_cond, progress_mutex);
-        bars = (int) (elapsed_frames * G_GUINT64_CONSTANT(72) / total_frames);
-        percent = (int) (elapsed_frames * G_GUINT64_CONSTANT(100) / total_frames);
+        if (total_frames) {
+            bars = (int) (elapsed_frames * G_GUINT64_CONSTANT(72) / total_frames);
+            percent = (int) (elapsed_frames * G_GUINT64_CONSTANT(100) / total_frames);
+        } else {
+            bars = percent = 0;
+        }
+        bars = CLAMP(bars, 0, 72);
+        percent = CLAMP(percent, 0, 100);
         progress_bar[0] = '[';
         for (i = 1; i <= bars; ++i) {
             progress_bar[i] = '#';

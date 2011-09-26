@@ -28,6 +28,11 @@ if(GLIB_FOUND)
     set_target_properties(input_ffmpeg PROPERTIES COMPILE_FLAGS "-std=c99")
   endif()
 
+  if(GSTREAMER_FOUND)
+    add_library(input_gstreamer MODULE input_gstreamer.c)
+    target_link_libraries(input_gstreamer ${GSTREAMER_LIBRARIES} ${GLIB_LIBRARIES})
+  endif()
+
   if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
     install(TARGETS input_ffmpeg input_sndfile input_mpg123 input_musepack
             RUNTIME DESTINATION ${FOLDER_BIN}
