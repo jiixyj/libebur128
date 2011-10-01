@@ -135,7 +135,7 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
                              "appsink name=sink sync=FALSE", &error);
   if (!ih->bin) {
     fprintf(stderr, "Parse error: %s", error->message);
-    return 1;
+    return NULL;
   }
 
   fdsrc = gst_bin_get_by_name(GST_BIN(ih->bin), "my_fdsrc");
@@ -163,21 +163,39 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
 }
 
 static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* filename) {
+  GTimeVal beg, end;
+
   ih->filename = filename;
   ih->quit_pipeline = TRUE;
   ih->main_loop_quit = FALSE;
   ih->ready = FALSE;
   ih->bin = NULL;
   ih->gstreamer_loop = g_thread_create(gstreamer_loop, ih, TRUE, NULL);
-  while (!ih->ready) g_thread_yield();
+
+  g_get_current_time(&beg);
+  while (!ih->ready) {
+    g_thread_yield();
+    g_get_current_time(&end);
+    if (end.tv_usec + end.tv_sec * G_USEC_PER_SEC
+      - beg.tv_usec - beg.tv_sec * G_USEC_PER_SEC > 1 * G_USEC_PER_SEC) {
+      break;
+    }
+  }
 
   if (ih->quit_pipeline) {
+    if (ih->bin) {
+      GstBus *bus = gst_element_get_bus(ih->bin);
+      gst_bus_post(bus, gst_message_new_eos(NULL));
+      g_object_unref(bus);
+    }
     g_thread_join(ih->gstreamer_loop);
-    /* cleanup */
-    gst_element_set_state(ih->bin, GST_STATE_NULL);
-    g_object_unref(ih->bin);
-    ih->bin = NULL;
-    g_main_loop_unref(ih->loop);
+    if (ih->bin) {
+      /* cleanup */
+      gst_element_set_state(ih->bin, GST_STATE_NULL);
+      g_object_unref(ih->bin);
+      ih->bin = NULL;
+      g_main_loop_unref(ih->loop);
+    }
     return 1;
   } else {
     return 0;
