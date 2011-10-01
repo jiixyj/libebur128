@@ -5,9 +5,17 @@
 #include "input.h"
 
 struct input_handle {
+  const char *filename;
+  GThread *gstreamer_loop;
+  gboolean quit_pipeline;
+  gboolean ready;
+  gboolean main_loop_quit;
+
+  GMainContext *main_context;
+
   GstElement *bin;
   GstElement *appsink;
-  GThread *event_thread;
+  GMainLoop *loop;
 
   GSList *buffer_list;
   size_t current_bytes;
@@ -16,55 +24,52 @@ struct input_handle {
 };
 
 static GStaticMutex gstreamer_mutex = G_STATIC_MUTEX_INIT;
+extern gboolean verbose;
 
-static gpointer event_loop(gpointer user)
+static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 {
-  GstBus *bus;
-  GstMessage *message = NULL;
-  gboolean running = TRUE;
-  struct input_handle *ih = (struct input_handle *) user;
+  struct input_handle *ih = (struct input_handle *) data;
 
-  bus = gst_element_get_bus (GST_ELEMENT (ih->bin));
-
-  while (running) {
-    g_static_mutex_lock(&gstreamer_mutex);
-    message = gst_bus_poll(bus, GST_MESSAGE_ANY, -1);
-    g_static_mutex_unlock(&gstreamer_mutex);
-    g_assert (message != NULL);
-    switch (message->type) {
-      case GST_MESSAGE_EOS:
-        running = FALSE;
-        break;
-      case GST_MESSAGE_WARNING:{
-        GError *gerror;
-        gchar *debug;
-
-        gst_message_parse_warning (message, &gerror, &debug);
-        gst_object_default_error (GST_MESSAGE_SRC (message), gerror, debug);
-        g_error_free (gerror);
-        g_free (debug);
-        break;
-      }
-      case GST_MESSAGE_ERROR:{
-        GError *gerror;
-        gchar *debug;
-
-        gst_message_parse_error (message, &gerror, &debug);
-        gst_object_default_error (GST_MESSAGE_SRC (message), gerror, debug);
-        g_error_free (gerror);
-        g_free (debug);
-        running = FALSE;
-        gst_element_set_state(ih->bin, GST_STATE_NULL);
-        break;
-      }
-      default:
-        break;
+  switch (GST_MESSAGE_TYPE (msg)) {
+    case GST_MESSAGE_ASYNC_DONE:{
+      ih->quit_pipeline = FALSE;
+      ih->ready = TRUE;
+      break;
     }
-    gst_message_unref (message);
-  }
-  gst_object_unref (bus);
+    case GST_MESSAGE_EOS:{
+      if (verbose) g_print("End-of-stream\n");
+      ih->ready = TRUE;
+      g_static_mutex_lock(&gstreamer_mutex);
+      if (!ih->main_loop_quit) {
+        ih->main_loop_quit = TRUE;
+        g_main_loop_quit(ih->loop);
+      }
+      g_static_mutex_unlock(&gstreamer_mutex);
+      break;
+    }
+    case GST_MESSAGE_ERROR:{
+      gchar *debug;
+      GError *err;
 
-  return NULL;
+      gst_message_parse_error (msg, &err, &debug);
+      g_free (debug);
+
+      if (verbose) g_print("%p Error: %s\n", bus, err->message);
+      g_error_free (err);
+
+      ih->ready = TRUE;
+      g_static_mutex_lock(&gstreamer_mutex);
+      if (!ih->main_loop_quit) {
+        ih->main_loop_quit = TRUE;
+        g_main_loop_quit(ih->loop);
+      }
+      g_static_mutex_unlock(&gstreamer_mutex);
+      break;
+    }
+    default:
+      break;
+  }
+  return TRUE;
 }
 
 static unsigned gstreamer_get_channels(struct input_handle* ih) {
@@ -93,13 +98,16 @@ static struct input_handle* gstreamer_handle_init() {
   ret->buffer_list = NULL;
   ret->current_bytes = 0;
 
+  ret->main_context = g_main_context_new();
+
   return ret;
 }
 
-static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* filename) {
+static gpointer gstreamer_loop(struct input_handle *ih) {
   GstElement *fdsrc;
   GError *error = NULL;
   GstBuffer *preroll = NULL;
+  GstBus *bus;
 
   ih->bin = gst_parse_launch("filesrc name=my_fdsrc ! "
                              "decodebin2 ! "
@@ -112,24 +120,50 @@ static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* 
   }
 
   fdsrc = gst_bin_get_by_name(GST_BIN(ih->bin), "my_fdsrc");
-  g_object_set(G_OBJECT(fdsrc), "location", filename, NULL);
+  g_object_set(G_OBJECT(fdsrc), "location", ih->filename, NULL);
 
   ih->appsink = gst_bin_get_by_name(GST_BIN(ih->bin), "sink");
   // gst_app_sink_set_max_buffers(GST_APP_SINK(ih->appsink), 1);
 
   /* start playing */
-  gst_element_set_state(ih->bin, GST_STATE_PLAYING);
-  ih->event_thread = g_thread_create(event_loop, ih, TRUE, NULL);
+  ih->loop = g_main_loop_new(ih->main_context, FALSE);
 
-  g_signal_emit_by_name(ih->appsink, "pull-preroll", &preroll);
-  if (!preroll) {
+  bus = gst_element_get_bus(ih->bin);
+  GSource *message_source = gst_bus_create_watch(bus);
+  g_source_set_callback(message_source, bus_call, ih, NULL);
+  g_source_attach(message_source, ih->main_context);
+  g_source_unref(message_source);
+  g_object_unref(bus);
+
+  /* start play back and listed to events */
+  gst_element_set_state(ih->bin, GST_STATE_PLAYING);
+
+  g_main_loop_run(ih->loop);
+
+  return NULL;
+}
+
+static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* filename) {
+  ih->filename = filename;
+  ih->quit_pipeline = TRUE;
+  ih->main_loop_quit = FALSE;
+  ih->ready = FALSE;
+  ih->bin = NULL;
+  ih->gstreamer_loop = g_thread_create(gstreamer_loop, ih, TRUE, NULL);
+  while (!ih->ready) g_thread_yield();
+
+  if (ih->quit_pipeline) {
+    g_thread_join(ih->gstreamer_loop);
+    /* cleanup */
     gst_element_set_state(ih->bin, GST_STATE_NULL);
-    g_thread_join(ih->event_thread);
+    g_object_unref(ih->bin);
+    ih->bin = NULL;
+    g_main_loop_unref(ih->loop);
     return 1;
   } else {
-    gst_buffer_unref(preroll);
     return 0;
   }
+  return 0;
 }
 
 static int gstreamer_set_channel_map(struct input_handle* ih, ebur128_state* st) {
@@ -139,6 +173,7 @@ static int gstreamer_set_channel_map(struct input_handle* ih, ebur128_state* st)
 }
 
 static void gstreamer_handle_destroy(struct input_handle** ih) {
+  g_main_context_unref((*ih)->main_context);
   free(*ih);
   *ih = NULL;
 }
@@ -191,11 +226,6 @@ static size_t gstreamer_read_frames(struct input_handle* ih) {
         g_slist_free_1(ih->buffer_list);
         ih->buffer_list = next;
     }
-    // if (ih->gst_buf->size > BUFFER_SIZE) {
-    //     fprintf(stderr, "Buffer too small for %lu bytes!\n", ih->gst_buf->size);
-    //     return 0;
-    // }
-    // memcpy(ih->buffer, ih->gst_buf->data, ih->gst_buf->size);
     return buf_pos / sizeof(float) / gstreamer_get_channels(ih);
 }
 
@@ -214,8 +244,18 @@ static void gstreamer_free_buffer(struct input_handle* ih) {
 
 static void gstreamer_close_file(struct input_handle* ih, FILE* file) {
   (void) file;
+
+  if (ih->bin) {
+    GstBus *bus = gst_element_get_bus(ih->bin);
+    gst_bus_post(bus, gst_message_new_eos(NULL));
+    g_object_unref(bus);
+  }
+  g_thread_join(ih->gstreamer_loop);
+  /* cleanup */
   gst_element_set_state(ih->bin, GST_STATE_NULL);
-  gst_object_unref(ih->bin);
+  g_object_unref(ih->bin);
+  ih->bin = NULL;
+  g_main_loop_unref(ih->loop);
 }
 
 static int gstreamer_init_library() {
