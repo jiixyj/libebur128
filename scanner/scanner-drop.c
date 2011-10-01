@@ -167,7 +167,6 @@ static void handle_data_received(GtkWidget *widget,
 
     rotation_active = TRUE;
     g_timeout_add(40, rotate_logo, widget);
-    rotate_logo(widget);
 
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
 }
