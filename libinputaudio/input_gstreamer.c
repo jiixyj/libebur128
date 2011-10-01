@@ -30,6 +30,8 @@ static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 {
   struct input_handle *ih = (struct input_handle *) data;
 
+  // if (verbose) fprintf(stderr, "%p %d %s\n", bus, GST_MESSAGE_TYPE(msg), ih->filename);
+
   switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_ASYNC_DONE:{
       ih->quit_pipeline = FALSE;
@@ -64,6 +66,23 @@ static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
         g_main_loop_quit(ih->loop);
       }
       g_static_mutex_unlock(&gstreamer_mutex);
+      break;
+    }
+    case GST_MESSAGE_STATE_CHANGED: {
+      GstState old_state, new_state;
+
+      gst_message_parse_state_changed (msg, &old_state, &new_state, NULL);
+      // if (verbose) g_print ("Element %s changed state from %s to %s.\n",
+      //     GST_OBJECT_NAME (msg->src),
+      //     gst_element_state_get_name (old_state),
+      //     gst_element_state_get_name (new_state));
+      break;
+    }
+    case GST_MESSAGE_STREAM_STATUS:{
+      GstStreamStatusType type;
+      GstElement *owner;
+      gst_message_parse_stream_status(msg, &type, &owner);
+      // if (verbose) g_print("%p New Stream Type: %d\n", bus, type);
       break;
     }
     default:
