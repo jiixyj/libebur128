@@ -40,16 +40,16 @@ static void mpg123_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-static int mpg123_open_file(struct input_handle* ih, FILE* file, const char* filename) {
+static int mpg123_open_file(struct input_handle* ih, const char* filename) {
   int result;
 
-  (void) filename;
   ih->mh = mpg123_new(NULL, &result);
   if (!ih->mh) {
     fprintf(stderr, "Could not create mpg123 handler!\n");
     goto close_file;
   }
-  result = mpg123_open_fd(ih->mh, fileno(file));
+  /* FIXME test on windows */
+  result = mpg123_open(ih->mh, filename);
   if (result != MPG123_OK) {
     fprintf(stderr, "Could not open input file!\n");
     goto close_file;
@@ -70,7 +70,7 @@ static int mpg123_open_file(struct input_handle* ih, FILE* file, const char* fil
     goto close_file;
   }
   result = mpg123_close(ih->mh);
-  result = mpg123_open_fd(ih->mh, fileno(file));
+  result = mpg123_open(ih->mh, filename);
   if (result != MPG123_OK) {
     fprintf(stderr, "Could not open input file!\n");
     goto close_file;
@@ -148,10 +148,9 @@ static void mpg123_free_buffer(struct input_handle* ih) {
   ih->buffer = NULL;
 }
 
-static void mpg123_close_file(struct input_handle* ih, FILE* file) {
+static void mpg123_close_file(struct input_handle* ih) {
   mpg123_close(ih->mh);
   mpg123_delete(ih->mh);
-  fclose(file);
   ih->mh = NULL;
 }
 

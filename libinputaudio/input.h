@@ -18,15 +18,14 @@ struct input_ops {
   size_t        (*get_buffer_size)(struct input_handle* ih);
   struct input_handle* (*handle_init)();
   void          (*handle_destroy)(struct input_handle** ih);
-  int           (*open_file)(struct input_handle* ih, FILE* file,
-                             const char* filename);
+  int           (*open_file)(struct input_handle* ih, const char* filename);
   int           (*set_channel_map)(struct input_handle* ih, ebur128_state* st);
   int           (*allocate_buffer)(struct input_handle* ih);
   size_t        (*get_total_frames)(struct input_handle* ih);
   size_t        (*read_frames)(struct input_handle* ih);
   int           (*check_ok)(struct input_handle* ih, size_t nr_frames_read_all);
   void          (*free_buffer)(struct input_handle* ih);
-  void          (*close_file)(struct input_handle* ih, FILE* file);
+  void          (*close_file)(struct input_handle* ih);
   int           (*init_library)();
   void          (*exit_library)();
 };

@@ -35,8 +35,9 @@ static struct input_handle* mpcdec_handle_init() {
   return ret;
 }
 
-static int mpcdec_open_file(struct input_handle* ih, FILE* file, const char* filename) {
-  int err = mpc_reader_init_stdio_stream(&ih->reader, file);
+static int mpcdec_open_file(struct input_handle* ih, const char* filename) {
+  /* FIXME test on windows */
+  int err = mpc_reader_init_stdio(&ih->reader, filename);
   (void) filename;
 
   if (err < 0) {
@@ -92,8 +93,7 @@ static void mpcdec_free_buffer(struct input_handle* ih) {
   return;
 }
 
-static void mpcdec_close_file(struct input_handle* ih, FILE* file) {
-  (void) file;
+static void mpcdec_close_file(struct input_handle* ih) {
   mpc_demux_exit(ih->demux);
   mpc_reader_exit_stdio(&ih->reader);
 }

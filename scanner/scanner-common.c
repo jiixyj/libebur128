@@ -34,9 +34,8 @@ void scanner_reset_common(void)
 }
 
 int open_plugin(const char *raw, const char *display,
-                       struct input_ops **ops,
-                       struct input_handle **ih,
-                       FILE **file)
+                struct input_ops **ops,
+                struct input_handle **ih)
 {
     int result;
 
@@ -47,16 +46,9 @@ int open_plugin(const char *raw, const char *display,
     }
     *ih = (*ops)->handle_init();
 
-    *file = g_fopen(raw, "rb");
-    if (!(*file)) {
-        if (verbose) fprintf(stderr, "Error opening file '%s'\n", display);
-        return 1;
-    }
-    result = (*ops)->open_file(*ih, *file, raw);
+    result = (*ops)->open_file(*ih, raw);
     if (result) {
         if (verbose) fprintf(stderr, "Error opening file '%s'\n", display);
-        fclose(*file);
-        *file = NULL;
         return 1;
     }
     return 0;
@@ -69,14 +61,15 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
 
     struct input_ops *ops = NULL;
     struct input_handle *ih = NULL;
-    FILE *file = NULL;
+    int result;
 
     int *do_scan = (int *) user_data;
     fln->d = g_malloc(sizeof(struct file_data));
     memcpy(fln->d, &empty, sizeof empty);
     fd = (struct file_data *) fln->d;
 
-    if (open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih, &file)) {
+    result = open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih);
+    if (result) {
         goto free;
     }
 
@@ -88,7 +81,7 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
     g_mutex_unlock(progress_mutex);
 
   free:
-    if (file) ops->close_file(ih, file);
+    if (!result) ops->close_file(ih);
     if (ih) ops->handle_destroy(&ih);
 }
 
@@ -100,7 +93,6 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
 
     struct input_ops* ops = NULL;
     struct input_handle* ih = NULL;
-    FILE *file = NULL;
     int r128_mode = EBUR128_MODE_I;
     unsigned int i;
 
@@ -108,7 +100,8 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     float *buffer = NULL;
     size_t nr_frames_read;
 
-    if (open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih, &file)) {
+    result = open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih);
+    if (result) {
         g_mutex_lock(progress_mutex);
         elapsed_frames += fd->number_of_frames;
         g_cond_broadcast(progress_cond);
@@ -183,7 +176,7 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
 
     if (ih) ops->free_buffer(ih);
   free:
-    if (file) ops->close_file(ih, file);
+    if (!result) ops->close_file(ih);
     if (ih) ops->handle_destroy(&ih);
 }
 

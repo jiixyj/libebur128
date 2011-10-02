@@ -41,10 +41,10 @@ static void sndfile_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-static int sndfile_open_file(struct input_handle* ih, FILE* file, const char* filename) {
-  (void) filename;
+static int sndfile_open_file(struct input_handle* ih, const char* filename) {
   memset(&ih->file_info, '\0', sizeof(ih->file_info));
-  ih->file = sf_open_fd(fileno(file), SFM_READ, &ih->file_info, 1);
+  /* FIXME test on windows */
+  ih->file = sf_open(filename, SFM_READ, &ih->file_info);
   if (ih->file) {
     return 0;
   } else {
@@ -124,12 +124,11 @@ static void sndfile_free_buffer(struct input_handle* ih) {
   ih->buffer = NULL;
 }
 
-static void sndfile_close_file(struct input_handle* ih, FILE* file) {
+static void sndfile_close_file(struct input_handle* ih) {
   if (sf_close(ih->file)) {
     fprintf(stderr, "Could not close input file!\n");
   }
   ih->file = NULL;
-  if (file) fclose(file);
 }
 
 static int sndfile_init_library() {

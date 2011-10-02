@@ -69,8 +69,7 @@ static void ffmpeg_handle_destroy(struct input_handle** ih) {
 }
 
 
-static int ffmpeg_open_file(struct input_handle* ih, FILE* file, const char* filename) {
-  (void) file;
+static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   g_mutex_lock(ffmpeg_mutex);
   ih->format_context = NULL;
 #if LIBAVFORMAT_VERSION_MAJOR >= 54 || \
@@ -334,11 +333,10 @@ static void ffmpeg_free_buffer(struct input_handle* ih) {
   return;
 }
 
-static void ffmpeg_close_file(struct input_handle* ih, FILE* file) {
+static void ffmpeg_close_file(struct input_handle* ih) {
   g_mutex_lock(ffmpeg_mutex);
   avcodec_close(ih->codec_context);
   av_close_input_file(ih->format_context);
-  fclose(file);
   g_mutex_unlock(ffmpeg_mutex);
 }
 

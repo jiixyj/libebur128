@@ -38,7 +38,8 @@ static void dump_loudness_info(gpointer user, gpointer user_data)
 
     int *ret = (int *) user_data;
 
-    if (open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih, &file)) {
+    result = open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih);
+    if (result) {
         *ret = EXIT_FAILURE;
         goto free;
     }
@@ -101,7 +102,7 @@ static void dump_loudness_info(gpointer user, gpointer user_data)
 
   free:
     if (ih) ops->free_buffer(ih);
-    if (file) ops->close_file(ih, file);
+    if (!result) ops->close_file(ih);
     if (ih) ops->handle_destroy(&ih);
 }
 

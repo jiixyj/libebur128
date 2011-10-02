@@ -36,8 +36,7 @@ extern guint64 total_frames;
 
 int open_plugin(const char *raw, const char *display,
                 struct input_ops **ops,
-                struct input_handle **ih,
-                FILE **file);
+                struct input_handle **ih);
 void scanner_init_common(void);
 void scanner_reset_common(void);
 void init_and_get_number_of_frames(gpointer user, gpointer user_data);

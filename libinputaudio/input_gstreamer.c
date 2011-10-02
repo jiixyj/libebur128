@@ -163,7 +163,7 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
   return NULL;
 }
 
-static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* filename) {
+static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
   GTimeVal beg, end;
 
   ih->filename = filename;
@@ -282,9 +282,7 @@ static void gstreamer_free_buffer(struct input_handle* ih) {
   return;
 }
 
-static void gstreamer_close_file(struct input_handle* ih, FILE* file) {
-  (void) file;
-
+static void gstreamer_close_file(struct input_handle* ih) {
   if (ih->bin) {
     GstBus *bus = gst_element_get_bus(ih->bin);
     gst_bus_post(bus, gst_message_new_eos(NULL));
