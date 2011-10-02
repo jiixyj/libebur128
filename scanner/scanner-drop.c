@@ -87,16 +87,26 @@ static gpointer do_work(gpointer data)
 }
 
 static gboolean update_bar_waiting;
+static gboolean rotate_logo(gpointer data);
+
+struct received_data {
+    GtkWidget *progress_bar, *drawing_area, *widget;
+};
+
 static gpointer update_bar(gpointer data)
 {
-    GtkProgressBar *progress_bar = (GtkProgressBar *) data;
+    struct received_data *rd = (struct received_data *) data;
     for (;;) {
         g_mutex_lock(progress_mutex);
         update_bar_waiting = TRUE;
         g_cond_wait(progress_cond, progress_mutex);
         if (total_frames > 0) {
             gdk_threads_enter();
-            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar),
+            if (!rotation_active && elapsed_frames) {
+                g_timeout_add(40, rotate_logo, rd->widget);
+                rotation_active = TRUE;
+            }
+            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(rd->progress_bar),
                                           CLAMP((double) elapsed_frames /
                                                 (double) total_frames,
                                                 0.0, 1.0));
@@ -115,12 +125,6 @@ static gpointer update_bar(gpointer data)
 
     return NULL;
 }
-
-struct received_data {
-    GtkWidget *progress_bar, *drawing_area;
-};
-
-static gboolean rotate_logo(gpointer data);
 
 static void handle_data_received(GtkWidget *widget,
                                  GdkDragContext *drag_context, gint x, gint y,
@@ -150,7 +154,7 @@ static void handle_data_received(GtkWidget *widget,
     g_strfreev(uris);
 
     update_bar_waiting = FALSE;
-    bar_thread = g_thread_create(update_bar, rd->progress_bar, FALSE, NULL);
+    bar_thread = g_thread_create(update_bar, rd, FALSE, NULL);
     /* make sure the update_bar thread is waiting */
     while (!update_bar_waiting) {
         g_thread_yield();
@@ -164,9 +168,6 @@ static void handle_data_received(GtkWidget *widget,
     sl->progress_bar = rd->progress_bar;
     sl->drawing_area = rd->drawing_area;
     worker_thread = g_thread_create(do_work, sl, FALSE, NULL);
-
-    rotation_active = TRUE;
-    g_timeout_add(40, rotate_logo, widget);
 
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
 }
@@ -329,6 +330,7 @@ int main(int argc, char *argv[])
     gtk_widget_set_size_request(progress_bar, 130, 15);
     rd.progress_bar = progress_bar;
     rd.drawing_area = drawing_area;
+    rd.widget = window;
     g_signal_connect(window, "drag-data-received",
                      G_CALLBACK(handle_data_received), &rd);
 
