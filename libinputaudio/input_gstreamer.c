@@ -12,6 +12,7 @@ struct input_handle {
   gboolean main_loop_quit;
 
   GMainContext *main_context;
+  GSource *message_source;
 
   GstElement *bin;
   GstElement *appsink;
@@ -148,10 +149,10 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
   ih->loop = g_main_loop_new(ih->main_context, FALSE);
 
   bus = gst_element_get_bus(ih->bin);
-  GSource *message_source = gst_bus_create_watch(bus);
-  g_source_set_callback(message_source, bus_call, ih, NULL);
-  g_source_attach(message_source, ih->main_context);
-  g_source_unref(message_source);
+  ih->message_source = gst_bus_create_watch(bus);
+  g_source_set_callback(ih->message_source, bus_call, ih, NULL);
+  g_source_attach(ih->message_source, ih->main_context);
+  g_source_unref(ih->message_source);
   g_object_unref(bus);
 
   /* start play back and listed to events */
@@ -170,6 +171,7 @@ static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* 
   ih->main_loop_quit = FALSE;
   ih->ready = FALSE;
   ih->bin = NULL;
+  ih->message_source = NULL;
   ih->gstreamer_loop = g_thread_create(gstreamer_loop, ih, TRUE, NULL);
 
   g_get_current_time(&beg);
@@ -189,6 +191,7 @@ static int gstreamer_open_file(struct input_handle* ih, FILE* file, const char* 
       g_object_unref(bus);
     }
     g_thread_join(ih->gstreamer_loop);
+    if (ih->message_source) g_source_destroy(ih->message_source);
     if (ih->bin) {
       /* cleanup */
       gst_element_set_state(ih->bin, GST_STATE_NULL);
@@ -288,11 +291,14 @@ static void gstreamer_close_file(struct input_handle* ih, FILE* file) {
     g_object_unref(bus);
   }
   g_thread_join(ih->gstreamer_loop);
-  /* cleanup */
-  gst_element_set_state(ih->bin, GST_STATE_NULL);
-  g_object_unref(ih->bin);
-  ih->bin = NULL;
-  g_main_loop_unref(ih->loop);
+  if (ih->message_source) g_source_destroy(ih->message_source);
+  if (ih->bin) {
+    /* cleanup */
+    gst_element_set_state(ih->bin, GST_STATE_NULL);
+    g_object_unref(ih->bin);
+    ih->bin = NULL;
+    g_main_loop_unref(ih->loop);
+  }
 }
 
 static int gstreamer_init_library() {
