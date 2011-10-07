@@ -30,11 +30,9 @@ static double clamp_rg(double x) {
   else return x;
 }
 
-static void fill_album_data(gpointer user, gpointer user_data)
+static void fill_album_data(struct filename_list_node *fln, double *album_data)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
-    double *album_data = (double *) user_data;
 
     fd->gain_album = album_data[0];
     fd->peak_album = album_data[1];
@@ -45,55 +43,53 @@ static GSList *files_in_current_dir;
 
 static void calculate_album_gain_and_peak_last_dir(void)
 {
-        double album_data[] = {0.0, 0.0};
-        GPtrArray *states = g_ptr_array_new();
-        struct file_data result;
-        memcpy(&result, &empty, sizeof empty);
+    double album_data[] = {0.0, 0.0};
+    GPtrArray *states = g_ptr_array_new();
+    struct file_data result;
+    memcpy(&result, &empty, sizeof empty);
 
-        files_in_current_dir = g_slist_reverse(files_in_current_dir);
-        g_slist_foreach(files_in_current_dir, get_state, states);
-        ebur128_loudness_global_multiple((ebur128_state **) states->pdata,
-                                         states->len, &album_data[0]);
-        album_data[0] = clamp_rg(REFERENCE_LEVEL - album_data[0]);
-        g_slist_foreach(files_in_current_dir, get_max_peaks, &result);
-        album_data[1] = tag_tp ? result.true_peak : result.peak;
-        g_slist_foreach(files_in_current_dir, fill_album_data, album_data);
+    files_in_current_dir = g_slist_reverse(files_in_current_dir);
+    g_slist_foreach(files_in_current_dir, (GFunc) get_state, states);
+    ebur128_loudness_global_multiple((ebur128_state **) states->pdata,
+                                     states->len, &album_data[0]);
+    album_data[0] = clamp_rg(REFERENCE_LEVEL - album_data[0]);
+    g_slist_foreach(files_in_current_dir, (GFunc) get_max_peaks, &result);
+    album_data[1] = tag_tp ? result.true_peak : result.peak;
+    g_slist_foreach(files_in_current_dir, (GFunc) fill_album_data, album_data);
 
-        g_ptr_array_free(states, TRUE);
+    g_ptr_array_free(states, TRUE);
 
-        g_free(current_dir);
-        current_dir = NULL;
-        g_slist_free(files_in_current_dir);
-        files_in_current_dir = NULL;
+    g_free(current_dir);
+    current_dir = NULL;
+    g_slist_free(files_in_current_dir);
+    files_in_current_dir = NULL;
 }
 
-static void calculate_album_gain_and_peak(gpointer user, gpointer user_data)
+static void calculate_album_gain_and_peak(struct filename_list_node *fln, gpointer unused)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     gchar *dirname;
 
-    (void) user_data;
+    (void) unused;
     dirname = g_path_get_dirname(fln->fr->raw);
     if (!current_dir) {
         current_dir = g_strdup(dirname);
     }
     if (!strcmp(current_dir, dirname)) {
-        files_in_current_dir = g_slist_prepend(files_in_current_dir, user);
+        files_in_current_dir = g_slist_prepend(files_in_current_dir, fln);
     } else {
         calculate_album_gain_and_peak_last_dir();
         current_dir = g_strdup(dirname);
-        files_in_current_dir = g_slist_prepend(files_in_current_dir, user);
+        files_in_current_dir = g_slist_prepend(files_in_current_dir, fln);
     }
     g_free(dirname);
 }
 
 
-static void print_file_data(gpointer user, gpointer user_data)
+static void print_file_data(struct filename_list_node *fln, gpointer unused)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
 
-    (void) user_data;
+    (void) unused;
     if (fd->scanned) {
         if (!track) {
             g_print("%7.2f dB, %7.2f dB, %10.6f, %10.6f",
@@ -115,9 +111,8 @@ static void print_file_data(gpointer user, gpointer user_data)
 }
 
 static int tag_output_state = 0;
-static void tag_files(gpointer user, gpointer user_data)
+static void tag_files(struct filename_list_node *fln, int *ret)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
     int error;
     char *basename, *extension, *filename;
@@ -128,7 +123,6 @@ static void tag_files(gpointer user, gpointer user_data)
                             fd->gain_album,
                             fd->peak_album };
 
-    int *ret = (int *) user_data;
     basename = g_path_get_basename(fln->fr->raw);
     extension = strrchr(basename, '.');
     if (extension) ++extension;
@@ -164,18 +158,18 @@ int loudness_tag(GSList *files)
     GThread *progress_bar_thread;
     int ret = 0, do_scan = 0;
 
-    g_slist_foreach(files, init_and_get_number_of_frames, &do_scan);
+    g_slist_foreach(files, (GFunc) init_and_get_number_of_frames, &do_scan);
     if (do_scan) {
-        pool = g_thread_pool_new(init_state_and_scan_work_item,
+        pool = g_thread_pool_new((GFunc) init_state_and_scan_work_item,
                                 &opts, nproc(), FALSE, NULL);
-        g_slist_foreach(files, init_state_and_scan, pool);
+        g_slist_foreach(files, (GFunc) init_state_and_scan, pool);
         progress_bar_thread = g_thread_create(print_progress_bar,
                                               NULL, TRUE, NULL);
         g_thread_pool_free(pool, FALSE, TRUE);
         g_thread_join(progress_bar_thread);
 
         if (!track) {
-            g_slist_foreach(files, calculate_album_gain_and_peak, NULL);
+            g_slist_foreach(files, (GFunc) calculate_album_gain_and_peak, NULL);
             calculate_album_gain_and_peak_last_dir();
         }
 
@@ -185,15 +179,15 @@ int loudness_tag(GSList *files)
         } else {
             fprintf(stderr, "Track gain, Track peak\n");
         }
-        g_slist_foreach(files, print_file_data, NULL);
+        g_slist_foreach(files, (GFunc) print_file_data, NULL);
         if (!dry_run) {
             fprintf(stderr, "Tagging");
-            g_slist_foreach(files, tag_files, &ret);
+            g_slist_foreach(files, (GFunc) tag_files, &ret);
             if (!ret) fprintf(stderr, " Success!");
             fputc('\n', stderr);
         }
     }
-    g_slist_foreach(files, destroy_state, NULL);
+    g_slist_foreach(files, (GFunc) destroy_state, NULL);
     scanner_reset_common();
     return ret;
 }

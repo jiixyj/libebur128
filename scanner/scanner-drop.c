@@ -41,9 +41,8 @@ static GThread *worker_thread, *bar_thread;
 
 static gboolean rotation_active;
 
-static gpointer do_work(gpointer data)
+static gpointer do_work(struct work_data *wd)
 {
-    struct work_data *wd = (struct work_data *) data;
     int result;
 
     Filetree tree;
@@ -91,15 +90,14 @@ static gpointer do_work(gpointer data)
 }
 
 static gboolean update_bar_waiting;
-static gboolean rotate_logo(gpointer data);
+static gboolean rotate_logo(GtkWidget *widget);
 
 struct received_data {
     GtkWidget *progress_bar, *drawing_area, *widget;
 };
 
-static gpointer update_bar(gpointer data)
+static gpointer update_bar(struct received_data *rd)
 {
-    struct received_data *rd = (struct received_data *) data;
     for (;;) {
         g_mutex_lock(progress_mutex);
         update_bar_waiting = TRUE;
@@ -107,7 +105,7 @@ static gpointer update_bar(gpointer data)
         if (total_frames > 0) {
             gdk_threads_enter();
             if (!rotation_active && elapsed_frames) {
-                g_timeout_add(40, rotate_logo, rd->widget);
+                g_timeout_add(40, (GSourceFunc) rotate_logo, rd->widget);
                 rotation_active = TRUE;
             }
             gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(rd->progress_bar),
@@ -133,12 +131,11 @@ static gpointer update_bar(gpointer data)
 static void handle_data_received(GtkWidget *widget,
                                  GdkDragContext *drag_context, gint x, gint y,
                                  GtkSelectionData *data, guint info,
-                                 guint time, gpointer user_data)
+                                 guint time, struct received_data *rd)
 {
     guint i, no_uris;
     gchar **uris, **files;
     struct work_data *sl;
-    struct received_data *rd = (struct received_data *) user_data;
 
     (void) widget; (void) x; (void) y; (void) info;
 
@@ -160,7 +157,7 @@ static void handle_data_received(GtkWidget *widget,
     g_strfreev(uris);
 
     update_bar_waiting = FALSE;
-    bar_thread = g_thread_create(update_bar, rd, FALSE, NULL);
+    bar_thread = g_thread_create((GThreadFunc) update_bar, rd, FALSE, NULL);
     /* make sure the update_bar thread is waiting */
     while (!update_bar_waiting) {
         g_thread_yield();
@@ -173,7 +170,7 @@ static void handle_data_received(GtkWidget *widget,
     sl->length = no_uris;
     sl->progress_bar = rd->progress_bar;
     sl->drawing_area = rd->drawing_area;
-    worker_thread = g_thread_create(do_work, sl, FALSE, NULL);
+    worker_thread = g_thread_create((GThreadFunc) do_work, sl, FALSE, NULL);
 
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
 }
@@ -240,13 +237,13 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
 
 static double rotation_state;
 
-static gboolean rotate_logo(gpointer data) {
+static gboolean rotate_logo(GtkWidget *widget) {
     rotation_state += G_PI / 20;
     if (rotation_state >= 2.0 * G_PI) rotation_state = 0.0;
-    gtk_widget_queue_draw(GTK_WIDGET(data));
+    gtk_widget_queue_draw(widget);
     if (!rotation_active) {
         rotation_state = 0.0;
-        gtk_widget_queue_draw(GTK_WIDGET(data));
+        gtk_widget_queue_draw(widget);
     }
     return rotation_active;
 }

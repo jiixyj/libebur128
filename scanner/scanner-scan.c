@@ -21,12 +21,11 @@ static GOptionEntry entries[] =
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
 
-static void print_file_data(gpointer user, gpointer user_data)
+static void print_file_data(struct filename_list_node *fln, gpointer unused)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
 
-    (void) user_data;
+    (void) unused;
     if (fd->scanned) {
         if (fd->loudness <= -HUGE_VAL) {
             g_print(" -inf LUFS");
@@ -63,7 +62,7 @@ static void print_summary(GSList *files)
     struct file_data result;
     memcpy(&result, &empty, sizeof empty);
 
-    g_slist_foreach(files, get_state, states);
+    g_slist_foreach(files, (GFunc) get_state, states);
     ebur128_loudness_global_multiple((ebur128_state **) states->pdata,
                                      states->len, &result.loudness);
     if (lra) {
@@ -71,7 +70,7 @@ static void print_summary(GSList *files)
                                         states->len, &result.lra);
     }
     if (peak) {
-        g_slist_foreach(files, get_max_peaks, &result);
+        g_slist_foreach(files, (GFunc) get_max_peaks, &result);
     }
 
     result.scanned = TRUE;
@@ -91,11 +90,11 @@ void loudness_scan(GSList *files)
     GThread *progress_bar_thread;
     int do_scan = FALSE;
 
-    g_slist_foreach(files, init_and_get_number_of_frames, &do_scan);
+    g_slist_foreach(files, (GFunc) init_and_get_number_of_frames, &do_scan);
     if (do_scan) {
-        pool = g_thread_pool_new(init_state_and_scan_work_item,
+        pool = g_thread_pool_new((GFunc) init_state_and_scan_work_item,
                                  &opts, nproc(), FALSE, NULL);
-        g_slist_foreach(files, init_state_and_scan, pool);
+        g_slist_foreach(files, (GFunc) init_state_and_scan, pool);
         progress_bar_thread = g_thread_create(print_progress_bar,
                                             NULL, TRUE, NULL);
         g_thread_pool_free(pool, FALSE, TRUE);
@@ -114,10 +113,10 @@ void loudness_scan(GSList *files)
         }
         fprintf(stderr, "\n");
 
-        g_slist_foreach(files, print_file_data, NULL);
+        g_slist_foreach(files, (GFunc) print_file_data, NULL);
         print_summary(files);
     }
-    g_slist_foreach(files, destroy_state, NULL);
+    g_slist_foreach(files, (GFunc) destroy_state, NULL);
     scanner_reset_common();
 
     g_free(peak);

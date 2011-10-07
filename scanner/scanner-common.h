@@ -39,14 +39,13 @@ int open_plugin(const char *raw, const char *display,
                 struct input_handle **ih);
 void scanner_init_common(void);
 void scanner_reset_common(void);
-void init_and_get_number_of_frames(gpointer user, gpointer user_data);
-void sum_frames(gpointer user, gpointer user_data);
-void init_state_and_scan_work_item(gpointer user, gpointer user_data);
-void init_state_and_scan(gpointer user, gpointer user_data);
-void destroy_state(gpointer user, gpointer user_data);
-void get_state(gpointer user, gpointer user_data);
-void get_max_peaks(gpointer user, gpointer user_data);
-gpointer print_progress_bar(gpointer data);
+void init_and_get_number_of_frames(struct filename_list_node *fln, int *do_scan);
+void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_opts *opts);
+void init_state_and_scan(gpointer work_item, GThreadPool *pool);
+void destroy_state(struct filename_list_node *fln, gpointer unused);
+void get_state(struct filename_list_node *fln, GPtrArray *states);
+void get_max_peaks(struct filename_list_node *fln, struct file_data *result);
+gpointer print_progress_bar(gpointer unused);
 void clear_line(void);
 
 #endif /* end of include guard: SCANNER_COMMON_H */

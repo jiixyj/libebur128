@@ -23,10 +23,8 @@ static double interval;
 static int r128_mode;
 static ebur128_state *st;
 
-static void dump_loudness_info(gpointer user, gpointer user_data)
+static void dump_loudness_info(struct filename_list_node *fln, int *ret)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
-
     struct input_ops* ops = NULL;
     struct input_handle* ih = NULL;
     float *buffer = NULL;
@@ -34,8 +32,6 @@ static void dump_loudness_info(gpointer user, gpointer user_data)
     int result;
     static size_t nr_frames_read;
     static size_t frames_counter, frames_needed;
-
-    int *ret = (int *) user_data;
 
     result = open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih);
     if (result) {
@@ -118,7 +114,7 @@ int loudness_dump(GSList *files)
     else
         return EXIT_FAILURE;
 
-    g_slist_foreach(files, dump_loudness_info, &ret);
+    g_slist_foreach(files, (GFunc) dump_loudness_info, &ret);
     if (st) ebur128_destroy(&st);
 
     return ret;

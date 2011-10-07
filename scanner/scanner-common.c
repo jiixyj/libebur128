@@ -54,16 +54,14 @@ int open_plugin(const char *raw, const char *display,
     return 0;
 }
 
-void init_and_get_number_of_frames(gpointer user, gpointer user_data)
+void init_and_get_number_of_frames(struct filename_list_node *fln, int *do_scan)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd;
 
     struct input_ops *ops = NULL;
     struct input_handle *ih = NULL;
     int result;
 
-    int *do_scan = (int *) user_data;
     fln->d = g_malloc(sizeof(struct file_data));
     memcpy(fln->d, &empty, sizeof empty);
     fd = (struct file_data *) fln->d;
@@ -85,11 +83,9 @@ void init_and_get_number_of_frames(gpointer user, gpointer user_data)
     if (ih) ops->handle_destroy(&ih);
 }
 
-void init_state_and_scan_work_item(gpointer user, gpointer user_data)
+void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_opts *opts)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
-    struct scan_opts *opts = (struct scan_opts *) user_data;
 
     struct input_ops* ops = NULL;
     struct input_handle* ih = NULL;
@@ -180,39 +176,33 @@ void init_state_and_scan_work_item(gpointer user, gpointer user_data)
     if (ih) ops->handle_destroy(&ih);
 }
 
-void init_state_and_scan(gpointer user, gpointer user_data)
+void init_state_and_scan(gpointer work_item, GThreadPool *pool)
 {
-    GThreadPool *pool = (GThreadPool *) user_data;
-    g_thread_pool_push(pool, user, NULL);
+    g_thread_pool_push(pool, work_item, NULL);
 }
 
-void destroy_state(gpointer user, gpointer user_data)
+void destroy_state(struct filename_list_node *fln, gpointer unused)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
 
-    (void) user_data;
+    (void) unused;
     if (fd->st) {
         ebur128_destroy(&fd->st);
     }
 }
 
-void get_state(gpointer user, gpointer user_data)
+void get_state(struct filename_list_node *fln, GPtrArray *states)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
-    GPtrArray *states = (GPtrArray *) user_data;
 
     if (fd->scanned) {
        g_ptr_array_add(states, fd->st);
     }
 }
 
-void get_max_peaks(gpointer user, gpointer user_data)
+void get_max_peaks(struct filename_list_node *fln, struct file_data *result)
 {
-    struct filename_list_node *fln = (struct filename_list_node *) user;
     struct file_data *fd = (struct file_data *) fln->d;
-    struct file_data *result = (struct file_data *) user_data;
 
     if (fd->scanned) {
         if (fd->peak > result->peak) result->peak = fd->peak;
