@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <assert.h>
 
 #include "input.h"
 #include "filetree.h"
@@ -32,14 +33,10 @@ struct work_data {
     gchar **files;
     guint length;
     int success;
-    GtkWidget *progress_bar;
-    GtkWidget *drawing_area;
 };
 
 static GStaticMutex thread_mutex = G_STATIC_MUTEX_INIT;
-static GThread *worker_thread, *bar_thread;
-
-static gboolean rotation_active;
+static GThread *worker_thread;
 
 static gpointer do_work(struct work_data *wd)
 {
@@ -77,11 +74,6 @@ static gpointer do_work(struct work_data *wd)
     g_free(wd->files);
     g_free(wd);
 
-    gdk_threads_enter();
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(wd->progress_bar), 0.0);
-    rotation_active = FALSE;
-    gdk_threads_leave();
-
     g_static_mutex_lock(&thread_mutex);
     worker_thread = NULL;
     g_static_mutex_unlock(&thread_mutex);
@@ -89,58 +81,21 @@ static gpointer do_work(struct work_data *wd)
     return NULL;
 }
 
-static gboolean update_bar_waiting;
 static gboolean rotate_logo(GtkWidget *widget);
-
-struct received_data {
-    GtkWidget *progress_bar, *drawing_area, *widget;
-};
-
-static gpointer update_bar(struct received_data *rd)
-{
-    for (;;) {
-        g_mutex_lock(progress_mutex);
-        update_bar_waiting = TRUE;
-        g_cond_wait(progress_cond, progress_mutex);
-        if (total_frames > 0) {
-            gdk_threads_enter();
-            if (!rotation_active && elapsed_frames) {
-                g_timeout_add(40, (GSourceFunc) rotate_logo, rd->widget);
-                rotation_active = TRUE;
-            }
-            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(rd->progress_bar),
-                                          CLAMP((double) elapsed_frames /
-                                                (double) total_frames,
-                                                0.0, 1.0));
-            gdk_threads_leave();
-        }
-        if (total_frames == elapsed_frames) {
-            g_mutex_unlock(progress_mutex);
-            break;
-        }
-        g_mutex_unlock(progress_mutex);
-    }
-
-    g_static_mutex_lock(&thread_mutex);
-    bar_thread = NULL;
-    g_static_mutex_unlock(&thread_mutex);
-
-    return NULL;
-}
 
 static void handle_data_received(GtkWidget *widget,
                                  GdkDragContext *drag_context, gint x, gint y,
                                  GtkSelectionData *data, guint info,
-                                 guint time, struct received_data *rd)
+                                 guint time, gpointer unused)
 {
     guint i, no_uris;
     gchar **uris, **files;
     struct work_data *sl;
 
-    (void) widget; (void) x; (void) y; (void) info;
+    (void) widget; (void) x; (void) y; (void) info; (void) unused;
 
     g_static_mutex_lock(&thread_mutex);
-    if (worker_thread || bar_thread) {
+    if (worker_thread) {
         g_static_mutex_unlock(&thread_mutex);
         gtk_drag_finish(drag_context, FALSE, FALSE, time);
         return;
@@ -156,24 +111,19 @@ static void handle_data_received(GtkWidget *widget,
     }
     g_strfreev(uris);
 
-    update_bar_waiting = FALSE;
-    bar_thread = g_thread_create((GThreadFunc) update_bar, rd, FALSE, NULL);
-    /* make sure the update_bar thread is waiting */
-    while (!update_bar_waiting) {
-        g_thread_yield();
-    }
-    g_mutex_lock(progress_mutex);
-    g_mutex_unlock(progress_mutex);
-
     sl = g_new(struct work_data, 1);
     sl->files = files;
     sl->length = no_uris;
-    sl->progress_bar = rd->progress_bar;
-    sl->drawing_area = rd->drawing_area;
     worker_thread = g_thread_create((GThreadFunc) do_work, sl, FALSE, NULL);
 
     gtk_drag_finish(drag_context, TRUE, FALSE, time);
 }
+
+
+
+
+
+/* input handling */
 
 struct popup_data {
     GtkAccelGroup *accel_group;
@@ -218,12 +168,11 @@ static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event,
     return FALSE;
 }
 
-
 static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
-                                 gpointer callback_data)
+                                 gpointer unused)
 {
     (void) widget;
-    (void) callback_data;
+    (void) unused;
 
     if (event->type == GDK_KEY_PRESS
             && (event->keyval == GDK_q || event->keyval == GDK_Q
@@ -235,7 +184,13 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
     return FALSE;
 }
 
+
+
+
+/* logo drawing */
+
 static double rotation_state;
+static gboolean rotation_active;
 
 static gboolean rotate_logo(GtkWidget *widget) {
     rotation_state += G_PI / 20;
@@ -257,12 +212,11 @@ struct expose_data {
 #define DRAW_WIDTH 130.0
 #define DRAW_HEIGHT 115.0
 
-static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
+static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, struct expose_data *ed)
 {
     static double padding_factor = 0.8;
     double new_width, new_height;
     cairo_t *cr = gdk_cairo_create(widget->window);
-    struct expose_data *ed = (struct expose_data *) data;
 
     (void) event;
 
@@ -284,13 +238,50 @@ static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, gpointer
     return TRUE;
 }
 
+static gpointer update_bar(GtkWidget *widget)
+{
+    GtkWidget *vbox = gtk_bin_get_child(GTK_BIN(widget));
+    GList *children = gtk_container_get_children(GTK_CONTAINER(vbox));
+    GtkWidget *progress_bar = GTK_IS_PROGRESS_BAR(children->data) ?
+                              children->data : g_list_next(children)->data;
+    g_list_free(children);
+
+    for (;;) {
+        g_mutex_lock(progress_mutex);
+        g_cond_wait(progress_cond, progress_mutex);
+        if (total_frames > 0) {
+            gdk_threads_enter();
+            if (!rotation_active && elapsed_frames) {
+                g_timeout_add(40, (GSourceFunc) rotate_logo, widget);
+                rotation_active = TRUE;
+            }
+            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar),
+                                          CLAMP((double) elapsed_frames /
+                                                (double) total_frames,
+                                                0.0, 1.0));
+            if (total_frames == elapsed_frames) {
+                gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar), 0.0);
+                rotation_active = FALSE;
+            }
+            gdk_threads_leave();
+        }
+        g_mutex_unlock(progress_mutex);
+    }
+
+    return NULL;
+}
+
+
+
+
+
 int main(int argc, char *argv[])
 {
     GtkWidget *window, *vbox, *drawing_area, *progress_bar;
     GtkAccelGroup *accel_group;
+    GThread *bar_thread;
     struct popup_data pd;
     struct expose_data ed;
-    struct received_data rd;
 
     g_thread_init(NULL);
     gdk_threads_init();
@@ -338,15 +329,13 @@ int main(int argc, char *argv[])
 
     progress_bar = gtk_progress_bar_new();
     gtk_widget_set_size_request(progress_bar, 130, 15);
-    rd.progress_bar = progress_bar;
-    rd.drawing_area = drawing_area;
-    rd.widget = window;
     g_signal_connect(window, "drag-data-received",
-                     G_CALLBACK(handle_data_received), &rd);
+                     G_CALLBACK(handle_data_received), NULL);
 
     gtk_box_pack_start(GTK_BOX(vbox), drawing_area, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), progress_bar, TRUE, TRUE, 0);
 
+    bar_thread = g_thread_create((GThreadFunc) update_bar, window, FALSE, NULL);
     gtk_widget_show_all(window);
 
     gtk_main();
