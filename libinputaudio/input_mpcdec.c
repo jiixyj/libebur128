@@ -24,11 +24,6 @@ static float* mpcdec_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-static size_t mpcdec_get_buffer_size(struct input_handle* ih) {
-  (void) ih;
-  return MPC_DECODER_BUFFER_LENGTH;
-}
-
 static struct input_handle* mpcdec_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
@@ -80,14 +75,6 @@ static size_t mpcdec_read_frames(struct input_handle* ih) {
   return frame.samples;
 }
 
-static int mpcdec_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  if (mpcdec_get_total_frames(ih) != nr_frames_read_all) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 static void mpcdec_free_buffer(struct input_handle* ih) {
   (void) ih;
   return;
@@ -110,7 +97,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   mpcdec_get_channels,
   mpcdec_get_samplerate,
   mpcdec_get_buffer,
-  mpcdec_get_buffer_size,
   mpcdec_handle_init,
   mpcdec_handle_destroy,
   mpcdec_open_file,
@@ -118,7 +104,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   mpcdec_allocate_buffer,
   mpcdec_get_total_frames,
   mpcdec_read_frames,
-  mpcdec_check_ok,
   mpcdec_free_buffer,
   mpcdec_close_file,
   mpcdec_init_library,

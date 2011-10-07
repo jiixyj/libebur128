@@ -29,7 +29,6 @@ static void dump_loudness_info(gpointer user, gpointer user_data)
 
     struct input_ops* ops = NULL;
     struct input_handle* ih = NULL;
-    FILE *file = NULL;
     float *buffer = NULL;
 
     int result;

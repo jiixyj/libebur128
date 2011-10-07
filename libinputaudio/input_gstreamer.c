@@ -106,11 +106,6 @@ static float* gstreamer_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-static size_t gstreamer_get_buffer_size(struct input_handle* ih) {
-    /* FIXME */
-  return 0;
-}
-
 static struct input_handle* gstreamer_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
@@ -126,7 +121,6 @@ static struct input_handle* gstreamer_handle_init() {
 static gpointer gstreamer_loop(struct input_handle *ih) {
   GstElement *fdsrc;
   GError *error = NULL;
-  GstBuffer *preroll = NULL;
   GstBus *bus;
 
   ih->bin = gst_parse_launch("filesrc name=my_fdsrc ! "
@@ -150,7 +144,7 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
 
   bus = gst_element_get_bus(ih->bin);
   ih->message_source = gst_bus_create_watch(bus);
-  g_source_set_callback(ih->message_source, bus_call, ih, NULL);
+  g_source_set_callback(ih->message_source, (GSourceFunc) bus_call, ih, NULL);
   g_source_attach(ih->message_source, ih->main_context);
   g_source_unref(ih->message_source);
   g_object_unref(bus);
@@ -172,7 +166,7 @@ static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
   ih->ready = FALSE;
   ih->bin = NULL;
   ih->message_source = NULL;
-  ih->gstreamer_loop = g_thread_create(gstreamer_loop, ih, TRUE, NULL);
+  ih->gstreamer_loop = g_thread_create((GThreadFunc) gstreamer_loop, ih, TRUE, NULL);
 
   g_get_current_time(&beg);
   while (!ih->ready) {
@@ -203,7 +197,6 @@ static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
   } else {
     return 0;
   }
-  return 0;
 }
 
 static int gstreamer_set_channel_map(struct input_handle* ih, ebur128_state* st) {
@@ -269,14 +262,6 @@ static size_t gstreamer_read_frames(struct input_handle* ih) {
     return buf_pos / sizeof(float) / gstreamer_get_channels(ih);
 }
 
-static int gstreamer_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  if (gstreamer_get_total_frames(ih) != nr_frames_read_all) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 static void gstreamer_free_buffer(struct input_handle* ih) {
   g_free(ih->buffer);
   return;
@@ -313,7 +298,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   gstreamer_get_channels,
   gstreamer_get_samplerate,
   gstreamer_get_buffer,
-  gstreamer_get_buffer_size,
   gstreamer_handle_init,
   gstreamer_handle_destroy,
   gstreamer_open_file,
@@ -321,7 +305,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   gstreamer_allocate_buffer,
   gstreamer_get_total_frames,
   gstreamer_read_frames,
-  gstreamer_check_ok,
   gstreamer_free_buffer,
   gstreamer_close_file,
   gstreamer_init_library,

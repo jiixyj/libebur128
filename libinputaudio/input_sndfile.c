@@ -25,11 +25,6 @@ static float* sndfile_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-static size_t sndfile_get_buffer_size(struct input_handle* ih) {
-  return (size_t) ih->file_info.samplerate *
-         (size_t) ih->file_info.channels;
-}
-
 static struct input_handle* sndfile_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
@@ -111,14 +106,6 @@ static size_t sndfile_read_frames(struct input_handle* ih) {
                                  (sf_count_t) ih->file_info.samplerate);
 }
 
-static int sndfile_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  if (ih->file && sndfile_get_total_frames(ih) != nr_frames_read_all) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 static void sndfile_free_buffer(struct input_handle* ih) {
   free(ih->buffer);
   ih->buffer = NULL;
@@ -143,7 +130,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   sndfile_get_channels,
   sndfile_get_samplerate,
   sndfile_get_buffer,
-  sndfile_get_buffer_size,
   sndfile_handle_init,
   sndfile_handle_destroy,
   sndfile_open_file,
@@ -151,7 +137,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   sndfile_allocate_buffer,
   sndfile_get_total_frames,
   sndfile_read_frames,
-  sndfile_check_ok,
   sndfile_free_buffer,
   sndfile_close_file,
   sndfile_init_library,

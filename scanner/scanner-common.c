@@ -220,11 +220,12 @@ void get_max_peaks(gpointer user, gpointer user_data)
     }
 }
 
-gpointer print_progress_bar(gpointer data)
+gpointer print_progress_bar(gpointer unused)
 {
     int percent, bars, i;
     static char progress_bar[81];
 
+    (void) unused;
     for (;;) {
         g_mutex_lock(progress_mutex);
         g_cond_wait(progress_cond, progress_mutex);

@@ -17,6 +17,10 @@
 
 gboolean verbose = TRUE;
 
+#if defined(__GNUC__)
+static void exit_program(void) __attribute__ ((noreturn));
+#endif
+
 static void exit_program(void)
 {
     fprintf(stderr, "Exiting...\n");
@@ -136,6 +140,8 @@ static void handle_data_received(GtkWidget *widget,
     struct work_data *sl;
     struct received_data *rd = (struct received_data *) user_data;
 
+    (void) widget; (void) x; (void) y; (void) info;
+
     g_static_mutex_lock(&thread_mutex);
     if (worker_thread || bar_thread) {
         g_static_mutex_unlock(&thread_mutex);
@@ -181,6 +187,8 @@ static void handle_popup(GtkWidget *widget, struct popup_data *pd)
 {
     GtkWidget *menu, *menu_item;
 
+    (void) widget;
+
     menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(menu), pd->accel_group);
 
@@ -217,12 +225,16 @@ static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event,
 static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
                                  gpointer callback_data)
 {
+    (void) widget;
+    (void) callback_data;
+
     if (event->type == GDK_KEY_PRESS
             && (event->keyval == GDK_q || event->keyval == GDK_Q
                 || event->keyval == GDK_Escape)) {
         exit_program();
         return TRUE;
     }
+
     return FALSE;
 }
 
@@ -251,9 +263,11 @@ struct expose_data {
 static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 {
     static double padding_factor = 0.8;
-    double new_width, new_height, scale_factor;
+    double new_width, new_height;
     cairo_t *cr = gdk_cairo_create(widget->window);
     struct expose_data *ed = (struct expose_data *) data;
+
+    (void) event;
 
     new_width = ed->scale_factor * padding_factor * ed->rdd.width;
     new_height = ed->scale_factor * padding_factor * ed->rdd.height;
@@ -280,7 +294,6 @@ int main(int argc, char *argv[])
     struct popup_data pd;
     struct expose_data ed;
     struct received_data rd;
-    RsvgDimensionData rdd;
 
     g_thread_init(NULL);
     gdk_threads_init();

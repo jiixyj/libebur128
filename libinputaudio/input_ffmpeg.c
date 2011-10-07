@@ -8,7 +8,7 @@
 #include "ebur128.h"
 #include "input.h"
 
-static GMutex* ffmpeg_mutex;
+static GStaticMutex ffmpeg_mutex = G_STATIC_MUTEX_INIT;
 
 #define BUFFER_SIZE (AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE)
 
@@ -49,11 +49,6 @@ static float* ffmpeg_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-static size_t ffmpeg_get_buffer_size(struct input_handle* ih) {
-  (void) ih;
-  return (AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE) / 2 + 1;
-}
-
 static struct input_handle* ffmpeg_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
@@ -70,7 +65,7 @@ static void ffmpeg_handle_destroy(struct input_handle** ih) {
 
 
 static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
-  g_mutex_lock(ffmpeg_mutex);
+  g_static_mutex_lock(&ffmpeg_mutex);
   ih->format_context = NULL;
 #if LIBAVFORMAT_VERSION_MAJOR >= 54 || \
     (LIBAVFORMAT_VERSION_MAJOR == 53 && \
@@ -82,12 +77,12 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   if (av_open_input_file(&ih->format_context, filename, NULL, 0, NULL) != 0) {
 #endif
     fprintf(stderr, "Could not open input file!\n");
-    g_mutex_unlock(ffmpeg_mutex);
+    g_static_mutex_unlock(&ffmpeg_mutex);
     return 1;
   }
   if (av_find_stream_info(ih->format_context) < 0) {
     fprintf(stderr, "Could not find stream info!\n");
-    g_mutex_unlock(ffmpeg_mutex);
+    g_static_mutex_unlock(&ffmpeg_mutex);
     goto close_file;
   }
   // av_dump_format(ih->format_context, 0, "blub", 0);
@@ -110,7 +105,7 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   }
   if (ih->audio_stream == -1) {
     fprintf(stderr, "Could not find an audio stream in file!\n");
-    g_mutex_unlock(ffmpeg_mutex);
+    g_static_mutex_unlock(&ffmpeg_mutex);
     goto close_file;
   }
   // Get a pointer to the codec context for the audio stream
@@ -126,24 +121,24 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
   if (ih->codec == NULL) {
     fprintf(stderr, "Could not find a decoder for the audio format!\n");
-    g_mutex_unlock(ffmpeg_mutex);
+    g_static_mutex_unlock(&ffmpeg_mutex);
     goto close_file;
   }
   // Open codec
   if (avcodec_open(ih->codec_context, ih->codec) < 0) {
     fprintf(stderr, "Could not open the codec!\n");
-    g_mutex_unlock(ffmpeg_mutex);
+    g_static_mutex_unlock(&ffmpeg_mutex);
     goto close_file;
   }
-  g_mutex_unlock(ffmpeg_mutex);
+  g_static_mutex_unlock(&ffmpeg_mutex);
   ih->need_new_frame = TRUE;
   ih->old_data = NULL;
   return 0;
 
 close_file:
-  g_mutex_lock(ffmpeg_mutex);
+  g_static_mutex_lock(&ffmpeg_mutex);
   av_close_input_file(ih->format_context);
-  g_mutex_unlock(ffmpeg_mutex);
+  g_static_mutex_unlock(&ffmpeg_mutex);
   return 1;
 }
 
@@ -286,8 +281,8 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
   }
 }
 
-static int ffmpeg_read_frames(struct input_handle* ih) {
-    size_t buf_pos = 0, nr_frames_read, buffer_size;
+static size_t ffmpeg_read_frames(struct input_handle* ih) {
+    size_t buf_pos = 0, nr_frames_read;
     GSList *next;
     struct buffer_list_node *buf_node;
 
@@ -298,7 +293,7 @@ static int ffmpeg_read_frames(struct input_handle* ih) {
         }
         buf_node = g_new(struct buffer_list_node, 1);
         buf_node->size = nr_frames_read * ffmpeg_get_channels(ih) * sizeof(float);
-        buf_node->data = g_memdup(ih->buffer, buf_node->size);
+        buf_node->data = g_memdup(ih->buffer, (guint) buf_node->size);
         ih->buffer_list = g_slist_append(ih->buffer_list, buf_node);
         ih->current_bytes += buf_node->size;
     }
@@ -320,36 +315,26 @@ static int ffmpeg_read_frames(struct input_handle* ih) {
     return buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
 }
 
-static int ffmpeg_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  if (ffmpeg_get_total_frames(ih) != nr_frames_read_all) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 static void ffmpeg_free_buffer(struct input_handle* ih) {
   (void) ih;
   return;
 }
 
 static void ffmpeg_close_file(struct input_handle* ih) {
-  g_mutex_lock(ffmpeg_mutex);
+  g_static_mutex_lock(&ffmpeg_mutex);
   avcodec_close(ih->codec_context);
   av_close_input_file(ih->format_context);
-  g_mutex_unlock(ffmpeg_mutex);
+  g_static_mutex_unlock(&ffmpeg_mutex);
 }
 
 static int ffmpeg_init_library() {
   // Register all formats and codecs
   av_register_all();
   av_log_set_level(AV_LOG_ERROR);
-  ffmpeg_mutex = g_mutex_new();
   return 0;
 }
 
 static void ffmpeg_exit_library() {
-  g_mutex_free(ffmpeg_mutex);
   return;
 }
 
@@ -357,7 +342,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   ffmpeg_get_channels,
   ffmpeg_get_samplerate,
   ffmpeg_get_buffer,
-  ffmpeg_get_buffer_size,
   ffmpeg_handle_init,
   ffmpeg_handle_destroy,
   ffmpeg_open_file,
@@ -365,7 +349,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   ffmpeg_allocate_buffer,
   ffmpeg_get_total_frames,
   ffmpeg_read_frames,
-  ffmpeg_check_ok,
   ffmpeg_free_buffer,
   ffmpeg_close_file,
   ffmpeg_init_library,

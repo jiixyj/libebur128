@@ -25,10 +25,6 @@ static float* mpg123_get_buffer(struct input_handle* ih) {
   return ih->buffer;
 }
 
-static size_t mpg123_get_buffer_size(struct input_handle* ih) {
-  return (size_t) ih->mh_rate * (size_t) ih->mh_channels;
-}
-
 static struct input_handle* mpg123_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
@@ -135,14 +131,6 @@ static size_t mpg123_read_frames(struct input_handle* ih) {
   return nr_frames_read;
 }
 
-static int mpg123_check_ok(struct input_handle* ih, size_t nr_frames_read_all) {
-  if (mpg123_get_total_frames(ih) != nr_frames_read_all) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 static void mpg123_free_buffer(struct input_handle* ih) {
   free(ih->buffer);
   ih->buffer = NULL;
@@ -170,7 +158,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   mpg123_get_channels,
   mpg123_get_samplerate,
   mpg123_get_buffer,
-  mpg123_get_buffer_size,
   mpg123_handle_init,
   mpg123_handle_destroy,
   mpg123_open_file,
@@ -178,7 +165,6 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   mpg123_allocate_buffer,
   mpg123_get_total_frames,
   mpg123_read_frames,
-  mpg123_check_ok,
   mpg123_free_buffer,
   mpg123_close_file,
   mpg123_init_library,
