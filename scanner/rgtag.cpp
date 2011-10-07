@@ -21,7 +21,7 @@
 #include <sstream>
 #include <ios>
 
-bool clear_txxx_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
+static bool clear_txxx_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
   TagLib::ID3v2::FrameList l = tag->frameList("TXXX");
   for (TagLib::ID3v2::FrameList::Iterator it = l.begin(); it != l.end(); ++it) {
     TagLib::ID3v2::UserTextIdentificationFrame* fr =
@@ -34,7 +34,7 @@ bool clear_txxx_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
   return false;
 }
 
-bool clear_rva2_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
+static bool clear_rva2_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
   TagLib::ID3v2::FrameList l = tag->frameList("RVA2");
   for (TagLib::ID3v2::FrameList::Iterator it = l.begin(); it != l.end(); ++it) {
     TagLib::ID3v2::RelativeVolumeFrame* fr =
@@ -47,7 +47,7 @@ bool clear_rva2_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
   return false;
 }
 
-void set_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, std::string value) {
+static void set_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, std::string value) {
   TagLib::ID3v2::UserTextIdentificationFrame* txxx = TagLib::ID3v2::UserTextIdentificationFrame::find(tag, tag_name);
   if (!txxx) {
     txxx = new TagLib::ID3v2::UserTextIdentificationFrame;
@@ -57,7 +57,7 @@ void set_txxx_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, std::string val
   txxx->setText(value);
 }
 
-void set_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, double gain, double peak) {
+static void set_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, double gain, double peak) {
   TagLib::ID3v2::RelativeVolumeFrame* rva2 = NULL;
   TagLib::ID3v2::FrameList rva2_frame_list = tag->frameList("RVA2");
   TagLib::ID3v2::FrameList::ConstIterator it = rva2_frame_list.begin();
@@ -75,7 +75,7 @@ void set_rva2_tag(TagLib::ID3v2::Tag* tag, std::string tag_name, double gain, do
     tag->addFrame(rva2);
   }
   rva2->setChannelType(TagLib::ID3v2::RelativeVolumeFrame::MasterVolume);
-  rva2->setVolumeAdjustment(gain);
+  rva2->setVolumeAdjustment(float(gain));
 
   TagLib::ID3v2::RelativeVolumeFrame::PeakVolume peak_volume;
   peak_volume.bitsRepresentingPeak = 16;
