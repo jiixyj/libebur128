@@ -125,34 +125,21 @@ static void handle_data_received(GtkWidget *widget,
 
 /* input handling */
 
-struct popup_data {
-    GtkAccelGroup *accel_group;
-    GdkEventButton *event;
-};
+static GtkWidget *popup_menu;
 
-static void handle_popup(GtkWidget *widget, struct popup_data *pd)
+static void handle_popup(GtkWidget *widget, GdkEventButton *event)
 {
-    GtkWidget *menu, *menu_item;
-
-    (void) widget;
-
-    menu = gtk_menu_new();
-    gtk_menu_set_accel_group(GTK_MENU(menu), pd->accel_group);
-
-    /* ... add menu items ... */
-    menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, pd->accel_group);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-    g_signal_connect(menu_item, "activate", gtk_main_quit, NULL);
-
-    gtk_widget_show_all(menu);
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-                   (pd->event != NULL) ? pd->event->button : 0,
-                   gdk_event_get_time((GdkEvent *) pd->event));
+    gtk_widget_show_all(popup_menu);
+    gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
+                   (event != NULL) ? event->button : 0,
+                   gdk_event_get_time((GdkEvent *) event));
 }
 
 static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event,
-                                    GtkAccelGroup *accel_group)
+                                    gpointer *unused)
 {
+    (void) unused;
+
     if (event->type == GDK_BUTTON_PRESS) {
         if (event->button == 1) {
             gtk_window_begin_move_drag(GTK_WINDOW
@@ -160,30 +147,12 @@ static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event,
                                        (int) event->button, (int) event->x_root,
                                        (int) event->y_root, event->time);
         } else if (event->button == 3) {
-            struct popup_data pd = { accel_group, event };
-            handle_popup(widget, &pd);
+            handle_popup(widget, event);
         }
     }
 
     return FALSE;
 }
-
-static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event,
-                                 gpointer unused)
-{
-    (void) widget;
-    (void) unused;
-
-    if (event->type == GDK_KEY_PRESS
-            && (event->keyval == GDK_q || event->keyval == GDK_Q
-                || event->keyval == GDK_Escape)) {
-        exit_program();
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
 
 
 
@@ -203,25 +172,27 @@ static gboolean rotate_logo(GtkWidget *widget) {
     return rotation_active;
 }
 
-struct expose_data {
-    RsvgHandle *rh;
-    RsvgDimensionData rdd;
-    double scale_factor;
-};
-
 #define DRAW_WIDTH 130.0
 #define DRAW_HEIGHT 115.0
 
-static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, struct expose_data *ed)
+static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event,
+                              RsvgHandle *rh)
 {
-    static double padding_factor = 0.8;
+    static double scale_factor;
+    static RsvgDimensionData rdd;
+
     double new_width, new_height;
     cairo_t *cr = gdk_cairo_create(widget->window);
-
     (void) event;
 
-    new_width = ed->scale_factor * padding_factor * ed->rdd.width;
-    new_height = ed->scale_factor * padding_factor * ed->rdd.height;
+    if (scale_factor <= 0.0) {
+        rsvg_handle_get_dimensions(rh, &rdd);
+        scale_factor = 0.8 * MIN(DRAW_HEIGHT / rdd.width,
+                                 DRAW_HEIGHT / rdd.height);
+    }
+
+    new_width = scale_factor * rdd.width;
+    new_height = scale_factor * rdd.height;
 
     cairo_translate(cr,  DRAW_WIDTH / 2.0,  DRAW_HEIGHT / 2.0);
     cairo_rotate(cr, rotation_state);
@@ -229,10 +200,9 @@ static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, struct e
 
     cairo_translate(cr, (DRAW_WIDTH - new_width) / 2.0,
                         (DRAW_HEIGHT - new_height) / 2.0);
-    cairo_scale(cr, ed->scale_factor * padding_factor,
-                    ed->scale_factor * padding_factor);
+    cairo_scale(cr, scale_factor, scale_factor);
 
-    rsvg_handle_render_cairo(ed->rh, cr);
+    rsvg_handle_render_cairo(rh, cr);
 
     cairo_destroy(cr);
     return TRUE;
@@ -277,16 +247,44 @@ static gpointer update_bar(GtkWidget *widget)
 
 
 
+static GtkActionEntry action_entries[] =
+{
+  { "FileMenuAction", NULL, "_File" },                  /* name, stock id, label */
+
+  { "QuitAction", GTK_STOCK_QUIT,
+    "_Quit", "<control>Q",
+    "Quit",
+    G_CALLBACK(exit_program) }
+};
+
+static guint n_action_entries = G_N_ELEMENTS(action_entries);
+
+static const char *ui =
+"<ui>"
+"  <menubar name=\"MainMenu\">"
+"    <menu name=\"FileMenu\" action=\"FileMenuAction\">"
+"      <menuitem name=\"Quit\" action=\"QuitAction\" />"
+"      <placeholder name=\"FileMenuAdditions\" />"
+"    </menu>"
+"  </menubar>"
+"</ui>"
+;
+
 
 
 int main(int argc, char *argv[])
 {
-    GtkWidget *window, *vbox, *drawing_area, *progress_bar;
-    GtkAccelGroup *accel_group;
+    GtkWidget *window;
+    GtkWidget *vbox;
+    GtkWidget *drawing_area;
+    GtkWidget *progress_bar;
     GThread *bar_thread;
-    struct popup_data pd;
-    struct expose_data ed;
+    GtkActionGroup *action_group;
+    GtkUIManager *menu_manager;
+    GError *error;
+    RsvgHandle *rh;
 
+    /* initialization */
     g_thread_init(NULL);
     gdk_threads_init();
     gdk_threads_enter();
@@ -296,9 +294,15 @@ int main(int argc, char *argv[])
     setlocale(LC_COLLATE, "");
     setlocale(LC_CTYPE, "");
 
-    accel_group = gtk_accel_group_new();
-
+    /* set up widgets */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    vbox = gtk_vbox_new(FALSE, 0);
+    drawing_area = gtk_drawing_area_new();
+    progress_bar = gtk_progress_bar_new();
+    action_group = gtk_action_group_new("Actions");
+    menu_manager = gtk_ui_manager_new();
+
+    /* set up window */
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
     gtk_window_set_default_size(GTK_WINDOW(window), 130, 130);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
@@ -306,40 +310,50 @@ int main(int argc, char *argv[])
     gtk_widget_add_events(window, GDK_BUTTON_PRESS_MASK);
     gtk_drag_dest_set(window, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
     gtk_drag_dest_add_uri_targets(window);
-    gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
     g_signal_connect(window, "delete-event", exit_program, NULL);
     g_signal_connect(window, "destroy", exit_program, NULL);
     g_signal_connect(window, "button-press-event",
-                     G_CALLBACK(handle_button_press), accel_group);
-    g_signal_connect(window, "key-press-event",
-                     G_CALLBACK(handle_key_press), NULL);
-    pd.accel_group = accel_group;
-    pd.event = NULL;
-    g_signal_connect(window, "popup-menu", G_CALLBACK(handle_popup), &pd);
-
-    vbox = gtk_vbox_new(FALSE, 0);
-    gtk_container_add(GTK_CONTAINER(window), vbox);
-
-    drawing_area = gtk_drawing_area_new();
-    gtk_widget_set_size_request(drawing_area, (int) DRAW_WIDTH,
-                                              (int) DRAW_HEIGHT);
-
-    ed.rh = rsvg_handle_new_from_data(test_svg, test_svg_len, NULL);
-    rsvg_handle_get_dimensions(ed.rh, &(ed.rdd));
-    ed.scale_factor = MIN(DRAW_HEIGHT / ed.rdd.width,
-                          DRAW_HEIGHT / ed.rdd.height);
-    g_signal_connect(drawing_area, "expose-event",
-                     G_CALLBACK(handle_expose), &ed);
-
-    progress_bar = gtk_progress_bar_new();
-    gtk_widget_set_size_request(progress_bar, 130, 15);
+                     G_CALLBACK(handle_button_press), NULL);
+    g_signal_connect(window, "popup-menu", G_CALLBACK(handle_popup), NULL);
     g_signal_connect(window, "drag-data-received",
                      G_CALLBACK(handle_data_received), NULL);
 
+    /* set up vbox */
+    gtk_container_add(GTK_CONTAINER(window), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), drawing_area, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), progress_bar, TRUE, TRUE, 0);
 
+    /* set up drawing area */
+    gtk_widget_set_size_request(drawing_area, (int) DRAW_WIDTH,
+                                              (int) DRAW_HEIGHT);
+    rh = rsvg_handle_new_from_data(test_svg, test_svg_len, NULL);
+    g_signal_connect(drawing_area, "expose-event",
+                     G_CALLBACK(handle_expose), rh);
+
+    /* set up progress bar */
+    gtk_widget_set_size_request(progress_bar, 130, 15);
+
+    /* set up bar thread */
     bar_thread = g_thread_create((GThreadFunc) update_bar, window, FALSE, NULL);
+
+    /* set up action group */
+    gtk_action_group_add_actions(action_group, action_entries,
+                                 n_action_entries, NULL);
+
+    /* set up menu manager */
+    gtk_ui_manager_insert_action_group(menu_manager, action_group, 0);
+    error = NULL;
+    gtk_ui_manager_add_ui_from_string(menu_manager, ui, -1, &error);
+    if (error) {
+        g_message ("building menus failed: %s", error->message);
+        g_error_free (error);
+    }
+    gtk_window_add_accel_group(GTK_WINDOW(window),
+                               gtk_ui_manager_get_accel_group(menu_manager));
+    popup_menu = gtk_menu_item_get_submenu(
+                     GTK_MENU_ITEM(gtk_ui_manager_get_widget(
+                                       menu_manager, "/MainMenu/FileMenu")));
+
     gtk_widget_show_all(window);
 
     gtk_main();
