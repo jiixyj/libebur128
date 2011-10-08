@@ -240,6 +240,7 @@ static gboolean handle_expose(GtkWidget *widget, GdkEventExpose *event, struct e
 
 static gpointer update_bar(GtkWidget *widget)
 {
+    double frac, new_frac;
     GtkWidget *vbox = gtk_bin_get_child(GTK_BIN(widget));
     GList *children = gtk_container_get_children(GTK_CONTAINER(vbox));
     GtkWidget *progress_bar = GTK_IS_PROGRESS_BAR(children->data) ?
@@ -255,10 +256,13 @@ static gpointer update_bar(GtkWidget *widget)
                 g_timeout_add(40, (GSourceFunc) rotate_logo, widget);
                 rotation_active = TRUE;
             }
-            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar),
-                                          CLAMP((double) elapsed_frames /
-                                                (double) total_frames,
-                                                0.0, 1.0));
+            frac = gtk_progress_bar_get_fraction(GTK_PROGRESS_BAR(progress_bar));
+            new_frac = CLAMP((double) elapsed_frames / (double) total_frames,
+                             0.0, 1.0);
+            if (ABS(frac - new_frac) > 1.0 / DRAW_WIDTH) {
+                gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar),
+                                              new_frac);
+            }
             if (total_frames == elapsed_frames) {
                 gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar), 0.0);
                 rotation_active = FALSE;
