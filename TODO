@@ -1,5 +1,5 @@
 DONE - search PATH for plugins
-- GUI
+DONE - GUI
 - build Debian packages
 DONE - remove fprintf calls in library
-- error messages when tagging
+DONE - error messages when tagging
