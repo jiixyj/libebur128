@@ -294,7 +294,12 @@ static void gstreamer_exit_library() {
   return;
 }
 
-G_MODULE_EXPORT struct input_ops ip_ops = {
+#ifdef GSTREAMER_INPUT_STATIC
+struct input_ops gstreamer_ip_ops =
+#else
+G_MODULE_EXPORT struct input_ops ip_ops =
+#endif
+{
   gstreamer_get_channels,
   gstreamer_get_samplerate,
   gstreamer_get_buffer,
@@ -311,4 +316,9 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   gstreamer_exit_library
 };
 
-G_MODULE_EXPORT const char* ip_exts[] = { NULL };
+#ifdef GSTREAMER_INPUT_STATIC
+const char *gstreamer_ip_exts[] =
+#else
+G_MODULE_EXPORT const char *ip_exts[] =
+#endif
+{ NULL };
