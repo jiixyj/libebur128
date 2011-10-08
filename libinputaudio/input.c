@@ -6,7 +6,9 @@ static const char* plugin_names[] = {
   "input_mpg123",
   "input_musepack",
   "input_ffmpeg",
+#ifndef GSTREAMER_INPUT_STATIC
   "input_gstreamer",
+#endif
   NULL
 };
 
@@ -90,6 +92,12 @@ int input_init(char* exe_name, const char* forced_plugin) {
     plugin_exts = g_slist_append(plugin_exts, exts);
     ++cur_plugin_name;
   }
+#ifdef GSTREAMER_INPUT_STATIC
+  plugin_ops = g_slist_append(plugin_ops, &gstreamer_ip_ops);
+  plugin_exts = g_slist_append(plugin_exts, &gstreamer_ip_exts);
+  gstreamer_ip_ops.init_library();
+  plugin_found = 1;
+#endif
   g_free(exe_dir);
   g_strfreev(env_path_split);
   if (!plugin_found) {

@@ -32,4 +32,9 @@ int input_init(char* exe_name, const char* forced_plugin);
 int input_deinit(void);
 struct input_ops* input_get_ops(const char* filename);
 
+#ifdef GSTREAMER_INPUT_STATIC
+struct input_ops gstreamer_ip_ops;
+const char *gstreamer_ip_exts[1];
+#endif
+
 #endif  /* _INPUT_H_ */

@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.6.4)
 
+if(GSTREAMER_INPUT_STATIC)
+  add_definitions(-DGSTREAMER_INPUT_STATIC)
+endif()
+
 if(GLIB_FOUND)
   add_library(input input)
 
@@ -29,7 +33,12 @@ if(GLIB_FOUND)
   endif()
 
   if(GSTREAMER_FOUND)
-    add_library(input_gstreamer MODULE input_gstreamer.c)
+    if(GSTREAMER_INPUT_STATIC)
+      add_library(input_gstreamer input_gstreamer.c)
+      target_link_libraries(input input_gstreamer)
+    else()
+      add_library(input_gstreamer MODULE input_gstreamer.c)
+    endif()
     target_link_libraries(input_gstreamer ${GSTREAMER_LIBRARIES} ${GLIB_LIBRARIES})
   endif()
 
