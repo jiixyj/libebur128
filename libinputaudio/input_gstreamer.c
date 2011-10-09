@@ -23,6 +23,10 @@ struct input_handle {
   size_t current_bytes;
 
   float *buffer;
+
+  unsigned n_channels;
+  unsigned long sample_rate;
+  GstAudioChannelPosition *channel_positions;
 };
 
 static GStaticMutex gstreamer_mutex = G_STATIC_MUTEX_INIT;
@@ -93,47 +97,49 @@ static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
   return TRUE;
 }
 
-static gint query_data(struct input_handle* ih, gboolean query_rate) {
+static gboolean query_data(struct input_handle* ih) {
   GstElement *converter;
   GstPad *src_pad;
   GstCaps *src_caps;
   GstStructure *s;
-  gint rate = 0, channels = 0;
-  GstAudioChannelPosition *channel_positions = NULL;
   int i;
+
+  ih->n_channels = 0;
+  ih->sample_rate = 0;
+  ih->channel_positions = NULL;
 
   converter = gst_bin_get_by_name(GST_BIN(ih->bin), "converter");
   src_pad = gst_element_get_static_pad(converter, "src");
   src_caps = gst_pad_get_caps(src_pad);
 
   s = gst_caps_get_structure(src_caps, 0);
-  gst_structure_get_int(s, "rate", &rate);
-  gst_structure_get_int(s, "channels", &channels);
-  // if (!rate || !channels) {
-  //   rate = 44100;
-  //   channels = 6;
-  // }
-  g_print ("%d channels @ %d Hz\n", channels, rate);
-  channel_positions = gst_audio_get_channel_positions(s);
-  if (channel_positions) {
-    for (i = 0; i < channels; ++i) {
-      printf("Channel %d: %d\n", i, channel_positions[i]);
+  gst_structure_get_int(s, "rate", &(ih->sample_rate));
+  gst_structure_get_int(s, "channels", &(ih->n_channels));
+  if (!ih->sample_rate || !ih->n_channels) {
+    g_object_unref(src_pad);
+    g_object_unref(converter);
+    return FALSE;
+  }
+
+  ih->channel_positions = gst_audio_get_channel_positions(s);
+  if (ih->channel_positions) {
+    for (i = 0; i < ih->n_channels; ++i) {
+      printf("Channel %d: %d\n", i, ih->channel_positions[i]);
     }
   }
-  /* g_print ("%d channels @ %d Hz\n", channels, rate); */
+  g_print ("%d channels @ %d Hz\n", ih->n_channels, ih->sample_rate);
 
-  g_free(channel_positions);
   g_object_unref(src_pad);
   g_object_unref(converter);
-  return query_rate ? rate : channels;
+  return TRUE;
 }
 
 static unsigned gstreamer_get_channels(struct input_handle* ih) {
-  return (unsigned) query_data(ih, FALSE);
+  return ih->n_channels;
 }
 
 static unsigned long gstreamer_get_samplerate(struct input_handle* ih) {
-  return (unsigned long) query_data(ih, TRUE);
+  return ih->sample_rate;
 }
 
 static float* gstreamer_get_buffer(struct input_handle* ih) {
@@ -161,9 +167,7 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
                              "decodebin2 ! "
                              "audioconvert name=converter ! "
                              "audio/x-raw-float,width=32,endianness=1234 ! "
-                             "tee name=t !"
-                             "queue ! appsink name=sink sync=FALSE t. !"
-                             "queue ! wavenc ! filesink location=tmp.wav", &error);
+                             "appsink name=sink sync=FALSE", &error);
   if (!ih->bin) {
     fprintf(stderr, "Parse error: %s", error->message);
     return NULL;
@@ -214,6 +218,10 @@ static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
     }
   }
 
+  if (!query_data(ih)) {
+    ih->quit_pipeline = TRUE;
+  }
+
   if (ih->quit_pipeline) {
     if (ih->bin) {
       GstBus *bus = gst_element_get_bus(ih->bin);
@@ -236,12 +244,31 @@ static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
 }
 
 static int gstreamer_set_channel_map(struct input_handle* ih, ebur128_state* st) {
-  (void) ih;
-  (void) st;
-  return 1;
+  unsigned j;
+  for (j = 0; j < st->channels; ++j) {
+    switch (ih->channel_positions[j]) {
+      case GST_AUDIO_CHANNEL_POSITION_INVALID:
+        ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
+      case GST_AUDIO_CHANNEL_POSITION_FRONT_MONO:
+        ebur128_set_channel(st, j, EBUR128_CENTER);         break;
+      case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT:
+        ebur128_set_channel(st, j, EBUR128_LEFT);           break;
+      case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT:
+        ebur128_set_channel(st, j, EBUR128_RIGHT);          break;
+      case GST_AUDIO_CHANNEL_POSITION_REAR_CENTER:
+        ebur128_set_channel(st, j, EBUR128_CENTER);         break;
+      case GST_AUDIO_CHANNEL_POSITION_REAR_LEFT:
+        ebur128_set_channel(st, j, EBUR128_LEFT_SURROUND);  break;
+      case GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT:
+        ebur128_set_channel(st, j, EBUR128_RIGHT_SURROUND); break;
+      default:
+        ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
+    }
+  }
 }
 
 static void gstreamer_handle_destroy(struct input_handle** ih) {
+  g_free((*ih)->channel_positions);
   g_main_context_unref((*ih)->main_context);
   free(*ih);
   *ih = NULL;
