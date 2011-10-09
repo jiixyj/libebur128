@@ -31,8 +31,6 @@ static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 {
   struct input_handle *ih = (struct input_handle *) data;
 
-  // if (verbose) fprintf(stderr, "%p %d %s\n", bus, GST_MESSAGE_TYPE(msg), ih->filename);
-
   switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_ASYNC_DONE:{
       ih->quit_pipeline = FALSE;
@@ -73,17 +71,17 @@ static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
       GstState old_state, new_state;
 
       gst_message_parse_state_changed (msg, &old_state, &new_state, NULL);
-      // if (verbose) g_print ("Element %s changed state from %s to %s.\n",
-      //     GST_OBJECT_NAME (msg->src),
-      //     gst_element_state_get_name (old_state),
-      //     gst_element_state_get_name (new_state));
+      /* if (verbose) g_print ("Element %s changed state from %s to %s.\n",
+             GST_OBJECT_NAME (msg->src),
+             gst_element_state_get_name (old_state),
+             gst_element_state_get_name (new_state)); */
       break;
     }
     case GST_MESSAGE_STREAM_STATUS:{
       GstStreamStatusType type;
       GstElement *owner;
       gst_message_parse_stream_status(msg, &type, &owner);
-      // if (verbose) g_print("%p New Stream Type: %d\n", bus, type);
+      /* if (verbose) g_print("%p New Stream Type: %d\n", bus, type); */
       break;
     }
     default:
@@ -137,7 +135,7 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
   g_object_set(G_OBJECT(fdsrc), "location", ih->filename, NULL);
 
   ih->appsink = gst_bin_get_by_name(GST_BIN(ih->bin), "sink");
-  // gst_app_sink_set_max_buffers(GST_APP_SINK(ih->appsink), 1);
+  /* gst_app_sink_set_max_buffers(GST_APP_SINK(ih->appsink), 1); */
 
   /* start playing */
   ih->loop = g_main_loop_new(ih->main_context, FALSE);

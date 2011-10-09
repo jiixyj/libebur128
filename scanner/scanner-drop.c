@@ -54,8 +54,8 @@ static gpointer do_work(struct work_data *wd)
 
     result = loudness_tag(files);
     if (result) {
-        gdk_threads_enter();
         GtkWidget *dialog;
+        gdk_threads_enter();
         dialog =
             gtk_message_dialog_new(NULL,
                                    GTK_DIALOG_MODAL |
@@ -129,6 +129,7 @@ static GtkWidget *popup_menu;
 
 static void handle_popup(GtkWidget *widget, GdkEventButton *event)
 {
+    (void) widget;
     gtk_widget_show_all(popup_menu);
     gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
                    (event != NULL) ? event->button : 0,
@@ -249,7 +250,8 @@ static gpointer update_bar(GtkWidget *widget)
 
 static GtkActionEntry action_entries[] =
 {
-  { "FileMenuAction", NULL, "_File" },                  /* name, stock id, label */
+  { "FileMenuAction", NULL, "_File",
+    NULL, NULL, NULL },
 
   { "QuitAction", GTK_STOCK_QUIT,
     "_Quit", "<control>Q",
