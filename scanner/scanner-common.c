@@ -119,6 +119,8 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
                           ops->get_samplerate(ih),
                           r128_mode);
 
+    result = ops->set_channel_map(ih, fd->st);
+
     result = ops->allocate_buffer(ih);
     if (result) abort();
     buffer = ops->get_buffer(ih);
