@@ -27,6 +27,9 @@ struct scan_opts
 {
     gboolean lra;
     gchar *peak;
+
+    /* used if in tag mode to force dual mono */
+    gboolean force_dual_mono;
 };
 
 extern GMutex *progress_mutex;

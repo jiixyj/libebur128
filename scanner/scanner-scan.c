@@ -85,7 +85,7 @@ static void print_summary(GSList *files)
 
 void loudness_scan(GSList *files)
 {
-    struct scan_opts opts = {lra, peak};
+    struct scan_opts opts = {lra, peak, FALSE};
     GThreadPool *pool;
     GThread *progress_bar_thread;
     int do_scan = FALSE;

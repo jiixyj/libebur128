@@ -120,6 +120,9 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
                           r128_mode);
 
     result = ops->set_channel_map(ih, fd->st);
+    if (fd->st->channels == 1 && opts->force_dual_mono) {
+        ebur128_set_channel(fd->st, 0, EBUR128_DUAL_MONO);
+    }
 
     result = ops->allocate_buffer(ih);
     if (result) abort();

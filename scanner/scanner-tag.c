@@ -156,7 +156,7 @@ static void tag_files(struct filename_list_node *fln, int *ret)
 
 int loudness_tag(GSList *files)
 {
-    struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample"};
+    struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample", TRUE};
     GThreadPool *pool;
     GThread *progress_bar_thread;
     int ret = 0, do_scan = 0;
