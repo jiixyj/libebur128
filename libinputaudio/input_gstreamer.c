@@ -90,14 +90,33 @@ static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
   return TRUE;
 }
 
+static gint query_data(struct input_handle* ih, gboolean query_rate) {
+  GstElement *converter;
+  GstPad *src_pad;
+  GstCaps *src_caps;
+  GstStructure *s;
+  gint rate, channels;
+
+  converter = gst_bin_get_by_name(GST_BIN(ih->bin), "converter");
+  src_pad = gst_element_get_static_pad(converter, "src");
+  src_caps = gst_pad_get_caps(src_pad);
+
+  s = gst_caps_get_structure(src_caps, 0);
+  gst_structure_get_int(s, "rate", &rate);
+  gst_structure_get_int(s, "channels", &channels);
+  /* g_print ("%d channels @ %d Hz\n", channels, rate); */
+
+  g_object_unref(src_pad);
+  g_object_unref(converter);
+  return query_rate ? rate : channels;
+}
+
 static unsigned gstreamer_get_channels(struct input_handle* ih) {
-    /* FIXME */
-  return 2;
+  return (unsigned) query_data(ih, FALSE);
 }
 
 static unsigned long gstreamer_get_samplerate(struct input_handle* ih) {
-    /* FIXME */
-  return 44100;
+  return (unsigned long) query_data(ih, TRUE);
 }
 
 static float* gstreamer_get_buffer(struct input_handle* ih) {
@@ -123,7 +142,7 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
 
   ih->bin = gst_parse_launch("filesrc name=my_fdsrc ! "
                              "decodebin2 ! "
-                             "audioconvert ! "
+                             "audioconvert name=converter ! "
                              "audio/x-raw-float,width=32,endianness=1234 ! "
                              "appsink name=sink sync=FALSE", &error);
   if (!ih->bin) {
