@@ -1,6 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
+#include <gst/audio/multichannel.h>
 
 #include "input.h"
 
@@ -30,6 +31,8 @@ extern gboolean verbose;
 static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 {
   struct input_handle *ih = (struct input_handle *) data;
+
+  if (verbose) fprintf(stderr, "%p %s %s\n", bus, GST_MESSAGE_TYPE_NAME(msg), ih->filename);
 
   switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_ASYNC_DONE:{
@@ -95,7 +98,9 @@ static gint query_data(struct input_handle* ih, gboolean query_rate) {
   GstPad *src_pad;
   GstCaps *src_caps;
   GstStructure *s;
-  gint rate, channels;
+  gint rate = 0, channels = 0;
+  GstAudioChannelPosition *channel_positions = NULL;
+  int i;
 
   converter = gst_bin_get_by_name(GST_BIN(ih->bin), "converter");
   src_pad = gst_element_get_static_pad(converter, "src");
@@ -104,8 +109,20 @@ static gint query_data(struct input_handle* ih, gboolean query_rate) {
   s = gst_caps_get_structure(src_caps, 0);
   gst_structure_get_int(s, "rate", &rate);
   gst_structure_get_int(s, "channels", &channels);
+  // if (!rate || !channels) {
+  //   rate = 44100;
+  //   channels = 6;
+  // }
+  g_print ("%d channels @ %d Hz\n", channels, rate);
+  channel_positions = gst_audio_get_channel_positions(s);
+  if (channel_positions) {
+    for (i = 0; i < channels; ++i) {
+      printf("Channel %d: %d\n", i, channel_positions[i]);
+    }
+  }
   /* g_print ("%d channels @ %d Hz\n", channels, rate); */
 
+  g_free(channel_positions);
   g_object_unref(src_pad);
   g_object_unref(converter);
   return query_rate ? rate : channels;
@@ -144,7 +161,9 @@ static gpointer gstreamer_loop(struct input_handle *ih) {
                              "decodebin2 ! "
                              "audioconvert name=converter ! "
                              "audio/x-raw-float,width=32,endianness=1234 ! "
-                             "appsink name=sink sync=FALSE", &error);
+                             "tee name=t !"
+                             "queue ! appsink name=sink sync=FALSE t. !"
+                             "queue ! wavenc ! filesink location=tmp.wav", &error);
   if (!ih->bin) {
     fprintf(stderr, "Parse error: %s", error->message);
     return NULL;
