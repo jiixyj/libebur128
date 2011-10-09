@@ -111,7 +111,7 @@ static void print_file_data(struct filename_list_node *fln, gpointer unused)
 }
 
 static int tag_output_state = 0;
-static void tag_files(struct filename_list_node *fln, int *ret)
+static void tag_file(struct filename_list_node *fln, int *ret)
 {
     struct file_data *fd = (struct file_data *) fln->d;
     if (!fd->scanned) {
@@ -154,12 +154,11 @@ static void tag_files(struct filename_list_node *fln, int *ret)
     }
 }
 
-int loudness_tag(GSList *files)
-{
+static int scan_files(GSList *files) {
     struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample", TRUE};
     GThreadPool *pool;
     GThread *progress_bar_thread;
-    int ret = 0, do_scan = 0;
+    int do_scan = 0;
 
     g_slist_foreach(files, (GFunc) init_and_get_number_of_frames, &do_scan);
     if (do_scan) {
@@ -183,16 +182,30 @@ int loudness_tag(GSList *files)
             fprintf(stderr, "Track gain, Track peak\n");
         }
         g_slist_foreach(files, (GFunc) print_file_data, NULL);
-        if (!dry_run) {
-            fprintf(stderr, "Tagging");
-            g_slist_foreach(files, (GFunc) tag_files, &ret);
-            if (!ret) fprintf(stderr, " Success!");
-            fputc('\n', stderr);
-        }
     }
     g_slist_foreach(files, (GFunc) destroy_state, NULL);
     scanner_reset_common();
+
+    return do_scan;
+}
+
+static int tag_files(GSList *files) {
+    int ret = 0;
+
+    fprintf(stderr, "Tagging");
+    g_slist_foreach(files, (GFunc) tag_file, &ret);
+    if (!ret) fprintf(stderr, " Success!");
+    fputc('\n', stderr);
+
     return ret;
+}
+
+int loudness_tag(GSList *files)
+{
+    if (scan_files(files) && !dry_run) {
+        return tag_files(files);
+    }
+    return 0;
 }
 
 gboolean loudness_tag_parse(int *argc, char **argv[])
