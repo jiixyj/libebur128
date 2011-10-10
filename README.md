@@ -53,6 +53,12 @@ In the root folder, type:
     cmake ..
     make
 
+If you want the git version, run:
+
+    git clone git@github.com:jiixyj/libebur128.git
+    cd libebur128
+    git submodule init
+    git submodule update
 
 Usage
 -----
