@@ -38,6 +38,179 @@ struct work_data {
 static GStaticMutex thread_mutex = G_STATIC_MUTEX_INIT;
 static GThread *worker_thread;
 
+
+
+
+/* result list */
+
+typedef struct {
+    const gchar *filename;
+    const float  album_gain;
+    const float  track_gain;
+    const float  album_peak;
+    const float  track_peak;
+} ResultEntry;
+
+enum {
+    COLUMN_FILENAME,
+    COLUMN_ALBUM_GAIN,
+    COLUMN_TRACK_GAIN,
+    COLUMN_ALBUM_PEAK,
+    COLUMN_TRACK_PEAK,
+    NUM_COLUMNS
+};
+
+static GtkTreeModel *create_result_list_model(GSList *files)
+{
+    gint i = 0;
+    GtkListStore *store;
+    GtkTreeIter iter;
+
+    store = gtk_list_store_new(NUM_COLUMNS,
+                               G_TYPE_STRING,
+                               G_TYPE_FLOAT,
+                               G_TYPE_FLOAT,
+                               G_TYPE_FLOAT,
+                               G_TYPE_FLOAT);
+
+    /* add data to the list store */
+    while (files) {
+        struct filename_list_node *fln;
+        struct file_data *fd;
+        fln = (struct filename_list_node *) files->data;
+        fd = (struct file_data *) fln->d;
+
+        if (fd->scanned) {
+            gtk_list_store_append(store, &iter);
+            gtk_list_store_set(store, &iter,
+                               COLUMN_FILENAME, fln->fr->display,
+                               COLUMN_ALBUM_GAIN, fd->gain_album,
+                               COLUMN_TRACK_GAIN, clamp_rg(RG_REFERENCE_LEVEL - fd->loudness),
+                               COLUMN_ALBUM_PEAK, fd->peak_album,
+                               COLUMN_TRACK_PEAK, fd->peak,
+                               -1);
+        }
+        files = g_slist_next(files);
+    }
+
+    return GTK_TREE_MODEL(store);
+}
+
+void float_to_rg_display(GtkTreeViewColumn *tree_column,
+                         GtkCellRenderer   *cell,
+                         GtkTreeModel      *tree_model,
+                         GtkTreeIter       *iter,
+                         gpointer           data)
+{
+  GtkCellRendererText *cell_text = (GtkCellRendererText *)cell;
+  float d;
+  gchar *text;
+
+  /* Get the double value from the model. */
+  gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
+  /* Now we can format the value ourselves. */
+  text = g_strdup_printf("%+.2f dB", d);
+  g_object_set(cell, "text", text, NULL);
+  g_free(text);
+}
+
+static void result_view_add_colums(GtkTreeView *treeview)
+{
+  GtkCellRenderer *renderer;
+  GtkTreeViewColumn *column;
+  GtkTreeModel *model = gtk_tree_view_get_model(treeview);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes(
+                        "File", renderer, "text", COLUMN_FILENAME, NULL);
+  gtk_tree_view_column_set_sort_column_id(column, COLUMN_FILENAME);
+  gtk_tree_view_append_column(treeview, column);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes(
+                  "Album Gain", renderer, "text", COLUMN_ALBUM_GAIN, NULL);
+  gtk_tree_view_column_set_sort_column_id(column, COLUMN_ALBUM_GAIN);
+  gtk_tree_view_append_column(treeview, column);
+  gtk_tree_view_column_set_cell_data_func(column, renderer,
+                                          float_to_rg_display,
+                                          (gpointer) COLUMN_ALBUM_GAIN, NULL);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes(
+                  "Track Gain", renderer, "text", COLUMN_TRACK_GAIN, NULL);
+  gtk_tree_view_column_set_sort_column_id(column, COLUMN_TRACK_GAIN);
+  gtk_tree_view_append_column(treeview, column);
+  gtk_tree_view_column_set_cell_data_func(column, renderer,
+                                          float_to_rg_display,
+                                          (gpointer) COLUMN_TRACK_GAIN, NULL);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes(
+                  "Album Peak", renderer, "text", COLUMN_ALBUM_PEAK, NULL);
+  gtk_tree_view_column_set_sort_column_id(column, COLUMN_ALBUM_PEAK);
+  gtk_tree_view_append_column(treeview, column);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes(
+                  "Track Peak", renderer, "text", COLUMN_TRACK_PEAK, NULL);
+  gtk_tree_view_column_set_sort_column_id(column, COLUMN_TRACK_PEAK);
+  gtk_tree_view_append_column(treeview, column);
+}
+
+static GtkWidget *show_result_list(GSList *files) {
+    GtkWidget *window;
+    GtkTreeModel *model;
+    GtkWidget *vbox;
+    GtkWidget *label;
+    GtkWidget *sw;
+    GtkWidget *treeview;
+
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "Scanning Result");
+
+    g_signal_connect(window, "destroy",
+                     G_CALLBACK(gtk_widget_destroyed), &window);
+    gtk_container_set_border_width(GTK_CONTAINER(window), 8);
+
+    vbox = gtk_vbox_new(FALSE, 8);
+    gtk_container_add(GTK_CONTAINER(window), vbox);
+
+    sw = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW (sw),
+                                        GTK_SHADOW_ETCHED_IN);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (sw),
+                                   GTK_POLICY_NEVER,
+                                   GTK_POLICY_AUTOMATIC);
+    gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
+
+    /* create tree model */
+    model = create_result_list_model(files);
+
+    /* create tree view */
+    treeview = gtk_tree_view_new_with_model(model);
+    gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(treeview), TRUE);
+    gtk_tree_view_set_search_column(GTK_TREE_VIEW(treeview),
+                                    COLUMN_FILENAME);
+
+    g_object_unref(model);
+
+    gtk_container_add(GTK_CONTAINER(sw), treeview);
+
+    /* add columns to the tree view */
+    result_view_add_colums(GTK_TREE_VIEW(treeview));
+
+    /* finish & show */
+    gtk_window_set_default_size(GTK_WINDOW(window), 280, 250);
+    gtk_widget_show_all(window);
+
+    return window;
+}
+
+
+
+
+/* drop handling and work */
+
 static gpointer do_work(struct work_data *wd)
 {
     int result;
@@ -52,18 +225,10 @@ static gpointer do_work(struct work_data *wd)
 
     filetree_file_list(tree, &files);
 
-    result = loudness_tag(files);
+    result = scan_files(files);
     if (result) {
-        GtkWidget *dialog;
         gdk_threads_enter();
-        dialog =
-            gtk_message_dialog_new(NULL,
-                                   GTK_DIALOG_MODAL |
-                                   GTK_DIALOG_DESTROY_WITH_PARENT,
-                                   GTK_MESSAGE_WARNING, GTK_BUTTONS_OK,
-                                   "Some files could not be tagged!");
-        gtk_dialog_run(GTK_DIALOG(dialog));
-        gtk_widget_destroy(dialog);
+        show_result_list(files);
         gdk_threads_leave();
     }
 

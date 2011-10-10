@@ -111,6 +111,9 @@ int input_deinit(void) {
   /* unload plugins */
   GSList* ops = plugin_ops;
   GSList* modules = g_modules;
+#ifdef GSTREAMER_INPUT_STATIC
+  gstreamer_ip_ops.exit_library();
+#endif
   while (ops && modules) {
     if (ops->data && modules->data) {
       ((struct input_ops*) ops->data)->exit_library();
