@@ -121,10 +121,14 @@ static void result_view_add_colums(GtkTreeView *treeview)
   GtkTreeModel *model = gtk_tree_view_get_model(treeview);
 
   renderer = gtk_cell_renderer_text_new();
+  g_object_set(renderer, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
   column = gtk_tree_view_column_new_with_attributes(
                         "File", renderer, "text", COLUMN_FILENAME, NULL);
   gtk_tree_view_column_set_sort_column_id(column, COLUMN_FILENAME);
   gtk_tree_view_append_column(treeview, column);
+  gtk_tree_view_column_set_expand(column, TRUE);
+  gtk_tree_view_column_set_min_width(column, 0);
+  gtk_tree_view_column_set_sizing(column, GTK_TREE_VIEW_COLUMN_FIXED);
 
   renderer = gtk_cell_renderer_text_new();
   column = gtk_tree_view_column_new_with_attributes(
@@ -200,7 +204,7 @@ static GtkWidget *show_result_list(GSList *files) {
     result_view_add_colums(GTK_TREE_VIEW(treeview));
 
     /* finish & show */
-    gtk_window_set_default_size(GTK_WINDOW(window), 280, 250);
+    gtk_window_set_default_size(GTK_WINDOW(window), 800, 400);
     gtk_widget_show_all(window);
 
     return window;
