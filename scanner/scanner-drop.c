@@ -52,6 +52,7 @@ typedef struct {
 } ResultEntry;
 
 enum {
+    COLUMN_IS_TAGGED,
     COLUMN_FILENAME,
     COLUMN_ALBUM_GAIN,
     COLUMN_TRACK_GAIN,
@@ -62,11 +63,11 @@ enum {
 
 static GtkTreeModel *create_result_list_model(GSList *files)
 {
-    gint i = 0;
     GtkListStore *store;
     GtkTreeIter iter;
 
     store = gtk_list_store_new(NUM_COLUMNS,
+                               GDK_TYPE_PIXBUF,
                                G_TYPE_STRING,
                                G_TYPE_FLOAT,
                                G_TYPE_FLOAT,
@@ -102,7 +103,6 @@ static void float_to_rg_display(GtkTreeViewColumn *tree_column,
                                 GtkTreeIter       *iter,
                                 gpointer           data)
 {
-  GtkCellRendererText *cell_text = (GtkCellRendererText *)cell;
   float d;
   gchar *text;
 
@@ -118,7 +118,13 @@ static void result_view_add_colums(GtkTreeView *treeview)
 {
   GtkCellRenderer *renderer;
   GtkTreeViewColumn *column;
-  GtkTreeModel *model = gtk_tree_view_get_model(treeview);
+
+  renderer = gtk_cell_renderer_pixbuf_new();
+  // g_object_set(renderer, "icon-name", GTK_STOCK_APPLY, NULL);
+  column = gtk_tree_view_column_new_with_attributes(
+                  "Tagged", renderer, "pixbuf", COLUMN_IS_TAGGED, NULL);
+  gtk_tree_view_column_set_sort_column_id(column, COLUMN_IS_TAGGED);
+  gtk_tree_view_append_column(treeview, column);
 
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
@@ -161,13 +167,20 @@ static void result_view_add_colums(GtkTreeView *treeview)
   gtk_tree_view_append_column(treeview, column);
 }
 
+static GtkTreeModel *tag_model; /* Must be updated before function call */
+static void tag_files_and_update_model(GSList *files) {
+    printf("test %p\n", (void *) files);
+}
+
 static GtkWidget *show_result_list(GSList *files) {
     GtkWidget *window;
     GtkTreeModel *model;
     GtkWidget *vbox;
-    GtkWidget *label;
     GtkWidget *sw;
     GtkWidget *treeview;
+
+    GtkWidget *lower_box, *lower_box_fill;
+    GtkWidget *button_box, *tag_button, *ok_button;
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Scanning Result");
@@ -198,10 +211,28 @@ static GtkWidget *show_result_list(GSList *files) {
 
     g_object_unref(model);
 
-    gtk_container_add(GTK_CONTAINER(sw), treeview);
-
     /* add columns to the tree view */
     result_view_add_colums(GTK_TREE_VIEW(treeview));
+    gtk_container_add(GTK_CONTAINER(sw), treeview);
+
+    /* create tag button */
+    lower_box = gtk_hbox_new(FALSE, 8);
+    ok_button = gtk_button_new_from_stock(GTK_STOCK_CLOSE);
+    g_signal_connect_swapped(ok_button, "clicked",
+                             G_CALLBACK(gtk_widget_destroy), window);
+    tag_button = gtk_button_new_with_mnemonic("_Tag files");
+    tag_model = model;
+    g_signal_connect(tag_button, "clicked",
+                     G_CALLBACK(tag_files_and_update_model), files);
+    lower_box_fill = gtk_alignment_new(0, 0.5f, 1, 1);
+    button_box = gtk_hbutton_box_new();
+    gtk_container_add(GTK_CONTAINER(button_box), tag_button);
+    gtk_container_add(GTK_CONTAINER(button_box), ok_button);
+    gtk_box_set_spacing(GTK_BOX(button_box), 6);
+
+    gtk_box_pack_start(GTK_BOX(lower_box), lower_box_fill, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(lower_box), button_box, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), lower_box, FALSE, FALSE, 0);
 
     /* finish & show */
     gtk_window_set_default_size(GTK_WINDOW(window), 800, 400);
