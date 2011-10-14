@@ -125,6 +125,7 @@ int main(int argc, char *argv[])
     g_slist_free(errors);
 
     filetree_file_list(tree, &files);
+    filetree_remove_common_prefix(files);
 
     switch (mode) {
         case LOUDNESS_MODE_SCAN:

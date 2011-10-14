@@ -96,11 +96,11 @@ static GtkTreeModel *create_result_list_model(GSList *files)
     return GTK_TREE_MODEL(store);
 }
 
-void float_to_rg_display(GtkTreeViewColumn *tree_column,
-                         GtkCellRenderer   *cell,
-                         GtkTreeModel      *tree_model,
-                         GtkTreeIter       *iter,
-                         gpointer           data)
+static void float_to_rg_display(GtkTreeViewColumn *tree_column,
+                                GtkCellRenderer   *cell,
+                                GtkTreeModel      *tree_model,
+                                GtkTreeIter       *iter,
+                                gpointer           data)
 {
   GtkCellRendererText *cell_text = (GtkCellRendererText *)cell;
   float d;
@@ -228,6 +228,7 @@ static gpointer do_work(struct work_data *wd)
     g_slist_free(errors);
 
     filetree_file_list(tree, &files);
+    filetree_remove_common_prefix(files);
 
     result = scan_files(files);
     if (result) {
