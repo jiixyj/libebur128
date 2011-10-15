@@ -6,6 +6,11 @@ endif()
 
 if(GLIB_FOUND)
   add_library(input input)
+  if(WIN32)
+    add_library(input_win32 input_win32)
+    target_link_libraries(input_win32 ${GLIB_LIBRARIES})
+    set(INPUT_HELPERS input_win32)
+  endif()
 
   if(WIN32 AND NOT "${CMAKE_SHARED_MODULE_PREFIX}")
     set(CMAKE_SHARED_MODULE_PREFIX "lib")
@@ -13,7 +18,7 @@ if(GLIB_FOUND)
 
   if(SNDFILE_FOUND)
     add_library(input_sndfile MODULE input_sndfile.c)
-    target_link_libraries(input_sndfile ebur128 ${SNDFILE_LIBRARIES})
+    target_link_libraries(input_sndfile ebur128 ${SNDFILE_LIBRARIES} ${INPUT_HELPERS})
   endif()
 
   if(MPG123_FOUND)

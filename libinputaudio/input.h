@@ -36,5 +36,8 @@ struct input_ops* input_get_ops(const char* filename);
 struct input_ops gstreamer_ip_ops;
 const char *gstreamer_ip_exts[1];
 #endif
+#ifdef G_OS_WIN32
+int input_open_fd(const char* filename);
+#endif
 
 #endif  /* _INPUT_H_ */
