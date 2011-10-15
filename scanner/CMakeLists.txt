@@ -4,10 +4,10 @@ if(GLIB_FOUND)
   add_library(parse_args parse_args)
 
   list(APPEND SCANNER_SRCS scanner.c nproc.c
-                           scanner-scan.c scanner-tag.c scanner-dump.c
+                           scanner-scan.c scanner-dump.c
                            scanner-common.c)
   if(TAGLIB_FOUND)
-    list(APPEND SCANNER_SRCS rgtag.cpp)
+    list(APPEND SCANNER_SRCS scanner-tag.c rgtag.cpp)
   endif()
 
   # Enable globbing for MinGW builds

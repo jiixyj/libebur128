@@ -22,17 +22,26 @@ static void print_help(void) {
     printf("Usage: loudness scan|tag|dump [OPTION...] [FILE|DIRECTORY]...\n");
     printf("\n");
     printf("`loudness' scans audio files according to the EBU R128 standard. It can output\n");
+#ifdef USE_TAGLIB
     printf("loudness and peak information, write it to ReplayGain conformant tags, or dump\n");
     printf("momentary/shortterm/integrated loudness in fixed intervals to the console.\n");
+#else
+    printf("loudness and peak information, or dump momentary/shortterm/integrated loudness\n");
+    printf("in fixed intervals to the console.\n");
+#endif
     printf("\n");
     printf("Examples:\n");
     printf("  loudness scan foo.wav       # Scans foo.wav and writes information to stdout.\n");
+#ifdef USE_TAGLIB
     printf("  loudness tag -r bar/        # Tag all files in foo as one album per subfolder.\n");
+#endif
     printf("  loudness dump -m 1.0 a.wav  # Each second, write momentary loudness to stdout.\n");
     printf("\n");
     printf(" Main operation mode:\n");
     printf("  scan                       output loudness and peak information\n");
+#ifdef USE_TAGLIB
     printf("  tag                        tag files with ReplayGain conformant tags\n");
+#endif
     printf("  dump                       output momentary/shortterm/integrated loudness\n");
     printf("                             in fixed intervals\n");
     printf("\n");
@@ -51,10 +60,12 @@ static void print_help(void) {
     printf("                                   -p dbtp:   true peak (dB True Peak)\n");
     printf("                                   -p all:    show all peak values\n");
     printf("\n");
+#ifdef USE_TAGLIB
     printf(" Tag options:\n");
     printf("  -t, --track                write only track gain (album gain is default)\n");
     printf("  -n, --dry-run              perform a trial run with no changes made\n");
     printf("\n");
+#endif
     printf(" Dump options:\n");
     printf("  -m, --momentary=INTERVAL   print momentary loudness every INTERVAL seconds\n");
     printf("  -s, --shortterm=INTERVAL   print shortterm loudness every INTERVAL seconds\n");
@@ -99,9 +110,11 @@ int main(int argc, char *argv[])
     if (!strcmp(argv[1], "scan")) {
         mode = LOUDNESS_MODE_SCAN;
         mode_parsed = loudness_scan_parse(&argc, &argv);
+#ifdef USE_TAGLIB
     } else if (!strcmp(argv[1], "tag")) {
         mode = LOUDNESS_MODE_TAG;
         mode_parsed = loudness_tag_parse(&argc, &argv);
+#endif
     } else if (!strcmp(argv[1], "dump")) {
         mode = LOUDNESS_MODE_DUMP;
         mode_parsed = loudness_dump_parse(&argc, &argv);
@@ -131,9 +144,11 @@ int main(int argc, char *argv[])
         case LOUDNESS_MODE_SCAN:
         loudness_scan(files);
         break;
+#ifdef USE_TAGLIB
         case LOUDNESS_MODE_TAG:
         ret = loudness_tag(files);
         break;
+#endif
         case LOUDNESS_MODE_DUMP:
         ret = loudness_dump(files);
         break;
