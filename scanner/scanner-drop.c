@@ -326,11 +326,11 @@ static void handle_data_received(GtkWidget *widget,
 
 /* input handling */
 
-static GtkWidget *popup_menu;
 
 static void handle_popup(GtkWidget *widget, GdkEventButton *event)
 {
-    (void) widget;
+    GtkWidget *popup_menu;
+    g_object_get(G_OBJECT(widget), "user-data", &popup_menu, NULL);
     gtk_widget_show_all(popup_menu);
     gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
                    (event != NULL) ? event->button : 0,
@@ -344,8 +344,7 @@ static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event,
 
     if (event->type == GDK_BUTTON_PRESS) {
         if (event->button == 1) {
-            gtk_window_begin_move_drag(GTK_WINDOW
-                                       (gtk_widget_get_toplevel(widget)),
+            gtk_window_begin_move_drag(GTK_WINDOW(widget),
                                        (int) event->button, (int) event->x_root,
                                        (int) event->y_root, event->time);
         } else if (event->button == 3) {
@@ -460,8 +459,6 @@ static GtkActionEntry action_entries[] =
     G_CALLBACK(exit_program) }
 };
 
-static guint n_action_entries = G_N_ELEMENTS(action_entries);
-
 static const char *ui =
 "<ui>"
 "  <menubar name=\"MainMenu\">"
@@ -472,7 +469,6 @@ static const char *ui =
 "  </menubar>"
 "</ui>"
 ;
-
 
 
 int main(int argc, char *argv[])
@@ -541,7 +537,7 @@ int main(int argc, char *argv[])
 
     /* set up action group */
     gtk_action_group_add_actions(action_group, action_entries,
-                                 n_action_entries, NULL);
+                                 G_N_ELEMENTS(action_entries), NULL);
 
     /* set up menu manager */
     gtk_ui_manager_insert_action_group(menu_manager, action_group, 0);
@@ -553,9 +549,10 @@ int main(int argc, char *argv[])
     }
     gtk_window_add_accel_group(GTK_WINDOW(window),
                                gtk_ui_manager_get_accel_group(menu_manager));
-    popup_menu = gtk_menu_item_get_submenu(
-                     GTK_MENU_ITEM(gtk_ui_manager_get_widget(
-                                       menu_manager, "/MainMenu/FileMenu")));
+    g_object_set(window, "user-data", gtk_menu_item_get_submenu(
+                                       GTK_MENU_ITEM(gtk_ui_manager_get_widget(
+                                       menu_manager, "/MainMenu/FileMenu"))),
+                         NULL);
 
     gtk_widget_show_all(window);
 
