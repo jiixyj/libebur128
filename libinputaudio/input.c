@@ -131,6 +131,7 @@ int input_deinit(void) {
 }
 
 struct input_ops* input_get_ops(const char* filename) {
+  static char empty[] = { '\0' };
   GSList* ops = plugin_ops;
   GSList* exts = plugin_exts;
   char* filename_ext = strrchr(filename, '.');
@@ -138,7 +139,7 @@ struct input_ops* input_get_ops(const char* filename) {
   if (filename_ext) {
     ++filename_ext;
   } else {
-    return NULL;
+    filename_ext = &empty[0];
   }
   while (ops && exts) {
     if (ops->data && exts->data) {
