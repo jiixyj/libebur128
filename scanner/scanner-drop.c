@@ -30,9 +30,12 @@ static void exit_program(void)
 }
 
 struct work_data {
-    gchar **files;
+    Filetree tree;
+    gchar **roots;
     guint length;
     int success;
+    GSList *files;
+    GtkWidget *result_window;
 };
 
 static GStaticMutex thread_mutex = G_STATIC_MUTEX_INIT;
@@ -42,14 +45,6 @@ static GThread *worker_thread;
 
 
 /* result list */
-
-typedef struct {
-    const gchar *filename;
-    const float  album_gain;
-    const float  track_gain;
-    const float  album_peak;
-    const float  track_peak;
-} ResultEntry;
 
 enum {
     COLUMN_IS_TAGGED,
@@ -65,9 +60,11 @@ static GtkTreeModel *create_result_list_model(GSList *files)
 {
     GtkListStore *store;
     GtkTreeIter iter;
+    struct filename_list_node *fln;
+    struct file_data *fd;
 
     store = gtk_list_store_new(NUM_COLUMNS,
-                               GDK_TYPE_PIXBUF,
+                               G_TYPE_STRING,
                                G_TYPE_STRING,
                                G_TYPE_FLOAT,
                                G_TYPE_FLOAT,
@@ -76,14 +73,13 @@ static GtkTreeModel *create_result_list_model(GSList *files)
 
     /* add data to the list store */
     while (files) {
-        struct filename_list_node *fln;
-        struct file_data *fd;
         fln = (struct filename_list_node *) files->data;
         fd = (struct file_data *) fln->d;
 
         if (fd->scanned) {
             gtk_list_store_append(store, &iter);
             gtk_list_store_set(store, &iter,
+                               COLUMN_IS_TAGGED, NULL,
                                COLUMN_FILENAME, fln->fr->display,
                                COLUMN_ALBUM_GAIN, fd->gain_album,
                                COLUMN_TRACK_GAIN, clamp_rg(RG_REFERENCE_LEVEL - fd->loudness),
@@ -122,7 +118,7 @@ static void result_view_add_colums(GtkTreeView *treeview)
   renderer = gtk_cell_renderer_pixbuf_new();
   // g_object_set(renderer, "icon-name", GTK_STOCK_APPLY, NULL);
   column = gtk_tree_view_column_new_with_attributes(
-                  "Tagged", renderer, "pixbuf", COLUMN_IS_TAGGED, NULL);
+                  "Tagged", renderer, "icon-name", COLUMN_IS_TAGGED, NULL);
   gtk_tree_view_column_set_sort_column_id(column, COLUMN_IS_TAGGED);
   gtk_tree_view_append_column(treeview, column);
 
@@ -168,12 +164,46 @@ static void result_view_add_colums(GtkTreeView *treeview)
 }
 
 static GtkTreeModel *tag_model; /* Must be updated before function call */
-static void tag_files_and_update_model(GSList *files) {
-    printf("test %p\n", (void *) files);
+static void tag_files_and_update_model(GSList *files, GtkWidget *tag_button) {
+    GtkTreeIter iter;
+    struct filename_list_node *fln;
+    struct file_data *fd;
+    int ret;
+
+    gtk_tree_model_get_iter_first(tag_model, &iter);
+    while (files) {
+        fln = (struct filename_list_node *) files->data;
+        fd = (struct file_data *) fln->d;
+        if (fd->scanned) {
+            if (!fd->tagged) {
+                ret = 0;
+                tag_file(fln, &ret);
+                gtk_list_store_set(GTK_LIST_STORE(tag_model), &iter,
+                                COLUMN_IS_TAGGED,
+                                ret ? GTK_STOCK_CANCEL : GTK_STOCK_APPLY,
+                                -1);
+                if (!ret) fd->tagged = TRUE;
+            }
+            gtk_tree_model_iter_next(tag_model, &iter);
+        }
+        files = g_slist_next(files);
+    }
+    gtk_widget_set_sensitive(tag_button, FALSE);
 }
 
-static GtkWidget *show_result_list(GSList *files) {
-    GtkWidget *window;
+static void destroy_work_data(struct work_data *wd) {
+    g_slist_foreach(wd->files, filetree_free_list_entry, NULL);
+    g_slist_free(wd->files);
+    filetree_destroy(wd->tree);
+    g_free(wd->roots);
+    if (wd->result_window) {
+        gtk_widget_destroy(wd->result_window);
+        fprintf(stderr, "result window destroyed\n");
+    }
+    g_free(wd);
+}
+
+static void show_result_list(struct work_data *wd) {
     GtkTreeModel *model;
     GtkWidget *vbox;
     GtkWidget *sw;
@@ -182,15 +212,15 @@ static GtkWidget *show_result_list(GSList *files) {
     GtkWidget *lower_box, *lower_box_fill;
     GtkWidget *button_box, *tag_button, *ok_button;
 
-    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Scanning Result");
+    wd->result_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(wd->result_window), "Scanning Result");
 
-    g_signal_connect(window, "destroy",
-                     G_CALLBACK(gtk_widget_destroyed), &window);
-    gtk_container_set_border_width(GTK_CONTAINER(window), 8);
+    g_signal_connect_swapped(wd->result_window, "delete-event",
+                             G_CALLBACK(destroy_work_data), wd);
+    gtk_container_set_border_width(GTK_CONTAINER(wd->result_window), 8);
 
     vbox = gtk_vbox_new(FALSE, 8);
-    gtk_container_add(GTK_CONTAINER(window), vbox);
+    gtk_container_add(GTK_CONTAINER(wd->result_window), vbox);
 
     sw = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW (sw),
@@ -201,7 +231,7 @@ static GtkWidget *show_result_list(GSList *files) {
     gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
 
     /* create tree model */
-    model = create_result_list_model(files);
+    model = create_result_list_model(wd->files);
 
     /* create tree view */
     treeview = gtk_tree_view_new_with_model(model);
@@ -219,11 +249,11 @@ static GtkWidget *show_result_list(GSList *files) {
     lower_box = gtk_hbox_new(FALSE, 8);
     ok_button = gtk_button_new_from_stock(GTK_STOCK_CLOSE);
     g_signal_connect_swapped(ok_button, "clicked",
-                             G_CALLBACK(gtk_widget_destroy), window);
+                             G_CALLBACK(destroy_work_data), wd);
     tag_button = gtk_button_new_with_mnemonic("_Tag files");
     tag_model = model;
-    g_signal_connect(tag_button, "clicked",
-                     G_CALLBACK(tag_files_and_update_model), files);
+    g_signal_connect_swapped(tag_button, "clicked",
+                             G_CALLBACK(tag_files_and_update_model), wd->files);
     lower_box_fill = gtk_alignment_new(0, 0.5f, 1, 1);
     button_box = gtk_hbutton_box_new();
     gtk_container_add(GTK_CONTAINER(button_box), tag_button);
@@ -235,10 +265,8 @@ static GtkWidget *show_result_list(GSList *files) {
     gtk_box_pack_start(GTK_BOX(vbox), lower_box, FALSE, FALSE, 0);
 
     /* finish & show */
-    gtk_window_set_default_size(GTK_WINDOW(window), 800, 400);
-    gtk_widget_show_all(window);
-
-    return window;
+    gtk_window_set_default_size(GTK_WINDOW(wd->result_window), 800, 400);
+    gtk_widget_show_all(wd->result_window);
 }
 
 
@@ -250,30 +278,26 @@ static gpointer do_work(struct work_data *wd)
 {
     int result;
 
-    Filetree tree;
-    GSList *errors = NULL, *files = NULL;
-    tree = filetree_init(wd->files, wd->length, TRUE, FALSE, FALSE, &errors);
+    GSList *errors = NULL;
+    wd->tree = filetree_init(wd->roots, wd->length, TRUE, FALSE, FALSE, &errors);
 
     g_slist_foreach(errors, filetree_print_error, &verbose);
     g_slist_foreach(errors, filetree_free_error, NULL);
     g_slist_free(errors);
 
-    filetree_file_list(tree, &files);
-    filetree_remove_common_prefix(files);
+    wd->files = NULL;
+    filetree_file_list(wd->tree, &wd->files);
+    filetree_remove_common_prefix(wd->files);
 
-    result = scan_files(files);
+    result = scan_files(wd->files);
     if (result) {
         gdk_threads_enter();
-        show_result_list(files);
+        show_result_list(wd);
         gdk_threads_leave();
+    } else {
+        wd->result_window = NULL;
+        destroy_work_data(wd);
     }
-
-    g_slist_foreach(files, filetree_free_list_entry, NULL);
-    g_slist_free(files);
-    filetree_destroy(tree);
-
-    g_free(wd->files);
-    g_free(wd);
 
     g_static_mutex_lock(&thread_mutex);
     worker_thread = NULL;
@@ -313,7 +337,7 @@ static void handle_data_received(GtkWidget *widget,
     g_strfreev(uris);
 
     sl = g_new(struct work_data, 1);
-    sl->files = files;
+    sl->roots = files;
     sl->length = no_uris;
     worker_thread = g_thread_create((GThreadFunc) do_work, sl, FALSE, NULL);
 

@@ -109,12 +109,10 @@ static void print_file_data(struct filename_list_node *fln, gpointer unused)
 }
 
 static int tag_output_state = 0;
-static void tag_file(struct filename_list_node *fln, int *ret)
+void tag_file(struct filename_list_node *fln, int *ret)
 {
     struct file_data *fd = (struct file_data *) fln->d;
-    if (!fd->scanned) {
-        return;
-    } else {
+    if (fd->scanned) {
         int error;
         char *basename, *extension, *filename;
         struct gain_data gd = { clamp_rg(RG_REFERENCE_LEVEL - fd->loudness),

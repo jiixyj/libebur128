@@ -20,7 +20,9 @@ struct file_data
     double gain_album;
     double peak_album;
 
-    gboolean scanned;
+    void *user;
+
+    gboolean scanned, tagged;
 };
 
 struct scan_opts

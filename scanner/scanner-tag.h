@@ -3,9 +3,12 @@
 
 #include <glib.h>
 
+#include "filetree.h"
+
 #define RG_REFERENCE_LEVEL -18.0
 double clamp_rg(double x);
 
+void tag_file(struct filename_list_node *fln, int *ret);
 int scan_files(GSList *files);
 int tag_files(GSList *files);
 int loudness_tag(GSList *files);
