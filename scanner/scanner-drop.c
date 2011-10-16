@@ -1,7 +1,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include <librsvg-2/librsvg/rsvg.h>
-#include <librsvg-2/librsvg/rsvg-cairo.h>
+#include <librsvg/rsvg.h>
+#include <librsvg/rsvg-cairo.h>
 
 #include <stdio.h>
 #include <stdlib.h>
