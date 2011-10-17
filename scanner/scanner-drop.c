@@ -36,6 +36,7 @@ struct work_data {
     int success;
     GSList *files;
     GtkWidget *result_window;
+    GtkTreeModel *tag_model;
 };
 
 static GStaticMutex thread_mutex = G_STATIC_MUTEX_INIT;
@@ -163,14 +164,15 @@ static void result_view_add_colums(GtkTreeView *treeview)
   gtk_tree_view_append_column(treeview, column);
 }
 
-static GtkTreeModel *tag_model; /* Must be updated before function call */
-static void tag_files_and_update_model(GSList *files, GtkWidget *tag_button) {
+static void tag_files_and_update_model(GtkWidget *tag_button, struct work_data *wd) {
     GtkTreeIter iter;
     struct filename_list_node *fln;
     struct file_data *fd;
     int ret;
+    GSList *files;
 
-    gtk_tree_model_get_iter_first(tag_model, &iter);
+    files = wd->files;
+    gtk_tree_model_get_iter_first(wd->tag_model, &iter);
     while (files) {
         fln = (struct filename_list_node *) files->data;
         fd = (struct file_data *) fln->d;
@@ -178,13 +180,13 @@ static void tag_files_and_update_model(GSList *files, GtkWidget *tag_button) {
             if (!fd->tagged) {
                 ret = 0;
                 tag_file(fln, &ret);
-                gtk_list_store_set(GTK_LIST_STORE(tag_model), &iter,
+                gtk_list_store_set(GTK_LIST_STORE(wd->tag_model), &iter,
                                 COLUMN_IS_TAGGED,
                                 ret ? GTK_STOCK_CANCEL : GTK_STOCK_APPLY,
                                 -1);
                 if (!ret) fd->tagged = TRUE;
             }
-            gtk_tree_model_iter_next(tag_model, &iter);
+            gtk_tree_model_iter_next(wd->tag_model, &iter);
         }
         files = g_slist_next(files);
     }
@@ -252,9 +254,9 @@ static gboolean show_result_list(struct work_data *wd) {
     g_signal_connect_swapped(ok_button, "clicked",
                              G_CALLBACK(destroy_work_data), wd);
     tag_button = gtk_button_new_with_mnemonic("_Tag files");
-    tag_model = model;
-    g_signal_connect_swapped(tag_button, "clicked",
-                             G_CALLBACK(tag_files_and_update_model), wd->files);
+    wd->tag_model = model;
+    g_signal_connect(tag_button, "clicked",
+                     G_CALLBACK(tag_files_and_update_model), wd);
     lower_box_fill = gtk_alignment_new(0, 0.5f, 1, 1);
     button_box = gtk_hbutton_box_new();
     gtk_container_add(GTK_CONTAINER(button_box), tag_button);
