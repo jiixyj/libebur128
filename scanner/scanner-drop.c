@@ -203,7 +203,7 @@ static void destroy_work_data(struct work_data *wd) {
     g_free(wd);
 }
 
-static void show_result_list(struct work_data *wd) {
+static gboolean show_result_list(struct work_data *wd) {
     GtkTreeModel *model;
     GtkWidget *vbox;
     GtkWidget *sw;
@@ -212,6 +212,7 @@ static void show_result_list(struct work_data *wd) {
     GtkWidget *lower_box, *lower_box_fill;
     GtkWidget *button_box, *tag_button, *ok_button;
 
+    gdk_threads_enter();
     wd->result_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(wd->result_window), "Scanning Result");
 
@@ -267,6 +268,9 @@ static void show_result_list(struct work_data *wd) {
     /* finish & show */
     gtk_window_set_default_size(GTK_WINDOW(wd->result_window), 800, 400);
     gtk_widget_show_all(wd->result_window);
+    gdk_threads_leave();
+
+    return FALSE;
 }
 
 
@@ -291,9 +295,7 @@ static gpointer do_work(struct work_data *wd)
 
     result = scan_files(wd->files);
     if (result) {
-        gdk_threads_enter();
-        show_result_list(wd);
-        gdk_threads_leave();
+        g_idle_add((GSourceFunc) show_result_list, wd);
     } else {
         wd->result_window = NULL;
         destroy_work_data(wd);
