@@ -126,7 +126,7 @@ void tag_file(struct filename_list_node *fln, int *ret)
         if (extension) ++extension;
         else extension = "";
 #ifdef G_OS_WIN32
-        filename = g_utf8_to_utf16(fln->fr->raw, -1, NULL, NULL, NULL);
+        filename = (char *) g_utf8_to_utf16(fln->fr->raw, -1, NULL, NULL, NULL);
 #else
         filename = g_strdup(fln->fr->raw);
 #endif

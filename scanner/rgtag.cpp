@@ -21,6 +21,12 @@
 #include <sstream>
 #include <ios>
 
+#ifdef _WIN32
+#define CAST_FILENAME (const wchar_t *)
+#else
+#define CAST_FILENAME
+#endif
+
 static bool clear_txxx_tag(TagLib::ID3v2::Tag* tag, TagLib::String tag_name) {
   TagLib::ID3v2::FrameList l = tag->frameList("TXXX");
   for (TagLib::ID3v2::FrameList::Iterator it = l.begin(); it != l.end(); ++it) {
@@ -103,7 +109,7 @@ struct gain_data_strings {
 static bool tag_id3v2(const char* filename,
                       struct gain_data* gd,
                       struct gain_data_strings* gds) {
-  TagLib::MPEG::File f(filename);
+  TagLib::MPEG::File f(CAST_FILENAME filename);
   TagLib::ID3v2::Tag* id3v2tag = f.ID3v2Tag(true);
 
   while (clear_txxx_tag(id3v2tag, TagLib::String("replaygain_album_gain").upper()));
@@ -131,11 +137,11 @@ static bool tag_vorbis_comment(const char* filename,
   TagLib::File* file = NULL;
   TagLib::Ogg::XiphComment* xiph = NULL;
   if (!::strcmp(extension, "flac")) {
-    TagLib::FLAC::File* f = new TagLib::FLAC::File(filename);
+    TagLib::FLAC::File* f = new TagLib::FLAC::File(CAST_FILENAME filename);
     xiph = f->xiphComment(true);
     file = f;
   } else if (!::strcmp(extension, "ogg") || !::strcmp(extension, "oga")) {
-    TagLib::Ogg::Vorbis::File* f = new TagLib::Ogg::Vorbis::File(filename);
+    TagLib::Ogg::Vorbis::File* f = new TagLib::Ogg::Vorbis::File(CAST_FILENAME filename);
     xiph = f->tag();
     file = f;
   }
@@ -160,11 +166,11 @@ static bool tag_ape(const char* filename,
   TagLib::File* file = NULL;
   TagLib::APE::Tag* ape = NULL;
   if (!::strcmp(extension, "mpc")) {
-    TagLib::MPC::File* f = new TagLib::MPC::File(filename);
+    TagLib::MPC::File* f = new TagLib::MPC::File(CAST_FILENAME filename);
     ape = f->APETag(true);
     file = f;
   } else if (!::strcmp(extension, "wv")) {
-    TagLib::WavPack::File* f = new TagLib::WavPack::File(filename);
+    TagLib::WavPack::File* f = new TagLib::WavPack::File(CAST_FILENAME filename);
     ape = f->APETag(true);
     file = f;
   }
@@ -185,7 +191,7 @@ static bool tag_ape(const char* filename,
 static bool tag_mp4(const char* filename,
                     struct gain_data* gd,
                     struct gain_data_strings* gds) {
-  TagLib::MP4::File f(filename);
+  TagLib::MP4::File f(CAST_FILENAME filename);
   TagLib::MP4::Tag* t = f.tag();
   TagLib::MP4::ItemListMap& ilm = t->itemListMap();
   ilm["----:com.apple.iTunes:replaygain_track_gain"] = TagLib::MP4::Item(TagLib::StringList(gds->track_gain));
