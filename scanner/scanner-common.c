@@ -145,7 +145,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
                             fd->number_of_frames, fd->number_of_elapsed_frames);
         }
         g_mutex_lock(progress_mutex);
-        elapsed_frames += fd->number_of_frames - fd->number_of_elapsed_frames;
+        elapsed_frames += (ssize_t) fd->number_of_frames - (ssize_t) fd->number_of_elapsed_frames;
         g_cond_broadcast(progress_cond);
         g_mutex_unlock(progress_mutex);
     }

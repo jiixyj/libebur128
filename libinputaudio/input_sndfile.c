@@ -41,6 +41,7 @@ static int sndfile_open_file(struct input_handle* ih, const char* filename) {
   memset(&ih->file_info, '\0', sizeof(ih->file_info));
 
 #ifdef G_OS_WIN32
+  g_usleep(10);
   fd = input_open_fd(filename);
   if (fd < 0) return 1;
   ih->file = sf_open_fd(fd, SFM_READ, &ih->file_info, 1);

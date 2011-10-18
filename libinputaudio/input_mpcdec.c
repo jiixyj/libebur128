@@ -31,9 +31,21 @@ static struct input_handle* mpcdec_handle_init() {
 }
 
 static int mpcdec_open_file(struct input_handle* ih, const char* filename) {
-  /* FIXME test on windows */
+#ifdef G_OS_WIN32
+  int err;
+  gunichar2 *utf16;
+  FILE *file;
+
+  utf16 = g_utf8_to_utf16(filename, -1, NULL, NULL, NULL);
+  file = _wfopen(utf16, L"rb");
+  g_free(utf16);
+  if (!file) {
+    return 1;
+  }
+  err = mpc_reader_init_stdio_stream(&ih->reader, file);
+#else
   int err = mpc_reader_init_stdio(&ih->reader, filename);
-  (void) filename;
+#endif
 
   if (err < 0) {
     return 1;

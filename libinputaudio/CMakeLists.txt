@@ -28,7 +28,7 @@ if(GLIB_FOUND)
 
   if(MPCDEC_FOUND)
     add_library(input_musepack MODULE input_mpcdec.c)
-    target_link_libraries(input_musepack ${MPCDEC_LIBRARY})
+    target_link_libraries(input_musepack ${MPCDEC_LIBRARY} ${INPUT_HELPERS})
   endif()
 
   if(FLAG_STD_C99 AND FFMPEG_FOUND)

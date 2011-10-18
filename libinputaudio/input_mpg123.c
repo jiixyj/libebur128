@@ -44,7 +44,6 @@ static int mpg123_open_file(struct input_handle* ih, const char* filename) {
     fprintf(stderr, "Could not create mpg123 handler!\n");
     goto close_file;
   }
-  /* FIXME test on windows */
   result = mpg123_open(ih->mh, filename);
   if (result != MPG123_OK) {
     fprintf(stderr, "Could not open input file!\n");

@@ -200,7 +200,6 @@ static void destroy_work_data(struct work_data *wd) {
     g_free(wd->roots);
     if (wd->result_window) {
         gtk_widget_destroy(wd->result_window);
-        fprintf(stderr, "result window destroyed\n");
     }
     g_free(wd);
 }
