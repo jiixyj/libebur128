@@ -32,6 +32,11 @@ if(GLIB_FOUND)
     target_link_libraries(loudness-drop ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
   endif()
 
+  if(QT4_FOUND AND TAGLIB_FOUND)
+    add_executable(loudness-drop-qt scanner-drop-qt scanner-tag scanner-common nproc rgtag.cpp)
+    target_link_libraries(loudness-drop-qt ebur128 input filetree parse_args ${GLIB_LIBRARIES} ${QT_LIBRARIES} ${TAGLIB_LIBRARIES})
+  endif()
+
   if(SNDFILE_FOUND)
     add_executable(r128-minimal-example minimal_example.c)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
