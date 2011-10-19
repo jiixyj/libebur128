@@ -1,8 +1,9 @@
 find_package(PkgConfig)
 pkg_check_modules(PC_RSVG2 QUIET librsvg-2.0)
 
-find_path(RSVG2_INCLUDE_DIR rsvg.h
-          HINTS ${PC_RSVG2_INCLUDEDIR} ${PC_RSVG2_INCLUDE_DIRS})
+find_path(RSVG2_INCLUDE_DIR librsvg/rsvg.h
+          HINTS ${PC_RSVG2_INCLUDEDIR} ${PC_RSVG2_INCLUDE_DIRS}
+          PATH_SUFFIXES librsvg-2.0 librsvg-2)
 find_library(RSVG2_LIBRARY NAMES rsvg rsvg-2
              HINTS ${PC_RSVG2_LIBDIR} ${PC_RSVG2_LIBRARY_DIRS})
 

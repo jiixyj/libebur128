@@ -16,9 +16,9 @@ find_library(GMODULE_LIBRARY NAMES gmodule-2.0 gmodule-2.0-0
 
 if(WIN32)
   if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
-    find_library(INTL_LIBRARY intl)
+    find_library(INTL_LIBRARY intl HINTS ${PC_GLIB_LIBDIR} ${PC_GLIB_LIBRARY_DIRS})
   elseif(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-    find_library(INTL_LIBRARY intl-8)
+    find_library(INTL_LIBRARY intl-8 HINTS ${PC_GLIB_LIBDIR} ${PC_GLIB_LIBRARY_DIRS})
   endif()
 endif()
 
