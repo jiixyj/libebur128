@@ -33,7 +33,7 @@ find_package(RSVG2)
 find_package(FFMPEG)
 find_package(TAGLIB)
 find_package(GStreamer)
-find_package(Qt4 COMPONENTS QtCore QtGui QtSvg)
+find_package(Qt4 COMPONENTS QtGui QtSvg)
 
 if(SNDFILE_FOUND)
 include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
