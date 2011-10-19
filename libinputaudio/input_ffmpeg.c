@@ -53,6 +53,7 @@ static struct input_handle* ffmpeg_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
 
+  av_init_packet(&ret->packet);
   ret->buffer_list = NULL;
   ret->current_bytes = 0;
   return ret;
@@ -355,4 +356,4 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   ffmpeg_exit_library
 };
 
-G_MODULE_EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", "m4a", "mp4", NULL};
+G_MODULE_EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", "m4a", "mp4", "aac", NULL};
