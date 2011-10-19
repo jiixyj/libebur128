@@ -22,7 +22,8 @@ struct file_data
 
     void *user;
 
-    gboolean scanned, tagged;
+    gboolean scanned;
+    int tagged;
 };
 
 struct scan_opts

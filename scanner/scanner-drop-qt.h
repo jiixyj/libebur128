@@ -99,8 +99,22 @@ public:
     ResultWindow(QWidget *parent, GSList *files, Filetree tree);
     ~ResultWindow();
     QSize sizeHint() const;
+private slots:
+    void tag_files();
 private:
     ResultData data;
+    QTreeView *view;
+    QSortFilterProxyModel *proxyModel;
+    QPushButton *tag_button;
     GSList *files_;
     Filetree tree_;
+};
+
+class IconDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+public:
+    IconDelegate(QWidget *parent = NULL);
+    void paint(QPainter *painter, QStyleOptionViewItem const& option,
+               QModelIndex const& index) const;
 };

@@ -184,7 +184,8 @@ static void tag_files_and_update_model(GtkWidget *tag_button, struct work_data *
                                 COLUMN_IS_TAGGED,
                                 ret ? GTK_STOCK_CANCEL : GTK_STOCK_APPLY,
                                 -1);
-                if (!ret) fd->tagged = TRUE;
+                if (!ret) fd->tagged = 1;
+                else fd->tagged = 2;
             }
             gtk_tree_model_iter_next(wd->tag_model, &iter);
         }

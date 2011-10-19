@@ -151,8 +151,8 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
     QVBoxLayout *layout = new QVBoxLayout;
     setLayout(layout);
 
-    QTreeView *view = new QTreeView;
-    QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel(this);
+    view = new QTreeView;
+    proxyModel = new QSortFilterProxyModel(this);
     proxyModel->setSourceModel(&data);
     view->setRootIsDecorated(false);
     view->setAlternatingRowColors(true);
@@ -161,10 +161,21 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
     view->sortByColumn(-1);
     view->setItemsExpandable(false);
     view->header()->setResizeMode(QHeaderView::Fixed);
-    view->header()->setResizeMode(0, QHeaderView::Stretch);
+    view->header()->setResizeMode(1, QHeaderView::Stretch);
     view->header()->setStretchLastSection(false);
+    view->setItemDelegateForColumn(0, new IconDelegate);
+
+    QHBoxLayout *bbox = new QHBoxLayout;
+    QPushButton *close_button = new QPushButton("&Close", this);
+    connect(close_button, SIGNAL(clicked()), this, SLOT(close()));
+    tag_button = new QPushButton("&Tag files", this);
+    connect(tag_button, SIGNAL(clicked()), this, SLOT(tag_files()));
+    bbox->addStretch(1);
+    bbox->addWidget(tag_button);
+    bbox->addWidget(close_button);
 
     layout->addWidget(view);
+    layout->addLayout(bbox);
 }
 
 ResultWindow::~ResultWindow()
@@ -177,6 +188,29 @@ ResultWindow::~ResultWindow()
 QSize ResultWindow::sizeHint() const
 {
     return QSize(800, 400);
+}
+
+void ResultWindow::tag_files() {
+    struct filename_list_node *fln;
+    struct file_data *fd;
+    GSList *iter = files_;
+    int row_index = 0;
+    tag_button->setEnabled(false);
+    while (iter) {
+        fln = (struct filename_list_node *) iter->data;
+        fd = (struct file_data *) fln->d;
+        if (fd->scanned) {
+            if (!fd->tagged) {
+                int ret = 0;
+                tag_file(fln, &ret);
+                if (!ret) fd->tagged = 1;
+                else fd->tagged = 2;
+            }
+            view->update(proxyModel->mapFromSource(data.index(row_index, 0)));
+            ++row_index;
+        }
+        iter = g_slist_next(iter);
+    }
 }
 
 ResultData::ResultData(GSList *files)
@@ -205,39 +239,43 @@ int ResultData::columnCount(QModelIndex const& parent) const
 QVariant ResultData::data(QModelIndex const& index, int role) const
 {
     if (role == Qt::DisplayRole) {
-        int row = index.row();
-        int column = index.column();
-        struct filename_list_node *fln = files_[row];
+        struct filename_list_node *fln = files_[index.row()];
         struct file_data *fd = (struct file_data *) fln->d;
-        switch (column) {
-        case 0:
+        switch (index.column()) {
+        case 1:
             return fln->fr->display;
-        case 1: {
+        case 2: {
             gchar *p = g_strdup_printf("%+.2f dB", fd->gain_album);
             QVariant r(p);
             g_free(p);
             return r;
         }
-        case 2: {
+        case 3: {
             gchar *p = g_strdup_printf("%+.2f dB",
                            clamp_rg(RG_REFERENCE_LEVEL - fd->loudness));
             QVariant r(p);
             g_free(p);
             return r;
         }
-        case 3: {
+        case 4: {
             gchar *p = g_strdup_printf("%.6f", fd->peak_album);
             QVariant r(p);
             g_free(p);
             return r;
         }
-        case 4: {
+        case 5: {
             gchar *p = g_strdup_printf("%.6f", fd->peak);
             QVariant r(p);
             g_free(p);
             return r;
         }
+        default:
+            return QVariant();
         }
+    } else if (role == Qt::UserRole and index.column() == 0) {
+        struct filename_list_node *fln = files_[index.row()];
+        struct file_data *fd = (struct file_data *) fln->d;
+        return fd->tagged;
     }
     return QVariant();
 }
@@ -247,14 +285,16 @@ QVariant ResultData::headerData(int section, Qt::Orientation orientation, int ro
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
         switch (section) {
             case 0:
-                return tr("File");
+                return tr("Tagged");
             case 1:
-                return tr("Album Gain");
+                return tr("File");
             case 2:
-                return tr("Track Gain");
+                return tr("Album Gain");
             case 3:
-                return tr("Album Peak");
+                return tr("Track Gain");
             case 4:
+                return tr("Album Peak");
+            case 5:
                 return tr("Track Peak");
             default:
                 return QVariant();
@@ -262,6 +302,23 @@ QVariant ResultData::headerData(int section, Qt::Orientation orientation, int ro
     }
     return QVariant();
 }
+
+IconDelegate::IconDelegate(QWidget *parent)
+    : QStyledItemDelegate(parent)
+{}
+
+void IconDelegate::paint(QPainter *painter, QStyleOptionViewItem const& option,
+                         QModelIndex const& index) const
+{
+    int tag_status = qVariantValue<int>(index.data(Qt::UserRole));
+    QStyledItemDelegate::paint(painter, option, index);
+    if (tag_status == 0) return;
+    QIcon icon = tag_status == 1
+           ? QApplication::style()->standardIcon(QStyle::SP_DialogApplyButton)
+           : QApplication::style()->standardIcon(QStyle::SP_DialogCancelButton);
+    icon.paint(painter, option.rect);
+}
+
 
 RenderArea::RenderArea(QWidget *parent)
     : QWidget(parent),
