@@ -84,7 +84,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event)
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (event->mimeData()->hasFormat("text/uri-list"))
+    if (event->mimeData()->hasUrls())
         event->acceptProposedAction();
 }
 
@@ -152,10 +152,13 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
     setLayout(layout);
 
     QTreeView *view = new QTreeView;
+    QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel(this);
+    proxyModel->setSourceModel(&data);
     view->setRootIsDecorated(false);
     view->setAlternatingRowColors(true);
-    view->setModel(&data);
+    view->setModel(proxyModel);
     view->setSortingEnabled(true);
+    view->sortByColumn(-1);
     view->setItemsExpandable(false);
     view->header()->setResizeMode(QHeaderView::Fixed);
     view->header()->setResizeMode(0, QHeaderView::Stretch);
@@ -166,10 +169,14 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
 
 ResultWindow::~ResultWindow()
 {
-    std::cerr << "filelist destroyed" << std::endl;
     g_slist_foreach(files_, filetree_free_list_entry, NULL);
     g_slist_free(files_);
     filetree_destroy(tree_);
+}
+
+QSize ResultWindow::sizeHint() const
+{
+    return QSize(800, 400);
 }
 
 ResultData::ResultData(GSList *files)
@@ -310,7 +317,11 @@ void WorkerThread::run()
 {
     std::vector<char *> roots;
     for (QList<QUrl>::ConstIterator it = urls_.begin(); it != urls_.end(); ++it) {
-        roots.push_back(g_strdup(it->toLocalFile().toStdString().c_str()));
+#ifdef G_OS_WIN32
+        roots.push_back(g_strdup(it->toLocalFile().toUtf8().constData()));
+#else
+        roots.push_back(g_strdup(it->toLocalFile().toLocal8Bit().constData()));
+#endif
     }
     GSList *errors = NULL, *files = NULL;
     Filetree tree = filetree_init(&roots[0], roots.size(), TRUE, FALSE, FALSE, &errors);
@@ -389,6 +400,7 @@ int main(int argc, char *argv[])
     scanner_init_common();
     setlocale(LC_COLLATE, "");
     setlocale(LC_CTYPE, "");
+    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
 
     MainWindow window;
     window.show();

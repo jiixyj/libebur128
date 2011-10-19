@@ -98,6 +98,7 @@ class ResultWindow : public QWidget {
 public:
     ResultWindow(QWidget *parent, GSList *files, Filetree tree);
     ~ResultWindow();
+    QSize sizeHint() const;
 private:
     ResultData data;
     GSList *files_;
