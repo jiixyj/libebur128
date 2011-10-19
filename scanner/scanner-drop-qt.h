@@ -1,6 +1,13 @@
 #include <QtGui>
 #include <QSvgRenderer>
 
+extern "C" {
+#include "input.h"
+#include "filetree.h"
+#include "scanner-tag.h"
+#include "scanner-common.h"
+}
+
 class RenderArea : public QWidget {
     Q_OBJECT
 public:
@@ -19,6 +26,8 @@ class WorkerThread : public QThread {
     Q_OBJECT
 public:
     WorkerThread(QList<QUrl> const& files);
+signals:
+    void showResultList(GSList *files, void *tree);
 protected:
     void run();
 private:
@@ -60,6 +69,7 @@ private slots:
     void setProgressBar(int);
     void rotateLogo();
     void resetLogo();
+    void showResultList(GSList *files, void *tree);
 signals:
     void stopGUIThread();
 private:
@@ -69,4 +79,27 @@ private:
     WorkerThread *worker_thread_;
     GUIUpdateThread gui_update_thread_;
     QTimer *logo_rotation_timer;
+};
+
+class ResultData : public QAbstractTableModel {
+    Q_OBJECT
+public:
+    ResultData(GSList *files);
+    int rowCount(QModelIndex const& parent = QModelIndex()) const;
+    int columnCount(QModelIndex const& parent = QModelIndex()) const;
+    QVariant data(QModelIndex const& index, int role = Qt::DisplayRole) const;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
+private:
+    std::vector<struct filename_list_node *> files_;
+};
+
+class ResultWindow : public QWidget {
+    Q_OBJECT
+public:
+    ResultWindow(QWidget *parent, GSList *files, Filetree tree);
+    ~ResultWindow();
+private:
+    ResultData data;
+    GSList *files_;
+    Filetree tree_;
 };

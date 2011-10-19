@@ -3,13 +3,6 @@
 #include <iostream>
 #include <glib.h>
 
-extern "C" {
-#include "input.h"
-#include "filetree.h"
-#include "scanner-tag.h"
-#include "scanner-common.h"
-}
-
 #include "logo.h"
 
 gboolean verbose = TRUE;
@@ -103,6 +96,8 @@ void MainWindow::dropEvent(QDropEvent *event)
         worker_thread_->start();
         connect(worker_thread_, SIGNAL(finished()),
                 this, SLOT(cleanUpThread()));
+        connect(worker_thread_, SIGNAL(showResultList(GSList *, void *)),
+                this, SLOT(showResultList(GSList *, void *)));
     }
     event->acceptProposedAction();
 }
@@ -138,6 +133,127 @@ void MainWindow::resetLogo()
     delete logo_rotation_timer;
     logo_rotation_timer = NULL;
     render_area_->resetLogo();
+}
+
+void MainWindow::showResultList(GSList *files, Filetree tree)
+{
+    ResultWindow *res = new ResultWindow(NULL, files, tree);
+    res->setAttribute(Qt::WA_DeleteOnClose);
+    res->show();
+}
+
+ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
+    : QWidget(parent),
+      data(files),
+      files_(files),
+      tree_(tree)
+{
+    QVBoxLayout *layout = new QVBoxLayout;
+    setLayout(layout);
+
+    QTreeView *view = new QTreeView;
+    view->setRootIsDecorated(false);
+    view->setAlternatingRowColors(true);
+    view->setModel(&data);
+    view->setSortingEnabled(true);
+    view->setItemsExpandable(false);
+    view->header()->setResizeMode(QHeaderView::Fixed);
+    view->header()->setResizeMode(0, QHeaderView::Stretch);
+    view->header()->setStretchLastSection(false);
+
+    layout->addWidget(view);
+}
+
+ResultWindow::~ResultWindow()
+{
+    std::cerr << "filelist destroyed" << std::endl;
+    g_slist_foreach(files_, filetree_free_list_entry, NULL);
+    g_slist_free(files_);
+    filetree_destroy(tree_);
+}
+
+ResultData::ResultData(GSList *files)
+{
+    GSList *it = files;
+    while (it) {
+        struct filename_list_node *fln = (struct filename_list_node *) it->data;
+        struct file_data *fd = (struct file_data *) fln->d;
+        if (fd->scanned) {
+            files_.push_back(fln);
+        }
+        it = g_slist_next(it);
+    }
+}
+
+int ResultData::rowCount(QModelIndex const& parent) const
+{
+    return files_.size();
+}
+
+int ResultData::columnCount(QModelIndex const& parent) const
+{
+    return 5;
+}
+
+QVariant ResultData::data(QModelIndex const& index, int role) const
+{
+    if (role == Qt::DisplayRole) {
+        int row = index.row();
+        int column = index.column();
+        struct filename_list_node *fln = files_[row];
+        struct file_data *fd = (struct file_data *) fln->d;
+        switch (column) {
+        case 0:
+            return fln->fr->display;
+        case 1: {
+            gchar *p = g_strdup_printf("%+.2f dB", fd->gain_album);
+            QVariant r(p);
+            g_free(p);
+            return r;
+        }
+        case 2: {
+            gchar *p = g_strdup_printf("%+.2f dB",
+                           clamp_rg(RG_REFERENCE_LEVEL - fd->loudness));
+            QVariant r(p);
+            g_free(p);
+            return r;
+        }
+        case 3: {
+            gchar *p = g_strdup_printf("%.6f", fd->peak_album);
+            QVariant r(p);
+            g_free(p);
+            return r;
+        }
+        case 4: {
+            gchar *p = g_strdup_printf("%.6f", fd->peak);
+            QVariant r(p);
+            g_free(p);
+            return r;
+        }
+        }
+    }
+    return QVariant();
+}
+
+QVariant ResultData::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
+        switch (section) {
+            case 0:
+                return tr("File");
+            case 1:
+                return tr("Album Gain");
+            case 2:
+                return tr("Track Gain");
+            case 3:
+                return tr("Album Peak");
+            case 4:
+                return tr("Track Peak");
+            default:
+                return QVariant();
+        }
+    }
+    return QVariant();
 }
 
 RenderArea::RenderArea(QWidget *parent)
@@ -207,16 +323,13 @@ void WorkerThread::run()
     filetree_remove_common_prefix(files);
 
     int result = scan_files(files);
-    // if (result) {
-    //     g_idle_add((GSourceFunc) show_result_list, wd);
-    // } else {
-    //     wd->result_window = NULL;
-    //     destroy_work_data(wd);
-    // }
-
-    g_slist_foreach(files, filetree_free_list_entry, NULL);
-    g_slist_free(files);
-    filetree_destroy(tree);
+    if (result) {
+        emit showResultList(files, tree);
+    } else {
+        g_slist_foreach(files, filetree_free_list_entry, NULL);
+        g_slist_free(files);
+        filetree_destroy(tree);
+    }
 }
 
 GUIUpdateThread::GUIUpdateThread(QWidget *parent)
