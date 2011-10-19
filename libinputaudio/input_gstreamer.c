@@ -30,7 +30,7 @@ struct input_handle {
 };
 
 static GStaticMutex gstreamer_mutex = G_STATIC_MUTEX_INIT;
-extern gboolean verbose;
+static gboolean verbose = FALSE;
 
 static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 {
