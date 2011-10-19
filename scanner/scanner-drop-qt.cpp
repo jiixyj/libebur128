@@ -8,7 +8,9 @@
 gboolean verbose = TRUE;
 
 MainWindow::MainWindow(QWidget *parent)
-    : QWidget(parent, Qt::FramelessWindowHint | Qt::WindowSystemMenuHint),
+    : QWidget(parent, Qt::FramelessWindowHint |
+                      Qt::WindowSystemMenuHint |
+                      Qt::WindowStaysOnTopHint),
       dragPosition(),
       worker_thread_(NULL),
       gui_update_thread_(this),
@@ -233,7 +235,7 @@ int ResultData::rowCount(QModelIndex const& parent) const
 
 int ResultData::columnCount(QModelIndex const& parent) const
 {
-    return 5;
+    return 6;
 }
 
 QVariant ResultData::data(QModelIndex const& index, int role) const
