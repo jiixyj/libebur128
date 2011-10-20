@@ -335,7 +335,13 @@ void IconDelegate::paint(QPainter *painter, QStyleOptionViewItem const& option,
     QIcon icon = tag_status == 1
            ? QApplication::style()->standardIcon(QStyle::SP_DialogApplyButton)
            : QApplication::style()->standardIcon(QStyle::SP_DialogCancelButton);
-    icon.paint(painter, option.rect);
+    QRect paint_rect = option.rect;
+    if (paint_rect.height() > 16) {
+        int diff = paint_rect.height() - 16;
+        paint_rect.setHeight(16);
+        paint_rect.moveTop(paint_rect.top() + diff / 2);
+    }
+    icon.paint(painter, paint_rect, option.decorationAlignment);
 }
 
 
