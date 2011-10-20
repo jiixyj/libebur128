@@ -156,6 +156,7 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
     view = new QTreeView;
     proxyModel = new QSortFilterProxyModel(this);
     proxyModel->setSourceModel(&data);
+    proxyModel->setSortRole(Qt::UserRole);
     view->setRootIsDecorated(false);
     view->setAlternatingRowColors(true);
     view->setModel(proxyModel);
@@ -274,11 +275,27 @@ QVariant ResultData::data(QModelIndex const& index, int role) const
         default:
             return QVariant();
         }
-    } else if (role == Qt::UserRole and index.column() == 0) {
+    } else if (role == Qt::UserRole) {
         struct filename_list_node *fln = files_[index.row()];
         struct file_data *fd = (struct file_data *) fln->d;
-        return fd->tagged;
+        switch (index.column()) {
+        case 0:
+            return fd->tagged;
+        case 1:
+            return fln->fr->display;
+        case 2:
+            return fd->gain_album;
+        case 3:
+            return clamp_rg(RG_REFERENCE_LEVEL - fd->loudness);
+        case 4:
+            return fd->peak_album;
+        case 5:
+            return fd->peak;
+        default:
+            return QVariant();
+        }
     }
+
     return QVariant();
 }
 
