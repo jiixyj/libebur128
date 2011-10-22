@@ -147,7 +147,12 @@ add_subdirectory(test)
 install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
 install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})
 if(WIN32)
-  install(DIRECTORY dlls-32/ DESTINATION ${FOLDER_BIN}
+  if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+    set(DLL_FOLDER dlls-64)
+  else()
+    set(DLL_FOLDER dlls-32)
+  endif()
+  install(DIRECTORY ${DLL_FOLDER}/ DESTINATION ${FOLDER_BIN}
           FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                            GROUP_EXECUTE GROUP_READ
                            WORLD_EXECUTE WORLD_READ)
