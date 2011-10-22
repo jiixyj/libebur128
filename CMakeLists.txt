@@ -116,6 +116,7 @@ message(STATUS "libmpcdec:      ${MPCDEC_FOUND}")
 message(STATUS "ffmpeg:         ${FFMPEG_FOUND}")
 message(STATUS "taglib:         ${TAGLIB_FOUND}")
 message(STATUS "gstreamer:      ${GSTREAMER_FOUND}")
+message(STATUS "qt4:            ${QT_FOUND}")
 
 # set up install folders
 set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
