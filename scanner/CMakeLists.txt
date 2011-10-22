@@ -27,7 +27,7 @@ if(GLIB_FOUND)
     target_link_libraries(loudness ${TAGLIB_LIBRARIES})
   endif()
 
-  if(GTK2_FOUND AND TAGLIB_FOUND)
+  if(GTK2_FOUND AND RSVG2_FOUND AND TAGLIB_FOUND)
     add_executable(loudness-drop scanner-drop scanner-tag scanner-common nproc rgtag.cpp)
     target_link_libraries(loudness-drop ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
   endif()
