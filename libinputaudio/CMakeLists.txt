@@ -51,30 +51,5 @@ if(GLIB_FOUND)
     install(TARGETS input_ffmpeg input_sndfile input_mpg123 input_musepack
             RUNTIME DESTINATION ${FOLDER_BIN}
             LIBRARY DESTINATION ${FOLDER_PLUGIN})
-    if(LSB_COMPILER_FOUND)
-      install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/libinput_ffmpeg0.5.2.so
-                       ${EXECUTABLE_OUTPUT_PATH}/libinput_ffmpeg0.6.2.so DESTINATION ${FOLDER_PLUGIN})
-    endif()
-    if(WIN32 AND FLAT_INSTALL)
-      get_filename_component(REAL_AVC ${LIBAVCODEC_LIBRARY} REALPATH)
-      get_filename_component(REAL_AVF ${LIBAVFORMAT_LIBRARY} REALPATH)
-      get_filename_component(REAL_AVU ${LIBAVUTIL_LIBRARY} REALPATH)
-      get_filename_component(NAME_AVC ${LIBAVCODEC_LIBRARY} NAME)
-      get_filename_component(NAME_AVF ${LIBAVFORMAT_LIBRARY} NAME)
-      get_filename_component(NAME_AVU ${LIBAVUTIL_LIBRARY} NAME)
-      install(TARGETS rgtag RUNTIME DESTINATION .
-              PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ)
-      install(FILES ${REAL_AVC} DESTINATION . RENAME ${NAME_AVC})
-      install(FILES ${REAL_AVF} DESTINATION . RENAME ${NAME_AVF})
-      install(FILES ${REAL_AVU} DESTINATION . RENAME ${NAME_AVU})
-      install(FILES
-              ${MPG123_LIBRARIES}
-              ${SNDFILE_LIBRARIES}
-              ${GLIB_LIBRARIES}
-              ${TAGLIB_LIBRARIES}
-              ${GCC_SJLJ}
-              ${STDCPP}
-              DESTINATION .)
-    endif()
   endif()
 endif()

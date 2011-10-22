@@ -26,10 +26,16 @@ if(GLIB_FOUND)
   if(TAGLIB_FOUND)
     target_link_libraries(loudness ${TAGLIB_LIBRARIES})
   endif()
+  install(TARGETS loudness
+          RUNTIME DESTINATION ${FOLDER_BIN}
+          LIBRARY DESTINATION ${FOLDER_PLUGIN})
 
   if(GTK2_FOUND AND RSVG2_FOUND AND TAGLIB_FOUND)
     add_executable(loudness-drop scanner-drop scanner-tag scanner-common nproc rgtag.cpp)
     target_link_libraries(loudness-drop ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
+    install(TARGETS loudness-drop
+            RUNTIME DESTINATION ${FOLDER_BIN}
+            LIBRARY DESTINATION ${FOLDER_PLUGIN})
   endif()
 
   if(QT4_FOUND AND TAGLIB_FOUND)
@@ -37,6 +43,9 @@ if(GLIB_FOUND)
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
     add_executable(loudness-drop-qt scanner-drop-qt scanner-tag scanner-common nproc rgtag.cpp)
     target_link_libraries(loudness-drop-qt ebur128 input filetree parse_args ${GLIB_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSVG_LIBRARY} ${TAGLIB_LIBRARIES})
+    install(TARGETS loudness-drop-qt
+            RUNTIME DESTINATION ${FOLDER_BIN}
+            LIBRARY DESTINATION ${FOLDER_PLUGIN})
   endif()
 
   if(SNDFILE_FOUND)
@@ -44,7 +53,4 @@ if(GLIB_FOUND)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
   endif()
 
-  install(TARGETS loudness
-          RUNTIME DESTINATION ${FOLDER_BIN}
-          LIBRARY DESTINATION ${FOLDER_PLUGIN})
 endif()
