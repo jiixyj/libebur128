@@ -66,6 +66,8 @@ static void ffmpeg_handle_destroy(struct input_handle** ih) {
 
 
 static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
+  size_t j;
+
   g_static_mutex_lock(&ffmpeg_mutex);
   ih->format_context = NULL;
 #if LIBAVFORMAT_VERSION_MAJOR >= 54 || \
@@ -90,7 +92,7 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
 
   // Find the first audio stream
   ih->audio_stream = -1;
-  for (size_t j = 0; j < ih->format_context->nb_streams; ++j) {
+  for (j = 0; j < ih->format_context->nb_streams; ++j) {
     if (ih->format_context->streams[j]->codec->codec_type ==
 #if LIBAVCODEC_VERSION_MAJOR >= 53 || \
     (LIBAVCODEC_VERSION_MAJOR == 52 && \
@@ -231,7 +233,7 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
         if (!data_size) {
           continue;
         }
-        size_t nr_frames_read;
+        size_t nr_frames_read, i;
         switch (ih->codec_context->sample_fmt) {
           case SAMPLE_FMT_U8:
             fprintf(stderr, "8 bit audio not supported by libebur128!\n");
@@ -239,7 +241,7 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
           case SAMPLE_FMT_S16:
             nr_frames_read = (size_t) data_size / sizeof(int16_t) /
                              (size_t) ih->codec_context->channels;
-            for (size_t i = 0; i < (size_t) data_size / sizeof(int16_t); ++i) {
+            for (i = 0; i < (size_t) data_size / sizeof(int16_t); ++i) {
               ih->buffer[i] = ((float) data_short[i]) /
                               MAX(-(float) SHRT_MIN, (float) SHRT_MAX);
             }
@@ -247,7 +249,7 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
           case SAMPLE_FMT_S32:
             nr_frames_read = (size_t) data_size / sizeof(int32_t) /
                              (size_t) ih->codec_context->channels;
-            for (size_t i = 0; i < (size_t) data_size / sizeof(int32_t); ++i) {
+            for (i = 0; i < (size_t) data_size / sizeof(int32_t); ++i) {
               ih->buffer[i] = ((float) data_int[i]) /
                               MAX(-(float) INT_MIN, (float) INT_MAX);
             }
@@ -255,14 +257,14 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
           case SAMPLE_FMT_FLT:
             nr_frames_read = (size_t) data_size / sizeof(float) /
                              (size_t) ih->codec_context->channels;
-            for (size_t i = 0; i < (size_t) data_size / sizeof(float); ++i) {
+            for (i = 0; i < (size_t) data_size / sizeof(float); ++i) {
               ih->buffer[i] = data_float[i];
             }
             break;
           case SAMPLE_FMT_DBL:
             nr_frames_read = (size_t) data_size / sizeof(double) /
                              (size_t) ih->codec_context->channels;
-            for (size_t i = 0; i < (size_t) data_size / sizeof(double); ++i) {
+            for (i = 0; i < (size_t) data_size / sizeof(double); ++i) {
               ih->buffer[i] = (float) data_double[i];
             }
             break;

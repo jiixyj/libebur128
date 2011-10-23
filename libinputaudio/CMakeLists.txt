@@ -31,10 +31,9 @@ if(GLIB_FOUND)
     target_link_libraries(input_musepack ${MPCDEC_LIBRARY} ${INPUT_HELPERS})
   endif()
 
-  if(FLAG_STD_C99 AND FFMPEG_FOUND)
+  if(FFMPEG_FOUND)
     add_library(input_ffmpeg MODULE input_ffmpeg.c)
     target_link_libraries(input_ffmpeg ebur128 ${FFMPEG_LIBRARIES} ${GLIB_LIBRARIES})
-    set_target_properties(input_ffmpeg PROPERTIES COMPILE_FLAGS "-std=c99")
   endif()
 
   if(GSTREAMER_FOUND)

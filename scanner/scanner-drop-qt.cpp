@@ -163,7 +163,7 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
     view->setSortingEnabled(true);
     view->sortByColumn(-1);
     view->setItemsExpandable(false);
-    view->header()->setResizeMode(QHeaderView::Fixed);
+    view->header()->setResizeMode(QHeaderView::ResizeToContents);
     view->header()->setResizeMode(1, QHeaderView::Stretch);
     view->header()->setStretchLastSection(false);
     view->setItemDelegateForColumn(0, new IconDelegate);
@@ -229,12 +229,12 @@ ResultData::ResultData(GSList *files)
     }
 }
 
-int ResultData::rowCount(QModelIndex const& parent) const
+int ResultData::rowCount(const QModelIndex &) const
 {
-    return files_.size();
+    return int(files_.size());
 }
 
-int ResultData::columnCount(QModelIndex const& parent) const
+int ResultData::columnCount(const QModelIndex &) const
 {
     return 6;
 }
@@ -242,7 +242,7 @@ int ResultData::columnCount(QModelIndex const& parent) const
 QVariant ResultData::data(QModelIndex const& index, int role) const
 {
     if (role == Qt::DisplayRole) {
-        struct filename_list_node *fln = files_[index.row()];
+        struct filename_list_node *fln = files_[size_t(index.row())];
         struct file_data *fd = (struct file_data *) fln->d;
         switch (index.column()) {
         case 1:
@@ -276,7 +276,7 @@ QVariant ResultData::data(QModelIndex const& index, int role) const
             return QVariant();
         }
     } else if (role == Qt::UserRole) {
-        struct filename_list_node *fln = files_[index.row()];
+        struct filename_list_node *fln = files_[size_t(index.row())];
         struct file_data *fd = (struct file_data *) fln->d;
         switch (index.column()) {
         case 0:
@@ -347,10 +347,10 @@ void IconDelegate::paint(QPainter *painter, QStyleOptionViewItem const& option,
 
 RenderArea::RenderArea(QWidget *parent)
     : QWidget(parent),
-      rotation_state(0),
-      svg_renderer_()
+      svg_renderer_(),
+      rotation_state(0)
 {
-    QByteArray logo((const char *) test_svg, test_svg_len);
+    QByteArray logo((const char *) test_svg, int(test_svg_len));
     svg_renderer_ = new QSvgRenderer(logo, this);
 }
 
@@ -367,7 +367,7 @@ void RenderArea::resetLogo()
     repaint();
 }
 
-void RenderArea::paintEvent(QPaintEvent *event)
+void RenderArea::paintEvent(QPaintEvent *)
 {
     static const qreal scale_factor = 0.8f;
     QPainter painter(this);

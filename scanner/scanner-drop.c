@@ -103,6 +103,7 @@ static void float_to_rg_display(GtkTreeViewColumn *tree_column,
   float d;
   gchar *text;
 
+  (void) tree_column;
   /* Get the double value from the model. */
   gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
   /* Now we can format the value ourselves. */

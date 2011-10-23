@@ -284,7 +284,7 @@ static void gstreamer_handle_destroy(struct input_handle** ih) {
   *ih = NULL;
 }
 
-#define BUFFER_SIZE (ih->sample_rate * sizeof(float))
+#define BUFFER_SIZE ((size_t) ih->sample_rate * sizeof(float))
 static int gstreamer_allocate_buffer(struct input_handle* ih) {
   ih->buffer = g_malloc(BUFFER_SIZE);
   return 0;

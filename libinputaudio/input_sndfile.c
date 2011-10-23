@@ -28,6 +28,7 @@ static float* sndfile_get_buffer(struct input_handle* ih) {
 static struct input_handle* sndfile_handle_init() {
   struct input_handle* ret;
   ret = malloc(sizeof(struct input_handle));
+  memset(&ret->file_info, '\0', sizeof(ret->file_info));
   return ret;
 }
 
@@ -37,10 +38,8 @@ static void sndfile_handle_destroy(struct input_handle** ih) {
 }
 
 static int sndfile_open_file(struct input_handle* ih, const char* filename) {
-  int fd;
-  memset(&ih->file_info, '\0', sizeof(ih->file_info));
-
 #ifdef G_OS_WIN32
+  int fd;
   g_usleep(10);
   fd = input_open_fd(filename);
   if (fd < 0) return 1;
