@@ -282,7 +282,7 @@ QVariant ResultData::data(QModelIndex const& index, int role) const
         case 0:
             return fd->tagged;
         case 1:
-            return fln->fr->display;
+            return fln->fr->collate_key;
         case 2:
             return fd->gain_album;
         case 3:

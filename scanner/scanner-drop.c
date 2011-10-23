@@ -54,6 +54,7 @@ enum {
     COLUMN_TRACK_GAIN,
     COLUMN_ALBUM_PEAK,
     COLUMN_TRACK_PEAK,
+    HIDDEN_FILENAME_COLLATE,
     NUM_COLUMNS
 };
 
@@ -65,12 +66,13 @@ static GtkTreeModel *create_result_list_model(GSList *files)
     struct file_data *fd;
 
     store = gtk_list_store_new(NUM_COLUMNS,
+                               G_TYPE_POINTER,
                                G_TYPE_STRING,
-                               G_TYPE_STRING,
                                G_TYPE_FLOAT,
                                G_TYPE_FLOAT,
                                G_TYPE_FLOAT,
-                               G_TYPE_FLOAT);
+                               G_TYPE_FLOAT,
+                               G_TYPE_STRING);
 
     /* add data to the list store */
     while (files) {
@@ -80,12 +82,13 @@ static GtkTreeModel *create_result_list_model(GSList *files)
         if (fd->scanned) {
             gtk_list_store_append(store, &iter);
             gtk_list_store_set(store, &iter,
-                               COLUMN_IS_TAGGED, NULL,
+                               COLUMN_IS_TAGGED, &fd->tagged,
                                COLUMN_FILENAME, fln->fr->display,
                                COLUMN_ALBUM_GAIN, fd->gain_album,
                                COLUMN_TRACK_GAIN, clamp_rg(RG_REFERENCE_LEVEL - fd->loudness),
                                COLUMN_ALBUM_PEAK, fd->peak_album,
                                COLUMN_TRACK_PEAK, fd->peak,
+                               HIDDEN_FILENAME_COLLATE, fln->fr->collate_key,
                                -1);
         }
         files = g_slist_next(files);
@@ -100,16 +103,31 @@ static void float_to_rg_display(GtkTreeViewColumn *tree_column,
                                 GtkTreeIter       *iter,
                                 gpointer           data)
 {
-  float d;
-  gchar *text;
+    float d;
+    gchar *text;
 
-  (void) tree_column;
-  /* Get the double value from the model. */
-  gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
-  /* Now we can format the value ourselves. */
-  text = g_strdup_printf("%+.2f dB", d);
-  g_object_set(cell, "text", text, NULL);
-  g_free(text);
+    (void) tree_column;
+    /* Get the double value from the model. */
+    gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
+    /* Now we can format the value ourselves. */
+    text = g_strdup_printf("%+.2f dB", d);
+    g_object_set(cell, "text", text, NULL);
+    g_free(text);
+}
+
+static void is_tagged_to_icon_name(GtkTreeViewColumn *tree_column,
+                                   GtkCellRenderer   *cell,
+                                   GtkTreeModel      *tree_model,
+                                   GtkTreeIter       *iter,
+                                   gpointer           data)
+{
+    gpointer d;
+    int tagged;
+
+    (void) tree_column;
+    gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
+    tagged = *((int *) d);
+    g_object_set(cell, "icon-name", tagged ? (tagged == 1 ? GTK_STOCK_APPLY : GTK_STOCK_CANCEL) : "", NULL);
 }
 
 static void result_view_add_colums(GtkTreeView *treeview)
@@ -119,10 +137,12 @@ static void result_view_add_colums(GtkTreeView *treeview)
 
   renderer = gtk_cell_renderer_pixbuf_new();
   // g_object_set(renderer, "icon-name", GTK_STOCK_APPLY, NULL);
-  column = gtk_tree_view_column_new_with_attributes(
-                  "Tagged", renderer, "icon-name", COLUMN_IS_TAGGED, NULL);
+  column = gtk_tree_view_column_new_with_attributes( "Tagged", renderer, NULL);
   gtk_tree_view_column_set_sort_column_id(column, COLUMN_IS_TAGGED);
   gtk_tree_view_append_column(treeview, column);
+  gtk_tree_view_column_set_cell_data_func(column, renderer,
+                                          is_tagged_to_icon_name,
+                                          (gpointer) COLUMN_IS_TAGGED, NULL);
 
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
@@ -166,14 +186,13 @@ static void result_view_add_colums(GtkTreeView *treeview)
 }
 
 static void tag_files_and_update_model(GtkWidget *tag_button, struct work_data *wd) {
-    GtkTreeIter iter;
     struct filename_list_node *fln;
     struct file_data *fd;
     int ret;
     GSList *files;
 
     files = wd->files;
-    gtk_tree_model_get_iter_first(wd->tag_model, &iter);
+    gtk_widget_set_sensitive(tag_button, FALSE);
     while (files) {
         fln = (struct filename_list_node *) files->data;
         fd = (struct file_data *) fln->d;
@@ -181,18 +200,15 @@ static void tag_files_and_update_model(GtkWidget *tag_button, struct work_data *
             if (!fd->tagged) {
                 ret = 0;
                 tag_file(fln, &ret);
-                gtk_list_store_set(GTK_LIST_STORE(wd->tag_model), &iter,
-                                COLUMN_IS_TAGGED,
-                                ret ? GTK_STOCK_CANCEL : GTK_STOCK_APPLY,
-                                -1);
                 if (!ret) fd->tagged = 1;
                 else fd->tagged = 2;
+                gtk_widget_queue_draw(wd->result_window);
+                while (gtk_events_pending())
+                    gtk_main_iteration();
             }
-            gtk_tree_model_iter_next(wd->tag_model, &iter);
         }
         files = g_slist_next(files);
     }
-    gtk_widget_set_sensitive(tag_button, FALSE);
 }
 
 static void destroy_work_data(struct work_data *wd) {
@@ -204,6 +220,31 @@ static void destroy_work_data(struct work_data *wd) {
         gtk_widget_destroy(wd->result_window);
     }
     g_free(wd);
+}
+
+static gint icon_sort(GtkTreeModel *tree_model,
+                      GtkTreeIter *a,
+                      GtkTreeIter *b,
+                      gpointer data)
+{
+    gpointer aa, bb;
+    int l, r;
+    gtk_tree_model_get(tree_model, a, (gint) data, &aa, -1);
+    gtk_tree_model_get(tree_model, b, (gint) data, &bb, -1);
+    l = *((int *) aa);
+    r = *((int *) bb);
+    return l - r;
+}
+
+static gint filename_sort(GtkTreeModel *tree_model,
+                          GtkTreeIter *a,
+                          GtkTreeIter *b,
+                          gpointer data)
+{
+    gchar *aa, *bb;
+    gtk_tree_model_get(tree_model, a, (gint) data, &aa, -1);
+    gtk_tree_model_get(tree_model, b, (gint) data, &bb, -1);
+    return strcmp(aa, bb);
 }
 
 static gboolean show_result_list(struct work_data *wd) {
@@ -236,6 +277,12 @@ static gboolean show_result_list(struct work_data *wd) {
 
     /* create tree model */
     model = create_result_list_model(wd->files);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(model),
+                                    COLUMN_IS_TAGGED, icon_sort,
+                                    (gpointer) COLUMN_IS_TAGGED, NULL);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(model),
+                                    COLUMN_FILENAME, filename_sort,
+                                    (gpointer) HIDDEN_FILENAME_COLLATE, NULL);
 
     /* create tree view */
     treeview = gtk_tree_view_new_with_model(model);
