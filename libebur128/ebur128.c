@@ -68,6 +68,7 @@ struct ebur128_state_internal {
   struct ebur128_double_queue short_term_block_list;
   int use_histogram;
   unsigned long *block_energy_histogram;
+  unsigned long *short_term_block_energy_histogram;
   /** Keeps track of when a new short term block is needed. */
   size_t short_term_frame_counter;
   /** Maximum sample peak, one per channel */
@@ -267,7 +268,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   ebur128_init_filter(st);
 
   if (st->d->use_histogram) {
-    st->d->block_energy_histogram = malloc(1000 * sizeof(double));
+    st->d->block_energy_histogram = malloc(1000 * sizeof(unsigned long));
     CHECK_ERROR(!st->d->block_energy_histogram, 0, free_audio_data)
     for (i = 0; i < 1000; ++i) {
       st->d->block_energy_histogram[i] = 0;
@@ -275,13 +276,22 @@ ebur128_state* ebur128_init(unsigned int channels,
   } else {
     st->d->block_energy_histogram = NULL;
   }
+  if (st->d->use_histogram) {
+    st->d->short_term_block_energy_histogram = malloc(1000 * sizeof(unsigned long));
+    CHECK_ERROR(!st->d->short_term_block_energy_histogram, 0, free_block_energy_histogram)
+    for (i = 0; i < 1000; ++i) {
+      st->d->short_term_block_energy_histogram[i] = 0;
+    }
+  } else {
+    st->d->short_term_block_energy_histogram = NULL;
+  }
   SLIST_INIT(&st->d->block_list);
   SLIST_INIT(&st->d->short_term_block_list);
   st->d->short_term_frame_counter = 0;
 
 #if EBUR128_USE_SPEEX_RESAMPLER
   result = ebur128_init_resampler(st);
-  CHECK_ERROR(result, 0, free_block_energy_histogram)
+  CHECK_ERROR(result, 0, free_short_term_block_energy_histogram)
 #endif
 
   /* the first block needs 400ms of audio data */
@@ -304,6 +314,8 @@ ebur128_state* ebur128_init(unsigned int channels,
 
   return st;
 
+free_short_term_block_energy_histogram:
+  free(st->d->short_term_block_energy_histogram);
 free_block_energy_histogram:
   free(st->d->block_energy_histogram);
 free_audio_data:
@@ -325,6 +337,7 @@ exit:
 void ebur128_destroy(ebur128_state** st) {
   struct ebur128_dq_entry* entry;
   free((*st)->d->block_energy_histogram);
+  free((*st)->d->short_term_block_energy_histogram);
   free((*st)->d->audio_data);
   free((*st)->d->channel_map);
   free((*st)->d->sample_peak);
@@ -629,11 +642,18 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
           struct ebur128_dq_entry* block;                                      \
           double st_energy;                                                    \
           ebur128_energy_shortterm(st, &st_energy);                            \
-          block = (struct ebur128_dq_entry*)                                   \
-                  malloc(sizeof(struct ebur128_dq_entry));                     \
-          if (!block) return EBUR128_ERROR_NOMEM;                              \
-          block->z = st_energy;                                                \
-          SLIST_INSERT_HEAD(&st->d->short_term_block_list, block, entries);    \
+          if (st_energy >= histogram_energy_boundaries[0]) {                   \
+            if (st->d->use_histogram) {                                        \
+              ++st->d->short_term_block_energy_histogram[                      \
+                                              find_histogram_index(st_energy)];\
+            } else {                                                           \
+              block = (struct ebur128_dq_entry*)                               \
+                      malloc(sizeof(struct ebur128_dq_entry));                 \
+              if (!block) return EBUR128_ERROR_NOMEM;                          \
+              block->z = st_energy;                                            \
+              SLIST_INSERT_HEAD(&st->d->short_term_block_list, block, entries);\
+            }                                                                  \
+          }                                                                    \
           st->d->short_term_frame_counter = st->d->samples_in_100ms * 20;      \
         }                                                                      \
       }                                                                        \
@@ -700,7 +720,7 @@ static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
     start_index = 0;
   } else {
     start_index = find_histogram_index(relative_threshold);
-    if (relative_threshold > histogram_energies[j]) {
+    if (relative_threshold > histogram_energies[start_index]) {
       ++start_index;
     }
   }
@@ -792,74 +812,133 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
   size_t i, j;
   struct ebur128_dq_entry* it;
   double* stl_vector;
-  size_t stl_size = 0;
-  double* stl_abs_gated;
-  size_t stl_abs_gated_size;
+  size_t stl_size;
   double* stl_relgated;
   size_t stl_relgated_size;
-  double stl_power = 0.0, stl_integrated;
+  double stl_power, stl_integrated;
   /* High and low percentile energy */
   double h_en, l_en;
+  int use_histogram = 0;
 
   for (i = 0; i < size; ++i) {
-    if (sts[i] && (sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
-      return EBUR128_ERROR_INVALID_MODE;
+    if (sts[i]) {
+      if ((sts[i]->mode & EBUR128_MODE_LRA) != EBUR128_MODE_LRA) {
+        return EBUR128_ERROR_INVALID_MODE;
+      }
+      if (i == 0 && sts[i]->mode & EBUR128_MODE_HISTOGRAM) {
+        use_histogram = 1;
+      } else if (use_histogram != !!(sts[i]->mode & EBUR128_MODE_HISTOGRAM)) {
+        return EBUR128_ERROR_INVALID_MODE;
+      }
     }
   }
 
-  for (i = 0; i < size; ++i) {
-    if (!sts[i]) continue;
-    SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
-      ++stl_size;
+  if (use_histogram) {
+    unsigned long hist[1000] = { 0 };
+    size_t percentile_low, percentile_high;
+    size_t index;
+
+    stl_size = 0;
+    stl_power = 0.0;
+    for (i = 0; i < size; ++i) {
+      if (!sts[i]) continue;
+      for (j = 0; j < 1000; ++j) {
+        hist[j]   += sts[i]->d->short_term_block_energy_histogram[j];
+        stl_size  += sts[i]->d->short_term_block_energy_histogram[j];
+        stl_power += sts[i]->d->short_term_block_energy_histogram[j]
+                     * histogram_energies[j];
+      }
     }
-  }
-  if (!stl_size) {
-    *out = 0.0;
-    return EBUR128_SUCCESS;
-  }
-  stl_vector = (double*) malloc(stl_size * sizeof(double));
-  if (!stl_vector)
-    return EBUR128_ERROR_NOMEM;
-
-  for (j = 0, i = 0; i < size; ++i) {
-    if (!sts[i]) continue;
-    SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
-      stl_vector[j] = it->z;
-      ++j;
+    if (!stl_size) {
+      *out = 0.0;
+      return EBUR128_SUCCESS;
     }
-  }
-  qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
-  stl_abs_gated = stl_vector;
-  stl_abs_gated_size = stl_size;
-  while (stl_abs_gated_size > 0 && *stl_abs_gated < histogram_energy_boundaries[0]) {
-    ++stl_abs_gated;
-    --stl_abs_gated_size;
-  }
-  for (i = 0; i < stl_abs_gated_size; ++i) {
-    stl_power += stl_abs_gated[i];
-  }
-  stl_power /= (double) stl_abs_gated_size;
-  stl_integrated = minus_twenty_decibels * stl_power;
 
-  stl_relgated = stl_abs_gated;
-  stl_relgated_size = stl_abs_gated_size;
-  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated) {
-    ++stl_relgated;
-    --stl_relgated_size;
-  }
+    stl_power /= stl_size;
+    stl_integrated = minus_twenty_decibels * stl_power;
 
-  if (stl_relgated_size) {
-    h_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 +
-                                  0.5)];
-    l_en = stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 +
-                                  0.5)];
-    free(stl_vector);
+    if (stl_integrated < histogram_energy_boundaries[0]) {
+      index = 0;
+    } else {
+      index = find_histogram_index(stl_integrated);
+      if (stl_integrated > histogram_energies[index]) {
+        ++index;
+      }
+    }
+    stl_size = 0;
+    for (j = index; j < 1000; ++j) {
+      stl_size += hist[j];
+    }
+    if (!stl_size) {
+      *out = 0.0;
+      return EBUR128_SUCCESS;
+    }
+
+    percentile_low  = (stl_size - 1) * 0.1 + 0.5;
+    percentile_high = (stl_size - 1) * 0.95 + 0.5;
+
+    stl_size = 0;
+    j = index;
+    while (stl_size <= percentile_low) {
+      stl_size += hist[j++];
+    }
+    l_en = histogram_energies[j - 1];
+    while (stl_size <= percentile_high) {
+      stl_size += hist[j++];
+    }
+    h_en = histogram_energies[j - 1];
     *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
     return EBUR128_SUCCESS;
+
   } else {
-    free(stl_vector);
-    *out = 0.0;
-    return EBUR128_SUCCESS;
+    stl_size = 0;
+    for (i = 0; i < size; ++i) {
+      if (!sts[i]) continue;
+      SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
+        ++stl_size;
+      }
+    }
+    if (!stl_size) {
+      *out = 0.0;
+      return EBUR128_SUCCESS;
+    }
+    stl_vector = (double*) malloc(stl_size * sizeof(double));
+    if (!stl_vector)
+      return EBUR128_ERROR_NOMEM;
+
+    for (j = 0, i = 0; i < size; ++i) {
+      if (!sts[i]) continue;
+      SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
+        stl_vector[j] = it->z;
+        ++j;
+      }
+    }
+    qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
+    stl_power = 0.0;
+    for (i = 0; i < stl_size; ++i) {
+      stl_power += stl_vector[i];
+    }
+    stl_power /= (double) stl_size;
+    stl_integrated = minus_twenty_decibels * stl_power;
+
+    stl_relgated = stl_vector;
+    stl_relgated_size = stl_size;
+    while (stl_relgated_size > 0 && *stl_relgated < stl_integrated) {
+      ++stl_relgated;
+      --stl_relgated_size;
+    }
+
+    if (stl_relgated_size) {
+      h_en = stl_relgated[(size_t) ((stl_relgated_size - 1) * 0.95 + 0.5)];
+      l_en = stl_relgated[(size_t) ((stl_relgated_size - 1) * 0.1 + 0.5)];
+      free(stl_vector);
+      *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+      return EBUR128_SUCCESS;
+    } else {
+      free(stl_vector);
+      *out = 0.0;
+      return EBUR128_SUCCESS;
+    }
   }
 }
 
