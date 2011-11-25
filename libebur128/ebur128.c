@@ -23,9 +23,7 @@
 #include <stdlib.h>
 
 #if EBUR128_USE_SPEEX_RESAMPLER
-  #define OUTSIDE_SPEEX
-  #define RANDOM_PREFIX ebur128
-  #include "speex_resampler.h"
+  #include <speex/speex_resampler.h>
 #endif
 
 /* This can be replaced by any BSD-like queue implementation. */
@@ -193,7 +191,7 @@ static int ebur128_init_resampler(ebur128_state* st) {
                                        sizeof(float));
   CHECK_ERROR(!st->d->resampler_buffer_output, EBUR128_ERROR_NOMEM, free_input)
 
-  st->d->resampler = ebur128_resampler_init
+  st->d->resampler = speex_resampler_init
                  ((spx_uint32_t) st->channels,
                   (spx_uint32_t) st->samplerate,
                   (spx_uint32_t) (st->samplerate * st->d->oversample_factor),
@@ -217,7 +215,7 @@ static void ebur128_destroy_resampler(ebur128_state* st) {
   st->d->resampler_buffer_input = NULL;
   free(st->d->resampler_buffer_output);
   st->d->resampler_buffer_output = NULL;
-  ebur128_resampler_destroy(st->d->resampler);
+  speex_resampler_destroy(st->d->resampler);
   st->d->resampler = NULL;
 }
 #endif
@@ -339,7 +337,7 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
   size_t c, i;
   spx_uint32_t in_len = (spx_uint32_t) frames;
   spx_uint32_t out_len = (spx_uint32_t) st->d->resampler_buffer_output_frames;
-  ebur128_resampler_process_interleaved_float(
+  speex_resampler_process_interleaved_float(
                       st->d->resampler,
                       st->d->resampler_buffer_input,  &in_len,
                       st->d->resampler_buffer_output, &out_len);
