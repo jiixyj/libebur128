@@ -109,7 +109,7 @@ static void float_to_rg_display(GtkTreeViewColumn *tree_column,
 
     (void) tree_column;
     /* Get the double value from the model. */
-    gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
+    gtk_tree_model_get(tree_model, iter, GPOINTER_TO_INT(data), &d, -1);
     /* Now we can format the value ourselves. */
     text = g_strdup_printf("%+.2f dB", d);
     g_object_set(cell, "text", text, NULL);
@@ -126,7 +126,7 @@ static void is_tagged_to_icon_name(GtkTreeViewColumn *tree_column,
     int tagged;
 
     (void) tree_column;
-    gtk_tree_model_get(tree_model, iter, (gint) data, &d, -1);
+    gtk_tree_model_get(tree_model, iter, GPOINTER_TO_INT(data), &d, -1);
     tagged = *((int *) d);
     g_object_set(cell, "icon-name", tagged ? (tagged == 1 ? GTK_STOCK_APPLY : GTK_STOCK_CANCEL) : "", NULL);
 }
@@ -230,8 +230,8 @@ static gint icon_sort(GtkTreeModel *tree_model,
 {
     gpointer aa, bb;
     int l, r;
-    gtk_tree_model_get(tree_model, a, (gint) data, &aa, -1);
-    gtk_tree_model_get(tree_model, b, (gint) data, &bb, -1);
+    gtk_tree_model_get(tree_model, a, GPOINTER_TO_INT(data), &aa, -1);
+    gtk_tree_model_get(tree_model, b, GPOINTER_TO_INT(data), &bb, -1);
     l = *((int *) aa);
     r = *((int *) bb);
     return l - r;
@@ -243,8 +243,8 @@ static gint filename_sort(GtkTreeModel *tree_model,
                           gpointer data)
 {
     gchar *aa, *bb;
-    gtk_tree_model_get(tree_model, a, (gint) data, &aa, -1);
-    gtk_tree_model_get(tree_model, b, (gint) data, &bb, -1);
+    gtk_tree_model_get(tree_model, a, GPOINTER_TO_INT(data), &aa, -1);
+    gtk_tree_model_get(tree_model, b, GPOINTER_TO_INT(data), &bb, -1);
     return strcmp(aa, bb);
 }
 
