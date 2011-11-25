@@ -114,6 +114,8 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
             !strcmp(opts->peak, "all"))
             r128_mode |= EBUR128_MODE_TRUE_PEAK;
     }
+    if (opts->histogram)
+        r128_mode |= EBUR128_MODE_HISTOGRAM;
 
     fd->st = ebur128_init(ops->get_channels(ih),
                           ops->get_samplerate(ih),

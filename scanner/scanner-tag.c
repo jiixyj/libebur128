@@ -10,6 +10,7 @@
 static struct file_data empty;
 
 extern gboolean verbose;
+extern gboolean histogram;
 static gboolean track = FALSE;
 static gboolean dry_run = FALSE;
 static gboolean tag_tp = FALSE;
@@ -151,7 +152,7 @@ void tag_file(struct filename_list_node *fln, int *ret)
 }
 
 int scan_files(GSList *files) {
-    struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample", TRUE};
+    struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample", histogram, TRUE};
     GThreadPool *pool;
     GThread *progress_bar_thread;
     int do_scan = 0;

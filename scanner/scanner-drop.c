@@ -17,6 +17,7 @@
 #include "logo.h"
 
 gboolean verbose = TRUE;
+gboolean histogram = FALSE;
 
 #if defined(__GNUC__)
 static void exit_program(void) __attribute__ ((noreturn));

@@ -6,6 +6,7 @@
 #include "logo.h"
 
 gboolean verbose = TRUE;
+gboolean histogram = FALSE;
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent, Qt::FramelessWindowHint |
