@@ -60,7 +60,8 @@ enum mode {
   /** uses histogram algorithm to calculate loudness */
 #if EBUR128_USE_SPEEX_RESAMPLER
   /** can call ebur128_true_peak */
-  EBUR128_MODE_TRUE_PEAK   = (1 << 5) | EBUR128_MODE_M,
+  EBUR128_MODE_TRUE_PEAK   = (1 << 5) | EBUR128_MODE_M
+                                      | EBUR128_MODE_SAMPLE_PEAK,
 #endif
   EBUR128_MODE_HISTOGRAM   = (1 << 6)
 };

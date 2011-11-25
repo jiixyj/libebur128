@@ -967,7 +967,9 @@ int ebur128_true_peak(ebur128_state* st,
   } else if (channel_number >= st->channels) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
-  *out = st->d->true_peak[channel_number];
+  *out = st->d->true_peak[channel_number] > st->d->sample_peak[channel_number]
+       ? st->d->true_peak[channel_number]
+       : st->d->sample_peak[channel_number];
   return EBUR128_SUCCESS;
 }
 #endif
