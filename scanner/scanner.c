@@ -56,10 +56,14 @@ static void print_help(void) {
     printf("\n");
     printf(" Scan options:\n");
     printf("  -l, --lra                  calculate loudness range in LRA\n");
+#if EBUR128_USE_SPEEX_RESAMPLER
     printf("  -p, --peak=sample|true|dbtp|all  -p sample: sample peak (float value)\n");
     printf("                                   -p true:   true peak (float value)\n");
     printf("                                   -p dbtp:   true peak (dB True Peak)\n");
     printf("                                   -p all:    show all peak values\n");
+#else
+    printf("  -p, --peak=sample                -p sample: sample peak (float value)\n");
+#endif
     printf("\n");
 #ifdef USE_TAGLIB
     printf(" Tag options:\n");

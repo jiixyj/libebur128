@@ -126,8 +126,13 @@ void loudness_scan(GSList *files)
 gboolean loudness_scan_parse(int *argc, char **argv[])
 {
     gboolean success = parse_mode_args(argc, argv, entries);
-    if (peak && strcmp(peak, "sample") && strcmp(peak, "true")
-             && strcmp(peak, "dbtp") && strcmp(peak, "all")) {
+    if (peak && strcmp(peak, "sample")
+#if EBUR128_USE_SPEEX_RESAMPLER
+             && strcmp(peak, "true")
+             && strcmp(peak, "dbtp")
+             && strcmp(peak, "all")
+#endif
+            ) {
         fprintf(stderr, "Invalid argument to --peak!\n");
         return FALSE;
     }

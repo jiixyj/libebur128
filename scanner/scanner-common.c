@@ -110,9 +110,11 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     if (opts->peak) {
         if (!strcmp(opts->peak, "sample") || !strcmp(opts->peak, "all"))
             r128_mode |= EBUR128_MODE_SAMPLE_PEAK;
+#if EBUR128_USE_SPEEX_RESAMPLER
         if (!strcmp(opts->peak, "true") || !strcmp(opts->peak, "dbtp") ||
             !strcmp(opts->peak, "all"))
             r128_mode |= EBUR128_MODE_TRUE_PEAK;
+#endif
     }
     if (opts->histogram)
         r128_mode |= EBUR128_MODE_HISTOGRAM;
@@ -166,6 +168,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
             }
         }
     }
+#if EBUR128_USE_SPEEX_RESAMPLER
     if ((fd->st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {
         for (i = 0; i < fd->st->channels; ++i) {
             double tp;
@@ -175,6 +178,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
             }
         }
     }
+#endif
     fd->scanned = TRUE;
 
     if (ih) ops->free_buffer(ih);
