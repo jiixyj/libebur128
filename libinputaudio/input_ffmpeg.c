@@ -145,7 +145,7 @@ close_file:
   return 1;
 }
 
-static int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+static int ffmpeg_set_channel_map(struct input_handle* ih, int* st) {
   if (ih->codec_context->channel_layout) {
     unsigned int channel_map_index = 0;
     int bit_counter = 0;
@@ -153,22 +153,22 @@ static int ffmpeg_set_channel_map(struct input_handle* ih, ebur128_state* st) {
       if (ih->codec_context->channel_layout & (1 << bit_counter)) {
         switch (1 << bit_counter) {
           case CH_FRONT_LEFT:
-            ebur128_set_channel(st, channel_map_index, EBUR128_LEFT);
+            st[channel_map_index] = EBUR128_LEFT;
             break;
           case CH_FRONT_RIGHT:
-            ebur128_set_channel(st, channel_map_index, EBUR128_RIGHT);
+            st[channel_map_index] = EBUR128_RIGHT;
             break;
           case CH_FRONT_CENTER:
-            ebur128_set_channel(st, channel_map_index, EBUR128_CENTER);
+            st[channel_map_index] = EBUR128_CENTER;
             break;
           case CH_BACK_LEFT:
-            ebur128_set_channel(st, channel_map_index, EBUR128_LEFT_SURROUND);
+            st[channel_map_index] = EBUR128_LEFT_SURROUND;
             break;
           case CH_BACK_RIGHT:
-            ebur128_set_channel(st, channel_map_index, EBUR128_RIGHT_SURROUND);
+            st[channel_map_index] = EBUR128_RIGHT_SURROUND;
             break;
           default:
-            ebur128_set_channel(st, channel_map_index, EBUR128_UNUSED);
+            st[channel_map_index] = EBUR128_UNUSED;
             break;
         }
         ++channel_map_index;

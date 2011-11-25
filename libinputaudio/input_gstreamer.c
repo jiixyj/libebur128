@@ -252,26 +252,26 @@ static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
   }
 }
 
-static int gstreamer_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+static int gstreamer_set_channel_map(struct input_handle* ih, int* st) {
   unsigned j;
-  for (j = 0; j < st->channels; ++j) {
+  for (j = 0; j < ih->n_channels; ++j) {
     switch (ih->channel_positions[j]) {
       case GST_AUDIO_CHANNEL_POSITION_INVALID:
-        ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
+        st[j] = EBUR128_UNUSED;         break;
       case GST_AUDIO_CHANNEL_POSITION_FRONT_MONO:
-        ebur128_set_channel(st, j, EBUR128_CENTER);         break;
+        st[j] = EBUR128_CENTER;         break;
       case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT:
-        ebur128_set_channel(st, j, EBUR128_LEFT);           break;
+        st[j] = EBUR128_LEFT;           break;
       case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT:
-        ebur128_set_channel(st, j, EBUR128_RIGHT);          break;
+        st[j] = EBUR128_RIGHT;          break;
       case GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER:
-        ebur128_set_channel(st, j, EBUR128_CENTER);         break;
+        st[j] = EBUR128_CENTER;         break;
       case GST_AUDIO_CHANNEL_POSITION_REAR_LEFT:
-        ebur128_set_channel(st, j, EBUR128_LEFT_SURROUND);  break;
+        st[j] = EBUR128_LEFT_SURROUND;  break;
       case GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT:
-        ebur128_set_channel(st, j, EBUR128_RIGHT_SURROUND); break;
+        st[j] = EBUR128_RIGHT_SURROUND; break;
       default:
-        ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
+        st[j] = EBUR128_UNUSED;         break;
     }
   }
   return 0;

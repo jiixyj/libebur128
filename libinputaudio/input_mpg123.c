@@ -84,7 +84,7 @@ close_file:
   return 1;
 }
 
-static int mpg123_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+static int mpg123_set_channel_map(struct input_handle* ih, int* st) {
   (void) ih;
   (void) st;
   return 1;

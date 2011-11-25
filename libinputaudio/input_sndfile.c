@@ -58,35 +58,35 @@ static int sndfile_open_file(struct input_handle* ih, const char* filename) {
   }
 }
 
-static int sndfile_set_channel_map(struct input_handle* ih, ebur128_state* st) {
+static int sndfile_set_channel_map(struct input_handle* ih, int* st) {
   int result;
-  int* channel_map = (int*) calloc(st->channels, sizeof(int));
+  int* channel_map = (int*) calloc(ih->file_info.channels, sizeof(int));
   if (!channel_map) return 1;
   result = sf_command(ih->file, SFC_GET_CHANNEL_MAP_INFO,
                       (void*) channel_map,
-                      (int) (st->channels * sizeof(int)));
+                      (int) (ih->file_info.channels * sizeof(int)));
   /* If sndfile found a channel map, set it with
    * ebur128_set_channel_map */
   if (result == SF_TRUE) {
     unsigned j;
-    for (j = 0; j < st->channels; ++j) {
+    for (j = 0; j < ih->file_info.channels; ++j) {
       switch (channel_map[j]) {
         case SF_CHANNEL_MAP_INVALID:
-          ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
+          st[j] = EBUR128_UNUSED;         break;
         case SF_CHANNEL_MAP_MONO:
-          ebur128_set_channel(st, j, EBUR128_CENTER);         break;
+          st[j] = EBUR128_CENTER;         break;
         case SF_CHANNEL_MAP_LEFT:
-          ebur128_set_channel(st, j, EBUR128_LEFT);           break;
+          st[j] = EBUR128_LEFT;           break;
         case SF_CHANNEL_MAP_RIGHT:
-          ebur128_set_channel(st, j, EBUR128_RIGHT);          break;
+          st[j] = EBUR128_RIGHT;          break;
         case SF_CHANNEL_MAP_CENTER:
-          ebur128_set_channel(st, j, EBUR128_CENTER);         break;
+          st[j] = EBUR128_CENTER;         break;
         case SF_CHANNEL_MAP_REAR_LEFT:
-          ebur128_set_channel(st, j, EBUR128_LEFT_SURROUND);  break;
+          st[j] = EBUR128_LEFT_SURROUND;  break;
         case SF_CHANNEL_MAP_REAR_RIGHT:
-          ebur128_set_channel(st, j, EBUR128_RIGHT_SURROUND); break;
+          st[j] = EBUR128_RIGHT_SURROUND; break;
         default:
-          ebur128_set_channel(st, j, EBUR128_UNUSED);         break;
+          st[j] = EBUR128_UNUSED;         break;
       }
     }
     free(channel_map);

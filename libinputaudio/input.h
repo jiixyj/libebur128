@@ -18,7 +18,7 @@ struct input_ops {
   struct input_handle* (*handle_init)();
   void          (*handle_destroy)(struct input_handle** ih);
   int           (*open_file)(struct input_handle* ih, const char* filename);
-  int           (*set_channel_map)(struct input_handle* ih, ebur128_state* st);
+  int           (*set_channel_map)(struct input_handle* ih, int* st);
   int           (*allocate_buffer)(struct input_handle* ih);
   size_t        (*get_total_frames)(struct input_handle* ih);
   size_t        (*read_frames)(struct input_handle* ih);

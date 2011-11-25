@@ -18,7 +18,7 @@ if(GLIB_FOUND)
 
   if(SNDFILE_FOUND)
     add_library(input_sndfile MODULE input_sndfile.c)
-    target_link_libraries(input_sndfile ebur128 ${SNDFILE_LIBRARIES} ${INPUT_HELPERS})
+    target_link_libraries(input_sndfile ${SNDFILE_LIBRARIES} ${INPUT_HELPERS})
   endif()
 
   if(MPG123_FOUND)
@@ -33,7 +33,7 @@ if(GLIB_FOUND)
 
   if(FFMPEG_FOUND)
     add_library(input_ffmpeg MODULE input_ffmpeg.c)
-    target_link_libraries(input_ffmpeg ebur128 ${FFMPEG_LIBRARIES} ${GLIB_LIBRARIES})
+    target_link_libraries(input_ffmpeg ${FFMPEG_LIBRARIES} ${GLIB_LIBRARIES})
   endif()
 
   if(GSTREAMER_FOUND)
@@ -43,7 +43,7 @@ if(GLIB_FOUND)
     else()
       add_library(input_gstreamer MODULE input_gstreamer.c)
     endif()
-    target_link_libraries(input_gstreamer ebur128 ${GLIB_LIBRARIES} ${GTK2_GOBJECT_LIBRARY} ${GSTREAMER_LIBRARIES})
+    target_link_libraries(input_gstreamer ${GLIB_LIBRARIES} ${GTK2_GOBJECT_LIBRARY} ${GSTREAMER_LIBRARIES})
   endif()
 
   if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)

@@ -91,6 +91,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     struct input_handle* ih = NULL;
     int r128_mode = EBUR128_MODE_I;
     unsigned int i;
+    int *channel_map;
 
     int result;
     float *buffer = NULL;
@@ -123,7 +124,14 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
                           ops->get_samplerate(ih),
                           r128_mode);
 
-    result = ops->set_channel_map(ih, fd->st);
+    channel_map = g_malloc(fd->st->channels * sizeof(int));
+    if (!ops->set_channel_map(ih, channel_map)) {
+        for (i = 0; i < fd->st->channels; ++i) {
+            ebur128_set_channel(fd->st, i, channel_map[i]);
+        }
+    }
+    free(channel_map);
+
     if (fd->st->channels == 1 && opts->force_dual_mono) {
         ebur128_set_channel(fd->st, 0, EBUR128_DUAL_MONO);
     }
