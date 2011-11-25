@@ -2,6 +2,10 @@
 #ifndef EBUR128_H_
 #define EBUR128_H_
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif
+
 #ifndef EBUR128_USE_SPEEX_RESAMPLER
   /** Set this to 1 to enable true peak scanning */
   #define EBUR128_USE_SPEEX_RESAMPLER 1

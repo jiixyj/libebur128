@@ -1,0 +1,5 @@
+/* for ebur128.h */
+#cmakedefine EBUR128_USE_SPEEX_RESAMPLER 0
+
+/* for scanner.c */
+#cmakedefine USE_TAGLIB

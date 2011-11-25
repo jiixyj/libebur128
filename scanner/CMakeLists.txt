@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
+  include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
+
   add_library(parse_args parse_args)
 
   list(APPEND SCANNER_SRCS scanner.c nproc.c
                            scanner-scan.c scanner-dump.c
                            scanner-common.c)
   if(TAGLIB_FOUND)
+    include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
     list(APPEND SCANNER_SRCS scanner-tag.c rgtag.cpp)
   endif()
 
@@ -31,6 +34,8 @@ if(GLIB_FOUND)
           LIBRARY DESTINATION ${FOLDER_PLUGIN})
 
   if(GTK2_FOUND AND RSVG2_FOUND AND TAGLIB_FOUND)
+    include_directories(SYSTEM ${GTK2_INCLUDE_DIRS})
+    include_directories(SYSTEM ${RSVG2_INCLUDE_DIRS})
     add_executable(loudness-drop scanner-drop scanner-tag scanner-common nproc rgtag.cpp)
     target_link_libraries(loudness-drop ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
     install(TARGETS loudness-drop
@@ -39,8 +44,10 @@ if(GLIB_FOUND)
   endif()
 
   if(QT4_FOUND AND TAGLIB_FOUND)
-    qt4_automoc(scanner-drop-qt.cpp)
+    include(${QT_USE_FILE})
+    include_directories(SYSTEM ${QT_INCLUDES})
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
+    qt4_automoc(scanner-drop-qt.cpp)
     add_executable(loudness-drop-qt scanner-drop-qt scanner-tag scanner-common nproc rgtag.cpp)
     target_link_libraries(loudness-drop-qt ebur128 input filetree parse_args ${GLIB_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSVG_LIBRARY} ${TAGLIB_LIBRARIES})
     install(TARGETS loudness-drop-qt
@@ -49,6 +56,7 @@ if(GLIB_FOUND)
   endif()
 
   if(SNDFILE_FOUND)
+    include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
     add_executable(r128-minimal-example minimal_example.c)
     target_link_libraries(r128-minimal-example ebur128 ${SNDFILE_LIBRARIES})
   endif()

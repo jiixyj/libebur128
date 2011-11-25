@@ -1,13 +1,11 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 include_directories(queue)
-if(SPEEXDSP_FOUND)
-  include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
-endif()
 
 add_library(ebur128 ebur128.c)
 
 if(SPEEXDSP_FOUND)
+  include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
   target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
 endif()
 
