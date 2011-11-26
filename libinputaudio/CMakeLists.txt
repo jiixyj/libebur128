@@ -48,7 +48,7 @@ if(GLIB_FOUND)
       add_library(input_gstreamer MODULE input_gstreamer.c)
     endif()
     set_target_properties(input_gstreamer PROPERTIES COMPILE_FLAGS "${GSTREAMER_CFLAGS}")
-    target_link_libraries(input_gstreamer ${GLIB_LIBRARIES} ${GTK2_GOBJECT_LIBRARY} ${GSTREAMER_LIBRARIES})
+    target_link_libraries(input_gstreamer ${GSTREAMER_LIBRARIES})
   endif()
 
   if(GSTREAMER_INPUT_STATIC)
