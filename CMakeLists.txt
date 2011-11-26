@@ -34,7 +34,7 @@ find_package(RSVG2)
 find_package(SPEEXDSP)
 find_package(FFMPEG)
 find_package(TAGLIB)
-find_package(GStreamer)
+find_package(GSTREAMER)
 find_package(Qt4 COMPONENTS QtGui QtSvg)
 
 if(NOT SPEEXDSP_FOUND)
