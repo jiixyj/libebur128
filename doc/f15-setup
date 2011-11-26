@@ -37,16 +37,16 @@ cd ../../
 # ffmpeg
 mkdir ffmpeg
 cd ffmpeg
-curl -O http://ffmpeg.org/releases/ffmpeg-0.8.5.tar.bz2
-tar xf ffmpeg-0.8.5.tar.bz2
-cd ffmpeg-0.8.5
+curl -O http://ffmpeg.org/releases/ffmpeg-0.8.7.tar.bz2
+tar xf ffmpeg-0.8.7.tar.bz2
+cd ffmpeg-0.8.7
 # remove compiler sanity check from configure file
 # remove MinGW runtime check from configure file
 # 32 bit: undef HAVE_YASM in ./libavcodec/x86/fmtconvert_mmx.c to prevent crash when reading MP4 files
 ./configure --enable-runtime-cpudetect --target-os=mingw32 --arch=x86 --cross-prefix=i686-w64-mingw32- --enable-shared
 mkdir dest
 make DESTDIR=`pwd`/dest install
-rsync -avP dest/usr/local/ /usr/i686-w64-mingw32/sys-root/mingw/
+rsync -avP dest/usr/local/ /usr/x86_64-w64-mingw32/sys-root/mingw/
 cd ../../
 
 # mpcdec
@@ -61,6 +61,18 @@ cmake . -DCMAKE_TOOLCHAIN_FILE=/home/jan/git/r128/cmake/i686-w64-mingw32.cmake
 make
 cp -r include/mpc /usr/i686-w64-mingw32/sys-root/mingw/include
 cp libmpcdec/libmpcdec_static.a /usr/i686-w64-mingw32/sys-root/mingw/lib
+
+# speexdsp
+mkdir speexdsp
+cd speexdsp
+curl -O http://downloads.xiph.org/releases/speex/speex-1.2rc1.tar.gz
+tar xf speex-1.2rc1.tar.gz
+cd speex-1.2rc1/
+./configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32
+make
+mkdir dest
+make DESTDIR=`pwd`/dest install
+rsync -avP dest/usr/local/ /usr/x86_64-w64-mingw32/sys-root/mingw/
 
 
 # compile loudness tools with
