@@ -61,18 +61,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
 endif()
 
-include(CheckCCompilerFlag)
-
-if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
-  CHECK_C_COMPILER_FLAG("-msse2 -mfpmath=sse" FLAG_SSE2_OPT)
-  if(FLAG_SSE2_OPT)
-    set(USE_SSE2 FALSE CACHE BOOL "Enable SSE2 optimizations")
-    if(USE_SSE2)
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2 -mfpmath=sse")
-    endif()
-  endif()
-endif()
-
 
 ######################################
 ##### Add libraries/executables  #####
@@ -147,10 +135,6 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND AND
     set(CPACK_SYSTEM_NAME "win64")
   elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(CPACK_SYSTEM_NAME "Linux64")
-  elseif(WIN32 AND USE_SSE2)
-    set(CPACK_SYSTEM_NAME "win32-sse2")
-  elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND USE_SSE2)
-    set(CPACK_SYSTEM_NAME "Linux-sse2")
   endif()
 
   include(CPack)
