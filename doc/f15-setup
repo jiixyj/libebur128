@@ -40,8 +40,6 @@ cd ffmpeg
 curl -O http://ffmpeg.org/releases/ffmpeg-0.8.7.tar.bz2
 tar xf ffmpeg-0.8.7.tar.bz2
 cd ffmpeg-0.8.7
-# remove compiler sanity check from configure file
-# remove MinGW runtime check from configure file
 # 32 bit: undef HAVE_YASM in ./libavcodec/x86/fmtconvert_mmx.c to prevent crash when reading MP4 files
 ./configure --enable-runtime-cpudetect --target-os=mingw32 --arch=x86 --cross-prefix=i686-w64-mingw32- --enable-shared
 mkdir dest
