@@ -253,7 +253,7 @@ static int gstreamer_open_file(struct input_handle* ih, const char* filename) {
 }
 
 static int gstreamer_set_channel_map(struct input_handle* ih, int* st) {
-  unsigned j;
+  gint j;
   for (j = 0; j < ih->n_channels; ++j) {
     switch (ih->channel_positions[j]) {
       case GST_AUDIO_CHANNEL_POSITION_INVALID:

@@ -60,15 +60,15 @@ static int sndfile_open_file(struct input_handle* ih, const char* filename) {
 
 static int sndfile_set_channel_map(struct input_handle* ih, int* st) {
   int result;
-  int* channel_map = (int*) calloc(ih->file_info.channels, sizeof(int));
+  int* channel_map = (int*) calloc((size_t) ih->file_info.channels, sizeof(int));
   if (!channel_map) return 1;
   result = sf_command(ih->file, SFC_GET_CHANNEL_MAP_INFO,
                       (void*) channel_map,
-                      (int) (ih->file_info.channels * sizeof(int)));
+                      (int) ((size_t) ih->file_info.channels * sizeof(int)));
   /* If sndfile found a channel map, set it with
    * ebur128_set_channel_map */
   if (result == SF_TRUE) {
-    unsigned j;
+    int j;
     for (j = 0; j < ih->file_info.channels; ++j) {
       switch (channel_map[j]) {
         case SF_CHANNEL_MAP_INVALID:

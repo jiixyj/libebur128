@@ -874,8 +874,8 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
       return EBUR128_SUCCESS;
     }
 
-    percentile_low  = (stl_size - 1) * 0.1 + 0.5;
-    percentile_high = (stl_size - 1) * 0.95 + 0.5;
+    percentile_low  = (size_t) ((stl_size - 1) * 0.1 + 0.5);
+    percentile_high = (size_t) ((stl_size - 1) * 0.95 + 0.5);
 
     stl_size = 0;
     j = index;
