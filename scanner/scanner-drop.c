@@ -229,12 +229,9 @@ static gint icon_sort(GtkTreeModel *tree_model,
                       gpointer data)
 {
     gpointer aa, bb;
-    int l, r;
     gtk_tree_model_get(tree_model, a, GPOINTER_TO_INT(data), &aa, -1);
     gtk_tree_model_get(tree_model, b, GPOINTER_TO_INT(data), &bb, -1);
-    l = *((int *) aa);
-    r = *((int *) bb);
-    return l - r;
+    return *((int *) aa) - *((int *) bb);
 }
 
 static gint filename_sort(GtkTreeModel *tree_model,
