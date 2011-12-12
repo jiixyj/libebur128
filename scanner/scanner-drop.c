@@ -579,6 +579,7 @@ int main(int argc, char *argv[])
     menu_manager = gtk_ui_manager_new();
 
     /* set up window */
+    gtk_window_set_title(GTK_WINDOW(window), "Loudness Drop");
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
     gtk_window_set_default_size(GTK_WINDOW(window), 130, 130);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);

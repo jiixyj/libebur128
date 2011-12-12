@@ -17,6 +17,8 @@ MainWindow::MainWindow(QWidget *parent)
       gui_update_thread_(this),
       logo_rotation_timer(NULL)
 {
+    setWindowTitle("Loudness Drop");
+
     setMinimumSize(130, 130);
     setMaximumSize(0, 0);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -151,6 +153,7 @@ ResultWindow::ResultWindow(QWidget *parent, GSList *files, Filetree tree)
       files_(files),
       tree_(tree)
 {
+    setWindowTitle("Scanning Result");
     QVBoxLayout *layout = new QVBoxLayout;
     setLayout(layout);
 
