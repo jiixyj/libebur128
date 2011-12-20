@@ -103,7 +103,7 @@ void loudness_scan(GSList *files)
 
         clear_line();
         fprintf(stderr, "  Loudness");
-        if (lra) fprintf(stderr, ",      LRA");
+        if (lra) fprintf(stderr, ",     LRA");
         if (peak) {
             if (!strcmp(peak, "sample") || !strcmp(peak, "all"))
                 fprintf(stderr, ", Sample peak");
