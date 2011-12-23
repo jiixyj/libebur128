@@ -3,7 +3,6 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <glib.h>
-#include <glib/gprintf.h>
 
 #include "ebur128.h"
 #include "input.h"

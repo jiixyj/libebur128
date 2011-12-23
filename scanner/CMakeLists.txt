@@ -40,9 +40,15 @@ if(GLIB_FOUND)
   if(GTK2_FOUND AND RSVG2_FOUND AND TAGLIB_FOUND)
     include_directories(SYSTEM ${GTK2_INCLUDE_DIRS})
     include_directories(SYSTEM ${RSVG2_INCLUDE_DIRS})
-    add_executable(loudness-drop scanner-drop scanner-tag scanner-common nproc rgtag.cpp)
-    target_link_libraries(loudness-drop ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
-    install(TARGETS loudness-drop
+    add_executable(loudness-drop-gtk scanner-drop scanner-tag scanner-common nproc rgtag.cpp)
+    # we don't need pango and atk
+    foreach(lib ${GTK2_LIBRARIES})
+        if(NOT "${lib}" MATCHES ".*pango.*" AND NOT "${lib}" MATCHES ".*atk.*")
+            list(APPEND MY_GTK2_LIBRARIES ${lib})
+        endif()
+    endforeach()
+    target_link_libraries(loudness-drop-gtk ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${MY_GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
+    install(TARGETS loudness-drop-gtk
             RUNTIME DESTINATION ${FOLDER_BIN}
             LIBRARY DESTINATION ${FOLDER_PLUGIN})
   endif()

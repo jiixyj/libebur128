@@ -16,7 +16,8 @@ set_target_properties(ebur128_static PROPERTIES
 add_library(ebur128 SHARED ebur128.c)
 set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
-      VERSION ${EBUR128_VERSION})
+    VERSION ${EBUR128_VERSION}
+    LINK_INTERFACE_LIBRARIES "")
 
 if(SPEEXDSP_FOUND)
     include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
