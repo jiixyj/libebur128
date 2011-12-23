@@ -22,6 +22,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef HAVE_CONFIG_USE_SPEEX_H
+  #include "use_speex.h" /* or define EBUR128_USE_SPEEX_RESAMPLER manually */
+#endif
+
 #ifdef EBUR128_USE_SPEEX_RESAMPLER
   #include <speex/speex_resampler.h>
 #endif

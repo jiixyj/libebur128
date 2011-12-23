@@ -2,10 +2,6 @@
 #ifndef EBUR128_H_
 #define EBUR128_H_
 
-#ifdef HAVE_CONFIG_USE_SPEEX_H
-  #include "use_speex.h" /* or define EBUR128_USE_SPEEX_RESAMPLER manually */
-#endif
-
 /** \file ebur128.h
  *  \brief libebur128 - a library for loudness measurement according to
  *         the EBU R128 standard.
@@ -56,12 +52,10 @@ enum mode {
   EBUR128_MODE_LRA         = (1 << 3) | EBUR128_MODE_S,
   /** can call ebur128_sample_peak */
   EBUR128_MODE_SAMPLE_PEAK = (1 << 4) | EBUR128_MODE_M,
-  /** uses histogram algorithm to calculate loudness */
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
   /** can call ebur128_true_peak */
   EBUR128_MODE_TRUE_PEAK   = (1 << 5) | EBUR128_MODE_M
                                       | EBUR128_MODE_SAMPLE_PEAK,
-#endif
+  /** uses histogram algorithm to calculate loudness */
   EBUR128_MODE_HISTOGRAM   = (1 << 6)
 };
 
@@ -250,7 +244,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
 int ebur128_sample_peak(ebur128_state* st,
                         unsigned int channel_number,
                         double* out);
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+
 /** \brief Get maximum true peak of selected channel in float format.
  *
  *  Uses the Speex resampler with quality level 8 to calculate true peak. Will
@@ -269,7 +263,6 @@ int ebur128_sample_peak(ebur128_state* st,
 int ebur128_true_peak(ebur128_state* st,
                       unsigned int channel_number,
                       double* out);
-#endif
 
 #ifdef __cplusplus
 }
