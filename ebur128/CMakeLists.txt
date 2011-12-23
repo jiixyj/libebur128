@@ -19,10 +19,18 @@ set_target_properties(ebur128 PROPERTIES
       VERSION ${EBUR128_VERSION})
 
 if(SPEEXDSP_FOUND)
-  include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
-  target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
+    include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
+    target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
 endif()
 
 if(NOT WIN32)
-  target_link_libraries(ebur128 m)
+    target_link_libraries(ebur128 m)
 endif()
+
+if(FOLDER_INCLUDE)
+    install(FILES ebur128.h DESTINATION ${FOLDER_INCLUDE})
+endif()
+
+install(TARGETS ebur128 ebur128_static
+        LIBRARY DESTINATION ${FOLDER_LIB}
+        ARCHIVE DESTINATION ${FOLDER_LIB})

@@ -55,13 +55,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_taglib.h.in
                ${CMAKE_BINARY_DIR}/use_taglib.h)
 add_definitions(-DHAVE_CONFIG_USE_TAGLIB_H)
 
-######################################
-##### Compiler setup             #####
-######################################
-if(NOT CMAKE_BUILD_TYPE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "RelWithDebInfo")
-endif()
-
 
 ######################################
 ##### Add libraries/executables  #####
@@ -85,11 +78,13 @@ set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
 if(FLAT_INSTALL)
   set(FOLDER_DOC .)
   set(FOLDER_BIN .)
+  set(FOLDER_LIB .)
   set(FOLDER_PLUGIN .)
 else()
-  set(FOLDER_DOC share/doc)
   set(FOLDER_BIN bin)
+  set(FOLDER_LIB lib)
   set(FOLDER_PLUGIN bin/r128)
+  set(FOLDER_INCLUDE include)
 endif()
 
 
@@ -101,8 +96,11 @@ add_subdirectory(test)
 ######################################
 ##### Install                    #####
 ######################################
-install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
-install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})
+if(FOLDER_DOC)
+    install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
+    install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})
+endif()
+
 if(WIN32)
   if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(DLL_FOLDER dlls-64)
@@ -114,7 +112,6 @@ if(WIN32)
                            GROUP_EXECUTE GROUP_READ
                            WORLD_EXECUTE WORLD_READ)
 endif()
-install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
 
 if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND AND
    GLIB_FOUND AND TAGLIB_FOUND)
