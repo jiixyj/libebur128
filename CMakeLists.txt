@@ -1,7 +1,7 @@
 ######################################
 ##### CMake environment setup    #####
 ######################################
-project(libebur128)
+project(ebur128-loudness-tools)
 cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
