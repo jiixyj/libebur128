@@ -1,7 +1,7 @@
 Source: ebur128-loudness-tools
 Priority: extra
 Maintainer: Jan Kokemüller <jan.kokemueller@gmail.com>
-Build-Depends: debhelper (>= 8.0.0), cmake
+Build-Depends: debhelper (>= 8.0.0), cmake, libgtk2.0-dev, libtag1-dev, librsvg2-dev, libgstreamer0.10-dev, libgstreamer-plugins-base0.10-dev, libsndfile1-dev, libmpg123-dev, libmpcdec-dev, libqt4-dev, libspeexdsp-dev, libavformat-dev
 Standards-Version: 3.9.2
 Section: libs
 Homepage: https://github.com/jiixyj/libebur128
