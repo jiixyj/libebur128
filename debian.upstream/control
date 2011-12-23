@@ -1,0 +1,21 @@
+Source: ebur128-loudness-tools
+Priority: extra
+Maintainer: Jan Kokemüller <jan.kokemueller@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), cmake
+Standards-Version: 3.9.2
+Section: libs
+Homepage: https://github.com/jiixyj/libebur128
+
+Package: libebur128-dev
+Section: libdevel
+Architecture: any
+Depends: ebur128-loudness-toolsBROKEN (= ${binary:Version})
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: libebur128-1
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
