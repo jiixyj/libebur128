@@ -83,7 +83,7 @@ if(FLAT_INSTALL)
 else()
   set(FOLDER_BIN bin)
   set(FOLDER_LIB lib)
-  set(FOLDER_PLUGIN bin/r128)
+  set(FOLDER_PLUGIN lib/ebur128-loudness-tools)
   set(FOLDER_INCLUDE include)
 endif()
 
