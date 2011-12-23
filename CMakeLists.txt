@@ -8,7 +8,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 include_directories(${CMAKE_BINARY_DIR})
 
-include_directories(libebur128)
+include_directories(ebur128)
 include_directories(scanner)
 
 enable_testing()
@@ -90,7 +90,7 @@ else()
 endif()
 
 
-add_subdirectory(libebur128)
+add_subdirectory(ebur128)
 add_subdirectory(scanner)
 add_subdirectory(test)
 
