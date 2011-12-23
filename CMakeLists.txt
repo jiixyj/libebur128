@@ -10,7 +10,6 @@ include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(libebur128)
 include_directories(libinputaudio)
-include_directories(libfilewalk)
 include_directories(scanner)
 
 enable_testing()
@@ -94,9 +93,6 @@ endif()
 
 add_subdirectory(libebur128)
 add_subdirectory(libinputaudio)
-if(GLIB_FOUND)
-  add_subdirectory(libfilewalk)
-endif()
 add_subdirectory(scanner)
 add_subdirectory(test)
 

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
+  add_subdirectory(filetree)
+  include_directories(filetree)
+
   include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
 
   add_library(parse_args parse_args)
