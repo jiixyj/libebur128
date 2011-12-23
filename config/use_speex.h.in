@@ -1,0 +1,1 @@
+#cmakedefine EBUR128_USE_SPEEX_RESAMPLER

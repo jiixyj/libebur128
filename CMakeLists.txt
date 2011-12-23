@@ -6,7 +6,6 @@ cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(ebur128)
 include_directories(scanner)
@@ -35,9 +34,7 @@ find_package(TAGLIB)
 find_package(GSTREAMER)
 find_package(Qt4 COMPONENTS QtGui QtSvg)
 
-if(NOT SPEEXDSP_FOUND)
-  set(EBUR128_USE_SPEEX_RESAMPLER ZERO)
-endif()
+set(EBUR128_USE_SPEEX_RESAMPLER ${SPEEXDSP_FOUND})
 
 if(GSTREAMER_FOUND AND UNIX)
   set(GSTREAMER_INPUT_STATIC TRUE)
@@ -48,15 +45,21 @@ if(NOT USE_TAGLIB)
   set(TAGLIB_FOUND FALSE)
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-add_definitions(-DHAVE_CONFIG_H)
+
+include_directories(${CMAKE_BINARY_DIR})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_speex.h.in
+               ${CMAKE_BINARY_DIR}/use_speex.h)
+add_definitions(-DHAVE_CONFIG_USE_SPEEX_H)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_taglib.h.in
+               ${CMAKE_BINARY_DIR}/use_taglib.h)
+add_definitions(-DHAVE_CONFIG_USE_TAGLIB_H)
 
 ######################################
 ##### Compiler setup             #####
 ######################################
 if(NOT CMAKE_BUILD_TYPE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "RelWithDebInfo")
 endif()
 
 
@@ -123,7 +126,7 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND AND
   set(CPACK_SOURCE_GENERATOR ZIP TGZ)
   set(CPACK_STRIP_FILES TRUE)
 
-  set(CPACK_SOURCE_IGNORE_FILES "/TODO;/build.*/;/.git/;/.gitignore;/mingw.*/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
+  set(CPACK_SOURCE_IGNORE_FILES "/TODO;/build.*/;/.git/;/.gitignore;/.gitmodules;/mingw.*/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
   if(WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
     set(CPACK_SYSTEM_NAME "win64")

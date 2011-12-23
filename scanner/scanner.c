@@ -17,6 +17,9 @@
 #include "scanner-dump.h"
 #include "scanner-common.h"
 
+#ifdef HAVE_CONFIG_USE_TAGLIB_H
+  #include "use_taglib.h"
+#endif
 
 static void print_help(void) {
     printf("Usage: loudness scan|tag|dump [OPTION...] [FILE|DIRECTORY]...\n");
@@ -56,7 +59,7 @@ static void print_help(void) {
     printf("\n");
     printf(" Scan options:\n");
     printf("  -l, --lra                  calculate loudness range in LRA\n");
-#if EBUR128_USE_SPEEX_RESAMPLER
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
     printf("  -p, --peak=sample|true|dbtp|all  -p sample: sample peak (float value)\n");
     printf("                                   -p true:   true peak (float value)\n");
     printf("                                   -p dbtp:   true peak (dB True Peak)\n");

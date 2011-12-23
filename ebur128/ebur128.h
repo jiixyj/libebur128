@@ -2,13 +2,8 @@
 #ifndef EBUR128_H_
 #define EBUR128_H_
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif
-
-#ifndef EBUR128_USE_SPEEX_RESAMPLER
-  /** Set this to 1 to enable true peak scanning */
-  #define EBUR128_USE_SPEEX_RESAMPLER 1
+#ifdef HAVE_CONFIG_USE_SPEEX_H
+  #include "use_speex.h" /* or define EBUR128_USE_SPEEX_RESAMPLER manually */
 #endif
 
 /** \file ebur128.h
@@ -62,7 +57,7 @@ enum mode {
   /** can call ebur128_sample_peak */
   EBUR128_MODE_SAMPLE_PEAK = (1 << 4) | EBUR128_MODE_M,
   /** uses histogram algorithm to calculate loudness */
-#if EBUR128_USE_SPEEX_RESAMPLER
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
   /** can call ebur128_true_peak */
   EBUR128_MODE_TRUE_PEAK   = (1 << 5) | EBUR128_MODE_M
                                       | EBUR128_MODE_SAMPLE_PEAK,
@@ -255,7 +250,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
 int ebur128_sample_peak(ebur128_state* st,
                         unsigned int channel_number,
                         double* out);
-#if EBUR128_USE_SPEEX_RESAMPLER
+#ifdef EBUR128_USE_SPEEX_RESAMPLER
 /** \brief Get maximum true peak of selected channel in float format.
  *
  *  Uses the Speex resampler with quality level 8 to calculate true peak. Will
