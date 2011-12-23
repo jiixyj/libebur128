@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.6.4)
 
 if(GLIB_FOUND)
   add_subdirectory(filetree)
-  include_directories(filetree)
+  add_subdirectory(inputaudio)
+  include_directories(filetree inputaudio)
 
   include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
 
