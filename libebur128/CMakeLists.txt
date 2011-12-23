@@ -1,8 +1,20 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-include_directories(queue)
+find_path(QUEUE_INCLUDE_PATH queue.h PATH_SUFFIXES sys)
+if(QUEUE_INCLUDE_PATH)
+    include_directories(SYSTEM ${QUEUE_INCLUDE_PATH})
+else()
+    include_directories(queue)
+endif()
 
-add_library(ebur128 ebur128.c)
+set(EBUR128_VERSION_MAJOR 1)
+set(EBUR128_VERSION 1.0.0)
+
+add_library(ebur128_static STATIC ebur128.c)
+add_library(ebur128 SHARED ebur128.c)
+set_target_properties(ebur128 PROPERTIES
+    SOVERSION ${EBUR128_VERSION_MAJOR}
+      VERSION ${EBUR128_VERSION})
 
 if(SPEEXDSP_FOUND)
   include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
