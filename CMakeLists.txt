@@ -36,10 +36,6 @@ find_package(Qt4 COMPONENTS QtGui QtSvg)
 
 set(EBUR128_USE_SPEEX_RESAMPLER ${SPEEXDSP_FOUND})
 
-if(GSTREAMER_FOUND AND UNIX)
-  set(GSTREAMER_INPUT_STATIC TRUE)
-endif()
-
 set(USE_TAGLIB ${TAGLIB_FOUND} CACHE BOOL "Use taglib for ReplayGain compatible tagging")
 if(NOT USE_TAGLIB)
   set(TAGLIB_FOUND FALSE)
