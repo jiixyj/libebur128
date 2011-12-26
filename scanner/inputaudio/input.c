@@ -24,6 +24,7 @@ static GSList* g_modules;
 static GSList* plugin_ops; /*struct input_ops* ops;*/
 static GSList* plugin_exts;
 
+extern int verbose;
 static int plugin_forced;
 
 static void search_module_in_paths(const char* plugin,
@@ -84,6 +85,7 @@ int input_init(char* exe_name, const char* forced_plugin) {
       }
     }
     if (ops) {
+      if (verbose) fprintf(stderr, "found plugin %s\n", *cur_plugin_name);
       ops->init_library();
       plugin_found = 1;
     }
