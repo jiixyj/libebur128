@@ -4,6 +4,7 @@ if(GLIB_FOUND)
   include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
 
   add_library(input input)
+  target_link_libraries(input ${GMODULE_LIBRARY})
 
   if(WIN32)
     add_library(input_win32 input_win32)
@@ -49,11 +50,12 @@ if(GLIB_FOUND)
       add_library(input_gstreamer MODULE input_gstreamer.c)
     endif()
     set_target_properties(input_gstreamer PROPERTIES COMPILE_FLAGS "${GSTREAMER_CFLAGS}")
-    target_link_libraries(input_gstreamer ${GSTAPP_LIBRARY} ${GSTAUDIO_LIBRARY})
+    target_link_libraries(input_gstreamer ${GSTREAMER_LIBRARY} ${GSTAPP_LIBRARY} ${GSTAUDIO_LIBRARY} ${GLIB_LIBRARY} ${GOBJECT_LIBRARY})
+    set_target_properties(input_gstreamer PROPERTIES LINK_INTERFACE_LIBRARIES "")
   endif()
 
-  if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND)
-    install(TARGETS input_ffmpeg input_sndfile input_mpg123 input_musepack
+  if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND AND GSTREAMER_FOUND)
+    install(TARGETS input_ffmpeg input_sndfile input_mpg123 input_musepack input_gstreamer
             RUNTIME DESTINATION ${FOLDER_BIN}
             LIBRARY DESTINATION ${FOLDER_PLUGIN})
   endif()
