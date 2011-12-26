@@ -17,6 +17,9 @@ static const char* plugin_search_dirs[] = {
   "r128",
   "",
   NULL, /* = g_path_get_dirname(av0); */
+  "/usr/lib/r128",
+  "/usr/lib/ebur128",
+  "/usr/lib/ebur128-loudness-tools",
   NULL
 };
 
