@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <glib/gstdio.h>
 
+#ifdef HAVE_CONFIG_USE_SPEEX_H
+  #include "use_speex.h"
+#endif
+
 extern gboolean verbose;
 
 static struct file_data empty;

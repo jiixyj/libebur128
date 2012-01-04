@@ -21,6 +21,10 @@
   #include "use_taglib.h"
 #endif
 
+#ifdef HAVE_CONFIG_USE_SPEEX_H
+  #include "use_speex.h"
+#endif
+
 static void print_help(void) {
     printf("Usage: loudness scan|tag|dump [OPTION...] [FILE|DIRECTORY]...\n");
     printf("\n");

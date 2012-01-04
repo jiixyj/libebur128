@@ -9,6 +9,10 @@
 #include "parse_args.h"
 #include "scanner-common.h"
 
+#ifdef HAVE_CONFIG_USE_SPEEX_H
+  #include "use_speex.h"
+#endif
+
 static struct file_data empty;
 
 extern gboolean histogram;
