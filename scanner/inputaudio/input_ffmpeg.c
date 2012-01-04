@@ -232,6 +232,10 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
         if (!data_size) {
           continue;
         }
+        if (ih->packet.size < 0) {
+            fprintf(stderr, "Error in decoder!\n");
+            return 0;
+        }
         size_t nr_frames_read, i;
         switch (ih->codec_context->sample_fmt) {
           case SAMPLE_FMT_U8:
