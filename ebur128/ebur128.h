@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include <string.h>       /* for size_t */
+#include <stddef.h>       /* for size_t */
 
 /** \enum channel
  *  Use these values when setting the channel map with ebur128_set_channel().
