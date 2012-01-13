@@ -3,6 +3,8 @@
 #include <gst/app/gstappsink.h>
 #include <gst/audio/multichannel.h>
 
+#include <locale.h>
+
 #include "input.h"
 
 struct input_handle {
@@ -359,7 +361,9 @@ static void gstreamer_close_file(struct input_handle* ih) {
 }
 
 static int gstreamer_init_library() {
+  char *current_locale = setlocale(LC_ALL, NULL);
   gst_init(NULL, NULL);
+  setlocale(LC_ALL, current_locale);
   return 0;
 }
 
