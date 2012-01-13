@@ -59,7 +59,7 @@ if(GLIB_FOUND)
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
     qt4_automoc(scanner-drop-qt.cpp)
     add_executable(loudness-drop-qt scanner-drop-qt scanner-tag scanner-common nproc rgtag.cpp)
-    target_link_libraries(loudness-drop-qt ebur128 input filetree parse_args ${GLIB_LIBRARY} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSVG_LIBRARY} ${TAGLIB_LIBRARIES})
+    target_link_libraries(loudness-drop-qt ebur128 input filetree parse_args ${GLIB_LIBRARY} ${GTHREAD_LIBRARY} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSVG_LIBRARY} ${TAGLIB_LIBRARIES})
     install(TARGETS loudness-drop-qt
             RUNTIME DESTINATION ${FOLDER_BIN}
             LIBRARY DESTINATION ${FOLDER_PLUGIN})

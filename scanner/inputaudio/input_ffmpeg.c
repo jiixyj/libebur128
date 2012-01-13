@@ -2,7 +2,7 @@
 #define _POSIX_C_SOURCE 1
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <glib.h>
+#include <gmodule.h>
 
 #include "ebur128.h"
 #include "input.h"

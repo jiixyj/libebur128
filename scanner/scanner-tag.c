@@ -1,6 +1,7 @@
 #include "scanner-tag.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "parse_args.h"
 #include "scanner-common.h"

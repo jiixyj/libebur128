@@ -3,11 +3,6 @@
 #define _INPUT_H_
 
 #include <string.h>
-#include <stdio.h>
-
-#include <gmodule.h>
-
-#include "ebur128.h"
 
 struct input_handle;
 

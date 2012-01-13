@@ -1,5 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 #include <mpc/mpcdec.h>
+#include <gmodule.h>
 
 #include "ebur128.h"
 #include "input.h"

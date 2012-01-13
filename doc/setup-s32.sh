@@ -9,9 +9,7 @@ curl -O http://download.opensuse.org/repositories/windows:/mingw:/win32/openSUSE
 mv windows\:mingw\:win32.repo /etc/zypp/repos.d/
 zypper --gpg-auto-import-keys update
 
-zypper -n install mingw32-cross-gcc-c++ mingw32-cross-gcc mingw32-cross-pkg-config mingw32-libsndfile mingw32-libsndfile-devel mingw32-taglib mingw32-taglib-devel mingw32-glib2-devel mingw32-libqt4-devel mingw32-libspeex-devel mingw32-libspeex
-
-sed -i -e '34,39d' /usr/i686-w64-mingw32/sys-root/mingw/include/float.h
+zypper -n install --auto-agree-with-licenses mingw32-cross-gcc-c++ mingw32-cross-gcc mingw32-cross-pkg-config mingw32-libsndfile mingw32-libsndfile-devel mingw32-taglib mingw32-taglib-devel mingw32-glib2-devel mingw32-libqt4-devel mingw32-libspeex-devel mingw32-libspeex
 
 
 tar xf libmpc-0.1~r459.tar

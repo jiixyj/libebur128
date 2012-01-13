@@ -3,6 +3,12 @@
 
 extern "C" {
 #include "input.h"
+
+// work around error when including mingw-w64 1.0 float.h header
+#ifdef __MINGW32__
+#define _FLOAT_H___
+#endif
+
 #include "filetree.h"
 #include "scanner-tag.h"
 #include "scanner-common.h"

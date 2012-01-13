@@ -11,8 +11,6 @@ zypper --gpg-auto-import-keys update
 
 zypper -n install --auto-agree-with-licenses mingw64-cross-gcc-c++ mingw64-cross-gcc mingw64-cross-pkg-config mingw64-libsndfile mingw64-libsndfile-devel mingw64-taglib mingw64-taglib-devel mingw64-glib2-devel mingw64-libqt4-devel mingw64-libspeex-devel mingw64-libspeex
 
-sed -i -e '34,39d' /usr/x86_64-w64-mingw32/sys-root/mingw/include/float.h
-
 
 tar xf libmpc-0.1~r459.tar 
 cd libmpc-0.1~r459

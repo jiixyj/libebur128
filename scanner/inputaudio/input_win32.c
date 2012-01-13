@@ -1,5 +1,6 @@
 #include "input.h"
 
+#include <glib.h>
 #include <fcntl.h>
 
 int input_open_fd(const char* filename)

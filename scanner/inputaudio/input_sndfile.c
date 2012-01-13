@@ -3,6 +3,7 @@
 #include <sndfile.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <gmodule.h>
 
 #include "ebur128.h"
 #include "input.h"

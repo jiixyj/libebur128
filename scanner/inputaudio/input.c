@@ -1,6 +1,9 @@
 /* See LICENSE file for copyright and license details. */
 #include "input.h"
 
+#include <gmodule.h>
+#include <stdio.h>
+
 static const char* plugin_names[] = {
   "input_sndfile",
   "input_mpg123",
