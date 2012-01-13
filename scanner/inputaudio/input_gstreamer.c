@@ -6,6 +6,7 @@
 #include <locale.h>
 
 #include "input.h"
+#include "ebur128.h"
 
 struct input_handle {
   const char *filename;
