@@ -30,21 +30,8 @@ There is input support for gstreamer, libsndfile, libmpg123, FFmpeg
 and libmpcdec.
 
 
-Download
---------
-
-* [Source (tar.gz)](libebur128-0.4.0-Source.tar.gz)
-* [Source (zip)](libebur128-0.4.0-Source.zip)
-* [Win32 build (zip)](libebur128-0.4.0-win32.zip)
-* [Win32 SSE2 build (zip)](libebur128-0.4.0-win32-sse2.zip)
-* [Win64 build (zip)](libebur128-0.4.0-win64.zip)
-* [Linux32 build (tar.gz)](libebur128-0.4.0-Linux.tar.gz)
-* [Linux32 SSE2 build (tar.gz)](libebur128-0.4.0-Linux-sse2.tar.gz)
-* [Linux64 build (tar.gz)](libebur128-0.4.0-Linux64.tar.gz)
-
-
 Installation
------------
+------------
 
 In the root folder, type:
 
