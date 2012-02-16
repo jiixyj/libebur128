@@ -47,7 +47,7 @@ if(GLIB_FOUND)
             list(APPEND MY_GTK2_LIBRARIES ${lib})
         endif()
     endforeach()
-    target_link_libraries(loudness-drop-gtk ebur128 input filetree parse_args ${RSVG2_LIBRARIES} ${MY_GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
+    target_link_libraries(loudness-drop-gtk ebur128 input filetree parse_args ${GTHREAD_LIBRARY} ${RSVG2_LIBRARIES} ${MY_GTK2_LIBRARIES} ${TAGLIB_LIBRARIES})
     install(TARGETS loudness-drop-gtk
             RUNTIME DESTINATION ${FOLDER_BIN}
             LIBRARY DESTINATION ${FOLDER_PLUGIN})
