@@ -24,8 +24,8 @@ if(SPEEXDSP_FOUND)
     target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
 endif()
 
-if(NOT WIN32)
-    target_link_libraries(ebur128 m)
+if(M_LIBRARY)
+    target_link_libraries(ebur128 ${M_LIBRARY})
 endif()
 
 if(FOLDER_INCLUDE)

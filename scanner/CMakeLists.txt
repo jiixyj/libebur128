@@ -33,6 +33,10 @@ if(GLIB_FOUND)
   if(TAGLIB_FOUND)
     target_link_libraries(loudness ${TAGLIB_LIBRARIES})
   endif()
+  if(M_LIBRARY)
+    target_link_libraries(loudness ${M_LIBRARY})
+  endif()
+
   install(TARGETS loudness
           RUNTIME DESTINATION ${FOLDER_BIN}
           LIBRARY DESTINATION ${FOLDER_PLUGIN})

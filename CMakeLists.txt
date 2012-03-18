@@ -33,6 +33,7 @@ find_package(FFMPEG)
 find_package(TAGLIB)
 find_package(GSTREAMER)
 find_package(Qt4 COMPONENTS QtGui QtSvg)
+find_library(M_LIBRARY m)
 
 set(EBUR128_USE_SPEEX_RESAMPLER ${SPEEXDSP_FOUND})
 
