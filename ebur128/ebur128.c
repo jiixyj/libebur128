@@ -401,6 +401,23 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #endif
 }
 
+#ifdef __SSE2_MATH__
+#include <xmmintrin.h>
+#define TURN_ON_FTZ \
+        unsigned int mxcsr = _mm_getcsr(); \
+        _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON);
+#define TURN_OFF_FTZ _mm_setcsr(mxcsr);
+#define FLUSH_MANUALLY
+#else
+#warning "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse)"
+#define TURN_ON_FTZ
+#define TURN_OFF_FTZ
+#define FLUSH_MANUALLY \
+    st->d->v[ci][4] = fabs(st->d->v[ci][4]) < 1.0e-15 ? 0.0 : st->d->v[ci][4]; \
+    st->d->v[ci][3] = fabs(st->d->v[ci][3]) < 1.0e-15 ? 0.0 : st->d->v[ci][3]; \
+    st->d->v[ci][2] = fabs(st->d->v[ci][2]) < 1.0e-15 ? 0.0 : st->d->v[ci][2]; \
+    st->d->v[ci][1] = fabs(st->d->v[ci][1]) < 1.0e-15 ? 0.0 : st->d->v[ci][1];
+#endif
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
 static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
@@ -409,6 +426,9 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
                                  -((double) min_scale) : (double) max_scale;   \
   double* audio_data = st->d->audio_data + st->d->audio_data_index;            \
   size_t i, c;                                                                 \
+                                                                               \
+  TURN_ON_FTZ                                                                  \
+                                                                               \
   if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {     \
     for (c = 0; c < st->channels; ++c) {                                       \
       double max = 0.0;                                                        \
@@ -453,12 +473,9 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
       st->d->v[ci][2] = st->d->v[ci][1];                                       \
       st->d->v[ci][1] = st->d->v[ci][0];                                       \
     }                                                                          \
-    /* prevent denormal numbers */                                             \
-    st->d->v[ci][4] = fabs(st->d->v[ci][4]) < 1.0e-15 ? 0.0 : st->d->v[ci][4]; \
-    st->d->v[ci][3] = fabs(st->d->v[ci][3]) < 1.0e-15 ? 0.0 : st->d->v[ci][3]; \
-    st->d->v[ci][2] = fabs(st->d->v[ci][2]) < 1.0e-15 ? 0.0 : st->d->v[ci][2]; \
-    st->d->v[ci][1] = fabs(st->d->v[ci][1]) < 1.0e-15 ? 0.0 : st->d->v[ci][1]; \
+    FLUSH_MANUALLY                                                             \
   }                                                                            \
+  TURN_OFF_FTZ                                                                 \
 }
 EBUR128_FILTER(short, SHRT_MIN, SHRT_MAX)
 EBUR128_FILTER(int, INT_MIN, INT_MAX)
