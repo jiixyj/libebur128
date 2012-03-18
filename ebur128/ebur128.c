@@ -413,10 +413,10 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #define TURN_ON_FTZ
 #define TURN_OFF_FTZ
 #define FLUSH_MANUALLY \
-    st->d->v[ci][4] = fabs(st->d->v[ci][4]) < 1.0e-15 ? 0.0 : st->d->v[ci][4]; \
-    st->d->v[ci][3] = fabs(st->d->v[ci][3]) < 1.0e-15 ? 0.0 : st->d->v[ci][3]; \
-    st->d->v[ci][2] = fabs(st->d->v[ci][2]) < 1.0e-15 ? 0.0 : st->d->v[ci][2]; \
-    st->d->v[ci][1] = fabs(st->d->v[ci][1]) < 1.0e-15 ? 0.0 : st->d->v[ci][1];
+    st->d->v[ci][4] = fabs(st->d->v[ci][4]) < DBL_MIN ? 0.0 : st->d->v[ci][4]; \
+    st->d->v[ci][3] = fabs(st->d->v[ci][3]) < DBL_MIN ? 0.0 : st->d->v[ci][3]; \
+    st->d->v[ci][2] = fabs(st->d->v[ci][2]) < DBL_MIN ? 0.0 : st->d->v[ci][2]; \
+    st->d->v[ci][1] = fabs(st->d->v[ci][1]) < DBL_MIN ? 0.0 : st->d->v[ci][1];
 #endif
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
