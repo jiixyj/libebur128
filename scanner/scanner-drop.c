@@ -18,6 +18,7 @@
 
 gboolean verbose = TRUE;
 gboolean histogram = FALSE;
+gchar *decode_to_file = NULL;
 
 #if defined(__GNUC__)
 static void exit_program(void) __attribute__ ((noreturn));

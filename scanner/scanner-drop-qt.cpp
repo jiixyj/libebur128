@@ -7,6 +7,7 @@
 
 gboolean verbose = TRUE;
 gboolean histogram = FALSE;
+gchar *decode_to_file = NULL;
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent, Qt::FramelessWindowHint |

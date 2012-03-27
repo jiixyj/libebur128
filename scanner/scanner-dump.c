@@ -11,6 +11,7 @@ extern gboolean verbose;
 static double momentary;
 static double shortterm;
 static double integrated;
+extern gchar *decode_to_file;
 
 static GOptionEntry entries[] =
 {
@@ -123,8 +124,12 @@ int loudness_dump(GSList *files)
 
 gboolean loudness_dump_parse(int *argc, char **argv[])
 {
-    gboolean success = parse_mode_args(argc, argv, entries);
-    if (!success) {
+    if (decode_to_file) {
+        fprintf(stderr, "Cannot decode to file in dump mode\n");
+        return FALSE;
+    }
+
+    if (!parse_mode_args(argc, argv, entries)) {
         if (*argc == 1) fprintf(stderr, "Missing arguments\n");
         return FALSE;
     }

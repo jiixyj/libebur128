@@ -8,6 +8,14 @@
   #include "use_speex.h"
 #endif
 
+#ifdef HAVE_CONFIG_USE_SNDFILE_H
+  #include "use_sndfile.h"
+#endif
+
+#ifdef SNDFILE_FOUND
+  #include <sndfile.h>
+#endif
+
 extern gboolean verbose;
 
 static struct file_data empty;
@@ -101,6 +109,10 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     float *buffer = NULL;
     size_t nr_frames_read;
 
+#ifdef SNDFILE_FOUND
+    SNDFILE *outfile;
+#endif
+
     result = open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih);
     if (result) {
         g_mutex_lock(progress_mutex);
@@ -144,6 +156,16 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     if (result) abort();
     buffer = ops->get_buffer(ih);
 
+#ifdef SNDFILE_FOUND
+    if (opts->decode_file) {
+        SF_INFO sf_info = {0};
+        sf_info.samplerate = fd->st->samplerate;
+        sf_info.channels = fd->st->channels;
+        sf_info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+        outfile = sf_open(opts->decode_file, SFM_WRITE, &sf_info);
+    }
+#endif
+
     while ((nr_frames_read = ops->read_frames(ih))) {
         g_mutex_lock(progress_mutex);
         elapsed_frames += nr_frames_read;
@@ -151,8 +173,21 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
         g_mutex_unlock(progress_mutex);
         fd->number_of_elapsed_frames += nr_frames_read;
         result = ebur128_add_frames_float(fd->st, buffer, nr_frames_read);
+#ifdef SNDFILE_FOUND
+        if (opts->decode_file) {
+            if (sf_writef_float(outfile, buffer, nr_frames_read) != nr_frames_read)
+                sf_perror(outfile);
+        }
+#endif
         if (result) abort();
     }
+
+#ifdef SNDFILE_FOUND
+    if (opts->decode_file) {
+        sf_close(outfile);
+    }
+#endif
+
     if (fd->number_of_elapsed_frames != fd->number_of_frames) {
         if (verbose) {
             fprintf(stderr, "Warning: Could not read full file"

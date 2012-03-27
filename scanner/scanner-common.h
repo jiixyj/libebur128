@@ -34,6 +34,8 @@ struct scan_opts
 
     /* used if in tag mode to force dual mono */
     gboolean force_dual_mono;
+    /* if non-zero, decode all input audio to this file */
+    gchar *decode_file;
 };
 
 extern GMutex *progress_mutex;

@@ -52,6 +52,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_taglib.h.in
                ${CMAKE_BINARY_DIR}/use_taglib.h)
 add_definitions(-DHAVE_CONFIG_USE_TAGLIB_H)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_sndfile.h.in
+               ${CMAKE_BINARY_DIR}/use_sndfile.h)
+add_definitions(-DHAVE_CONFIG_USE_SNDFILE_H)
+
 
 ######################################
 ##### Add libraries/executables  #####

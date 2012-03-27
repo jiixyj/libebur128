@@ -25,6 +25,10 @@
   #include "use_speex.h"
 #endif
 
+#ifdef HAVE_CONFIG_USE_SNDFILE_H
+  #include "use_sndfile.h"
+#endif
+
 static void print_help(void) {
     printf("Usage: loudness scan|tag|dump [OPTION...] [FILE|DIRECTORY]...\n");
     printf("\n");
@@ -60,6 +64,10 @@ static void print_help(void) {
     printf("  --no-sort                  do not sort command line arguments alphabetically\n");
     printf("  --force-plugin=PLUGIN      force input plugin; PLUGIN is one of:\n");
     printf("                             sndfile, mpg123, musepack, ffmpeg\n");
+#ifdef SNDFILE_FOUND
+    printf("  --decode=FILE              decode one input to FILE (32 bit float WAV,\n");
+    printf("                             only available in scan and tag mode)\n");
+#endif
     printf("\n");
     printf(" Scan options:\n");
     printf("  -l, --lra                  calculate loudness range in LRA\n");
@@ -90,6 +98,7 @@ static gboolean no_sort = FALSE;
        gboolean verbose = FALSE;
        gboolean histogram = FALSE;
 static gchar *forced_plugin = NULL;
+       gchar *decode_to_file = NULL;
 static gboolean help = FALSE;
 
 static GOptionEntry entries[] =
@@ -100,6 +109,9 @@ static GOptionEntry entries[] =
     { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, NULL, NULL },
     { "histogram", 0, 0, G_OPTION_ARG_NONE, &histogram, NULL, NULL },
     { "force-plugin", 0, 0, G_OPTION_ARG_STRING, &forced_plugin, NULL, NULL },
+#ifdef SNDFILE_FOUND
+    { "decode", 0, 0, G_OPTION_ARG_STRING, &decode_to_file, NULL, NULL },
+#endif
     { "help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL },
     { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, 0 }
 };
@@ -138,6 +150,11 @@ int main(int argc, char *argv[])
     if (!mode_parsed) {
         exit(EXIT_FAILURE);
     }
+    if (decode_to_file && argc - 1 != 1) {
+        fprintf(stderr, "Cannot decode more than one file\n");
+        exit(EXIT_FAILURE);
+    }
+
     g_thread_init(NULL);
     input_init(argv[0], forced_plugin);
     scanner_init_common();
