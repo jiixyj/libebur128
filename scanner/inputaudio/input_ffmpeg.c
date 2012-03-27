@@ -117,7 +117,7 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
 #if LIBAVCODEC_VERSION_MAJOR >= 54 || \
     (LIBAVCODEC_VERSION_MAJOR == 53 && \
      LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 4, 0))
-  ih->codec_context->request_sample_fmt = SAMPLE_FMT_FLT;
+  ih->codec_context->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 #endif
   // Find the decoder for the video stream
   ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
@@ -151,19 +151,19 @@ static int ffmpeg_set_channel_map(struct input_handle* ih, int* st) {
     while (channel_map_index < (unsigned) ih->codec_context->channels) {
       if (ih->codec_context->channel_layout & (1 << bit_counter)) {
         switch (1 << bit_counter) {
-          case CH_FRONT_LEFT:
+          case AV_CH_FRONT_LEFT:
             st[channel_map_index] = EBUR128_LEFT;
             break;
-          case CH_FRONT_RIGHT:
+          case AV_CH_FRONT_RIGHT:
             st[channel_map_index] = EBUR128_RIGHT;
             break;
-          case CH_FRONT_CENTER:
+          case AV_CH_FRONT_CENTER:
             st[channel_map_index] = EBUR128_CENTER;
             break;
-          case CH_BACK_LEFT:
+          case AV_CH_BACK_LEFT:
             st[channel_map_index] = EBUR128_LEFT_SURROUND;
             break;
-          case CH_BACK_RIGHT:
+          case AV_CH_BACK_RIGHT:
             st[channel_map_index] = EBUR128_RIGHT_SURROUND;
             break;
           default:
@@ -238,10 +238,10 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
         }
         size_t nr_frames_read, i;
         switch (ih->codec_context->sample_fmt) {
-          case SAMPLE_FMT_U8:
+          case AV_SAMPLE_FMT_U8:
             fprintf(stderr, "8 bit audio not supported by libebur128!\n");
             return 0;
-          case SAMPLE_FMT_S16:
+          case AV_SAMPLE_FMT_S16:
             nr_frames_read = (size_t) data_size / sizeof(int16_t) /
                              (size_t) ih->codec_context->channels;
             for (i = 0; i < (size_t) data_size / sizeof(int16_t); ++i) {
@@ -249,7 +249,7 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
                               MAX(-(float) SHRT_MIN, (float) SHRT_MAX);
             }
             break;
-          case SAMPLE_FMT_S32:
+          case AV_SAMPLE_FMT_S32:
             nr_frames_read = (size_t) data_size / sizeof(int32_t) /
                              (size_t) ih->codec_context->channels;
             for (i = 0; i < (size_t) data_size / sizeof(int32_t); ++i) {
@@ -257,22 +257,22 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
                               MAX(-(float) INT_MIN, (float) INT_MAX);
             }
             break;
-          case SAMPLE_FMT_FLT:
+          case AV_SAMPLE_FMT_FLT:
             nr_frames_read = (size_t) data_size / sizeof(float) /
                              (size_t) ih->codec_context->channels;
             for (i = 0; i < (size_t) data_size / sizeof(float); ++i) {
               ih->buffer[i] = data_float[i];
             }
             break;
-          case SAMPLE_FMT_DBL:
+          case AV_SAMPLE_FMT_DBL:
             nr_frames_read = (size_t) data_size / sizeof(double) /
                              (size_t) ih->codec_context->channels;
             for (i = 0; i < (size_t) data_size / sizeof(double); ++i) {
               ih->buffer[i] = (float) data_double[i];
             }
             break;
-          case SAMPLE_FMT_NONE:
-          case SAMPLE_FMT_NB:
+          case AV_SAMPLE_FMT_NONE:
+          case AV_SAMPLE_FMT_NB:
           default:
             fprintf(stderr, "Unknown sample format!\n");
             return 0;
