@@ -144,9 +144,15 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   ih->old_data = NULL;
 
   if (ih->codec_context->codec_id == CODEC_ID_MP3) {
-    input_read_mp3_padding(ih->format_context->filename,
-                           &ih->mp3_padding_start,
-                           &ih->mp3_padding_end);
+    if (input_read_mp3_padding(ih->format_context->filename,
+                               &ih->mp3_padding_start,
+                               &ih->mp3_padding_end) == 0) {
+      ih->mp3_padding_start += 528;
+      if (ih->mp3_padding_end < 528)
+        fprintf(stderr, "Weird end padding value, please investigate\n");
+      else
+        ih->mp3_padding_end -= 528;
+    }
   }
 
   return 0;
