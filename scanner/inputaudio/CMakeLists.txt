@@ -6,11 +6,12 @@ if(GLIB_FOUND)
   add_library(input input)
   target_link_libraries(input ${GMODULE_LIBRARY})
 
-  if(WIN32)
-    add_library(input_win32 input_win32)
-    target_link_libraries(input_win32 ${GLIB_LIBRARIES})
-    set(INPUT_HELPERS input_win32)
-  endif()
+  add_library(input_helper input_helper)
+  target_link_libraries(input_helper ${GLIB_LIBRARIES})
+
+  set(INPUT_HELPERS input_helper)
+
+  add_library(mp3_padding mp3_padding)
 
   if(WIN32 AND NOT "${CMAKE_SHARED_MODULE_PREFIX}")
     set(CMAKE_SHARED_MODULE_PREFIX "lib")
@@ -36,7 +37,7 @@ if(GLIB_FOUND)
 
   if(FFMPEG_FOUND)
     include_directories(SYSTEM ${FFMPEG_INCLUDE_DIRS})
-    add_library(input_ffmpeg MODULE input_ffmpeg.c)
+    add_library(input_ffmpeg MODULE input_ffmpeg.c mp3_padding.c input_helper.c)
     target_link_libraries(input_ffmpeg ${FFMPEG_LIBRARIES} ${GLIB_LIBRARY})
   endif()
 

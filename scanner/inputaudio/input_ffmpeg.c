@@ -13,7 +13,7 @@ static GStaticMutex ffmpeg_mutex = G_STATIC_MUTEX_INIT;
 
 struct _buffer {
   uint8_t audio_buf[BUFFER_SIZE];
-} __attribute__ ((aligned (8)));
+} __attribute__ ((aligned (16)));
 
 struct buffer_list_node {
   guint8 *data;
@@ -34,6 +34,10 @@ struct input_handle {
   GSList *buffer_list;
   size_t current_bytes;
 
+  int mp3_padding_start;
+  int mp3_padding_end;
+  int mp3_has_skipped_beginning;
+  int mp3_stop;
 };
 
 static unsigned ffmpeg_get_channels(struct input_handle* ih) {
@@ -55,6 +59,9 @@ static struct input_handle* ffmpeg_handle_init() {
   av_init_packet(&ret->packet);
   ret->buffer_list = NULL;
   ret->current_bytes = 0;
+  ret->mp3_has_skipped_beginning = 0;
+  ret->mp3_stop = 0;
+
   return ret;
 }
 
@@ -135,6 +142,13 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   g_static_mutex_unlock(&ffmpeg_mutex);
   ih->need_new_frame = TRUE;
   ih->old_data = NULL;
+
+  if (ih->codec_context->codec_id == CODEC_ID_MP3) {
+    input_read_mp3_padding(ih->format_context->filename,
+                           &ih->mp3_padding_start,
+                           &ih->mp3_padding_end);
+  }
+
   return 0;
 
 close_file:
@@ -190,6 +204,11 @@ static size_t ffmpeg_get_total_frames(struct input_handle* ih) {
              * (double) ih->format_context->streams[ih->audio_stream]->time_base.num
              / (double) ih->format_context->streams[ih->audio_stream]->time_base.den
              * (double) ih->codec_context->sample_rate;
+
+  if (ih->codec_context->codec_id == CODEC_ID_MP3) {
+    tmp -= ih->mp3_padding_start + ih->mp3_padding_end;
+  }
+
   if (tmp <= 0.0) {
     return 0;
   } else {
@@ -202,6 +221,7 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
     if (ih->need_new_frame && av_read_frame(ih->format_context, &ih->packet) < 0) {
       return 0;
     }
+
     ih->need_new_frame = FALSE;
     if (ih->packet.stream_index == ih->audio_stream) {
       int16_t* data_short =  (int16_t*) &ih->audio_buf;
@@ -291,8 +311,11 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
     size_t buf_pos = 0, nr_frames_read;
     GSList *next;
     struct buffer_list_node *buf_node;
+    size_t frames_return;
 
-    while (ih->current_bytes < BUFFER_SIZE) {
+    if (ih->mp3_stop) return 0;
+
+    while (ih->current_bytes < BUFFER_SIZE * 2) {
         nr_frames_read = ffmpeg_read_one_packet(ih);
         if (!nr_frames_read) {
             break;
@@ -318,7 +341,28 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
         ih->buffer_list = next;
     }
 
-    return buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
+
+    frames_return = buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
+    if (frames_return == 0) return 0;
+
+    if (ih->codec_context->codec_id == CODEC_ID_MP3) {
+        if (!ih->mp3_has_skipped_beginning) {
+            memmove(ih->buffer, ih->buffer + ih->mp3_padding_start * sizeof(float) * ffmpeg_get_channels(ih),
+                                buf_pos - ih->mp3_padding_start * sizeof(float) * ffmpeg_get_channels(ih));
+            frames_return -= ih->mp3_padding_start;
+
+            ih->mp3_has_skipped_beginning = 1;
+        }
+
+        if (!ih->buffer_list) {
+            frames_return -= ih->mp3_padding_end;
+        } else if (ih->mp3_padding_end > ih->current_bytes / sizeof(float) / ffmpeg_get_channels(ih)) {
+            frames_return -= ih->mp3_padding_end - ih->current_bytes / sizeof(float) / ffmpeg_get_channels(ih);
+            ih->mp3_stop = 1;
+        }
+    }
+
+    return frames_return;
 }
 
 static void ffmpeg_free_buffer(struct input_handle* ih) {
