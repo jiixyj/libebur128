@@ -347,7 +347,7 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
 
     if (ih->codec_context->codec_id == CODEC_ID_MP3) {
         if (!ih->mp3_has_skipped_beginning) {
-            memmove(ih->buffer, ih->buffer + ih->mp3_padding_start * sizeof(float) * ffmpeg_get_channels(ih),
+            memmove(ih->buffer, ih->buffer + ih->mp3_padding_start * ffmpeg_get_channels(ih),
                                 buf_pos - ih->mp3_padding_start * sizeof(float) * ffmpeg_get_channels(ih));
             frames_return -= ih->mp3_padding_start;
 
