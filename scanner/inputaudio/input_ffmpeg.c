@@ -36,8 +36,8 @@ struct input_handle {
   GSList *buffer_list;
   size_t current_bytes;
 
-  int mp3_padding_start;
-  int mp3_padding_end;
+  unsigned mp3_padding_start;
+  unsigned mp3_padding_end;
   int mp3_has_skipped_beginning;
   int mp3_stop;
 };

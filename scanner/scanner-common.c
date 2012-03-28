@@ -158,9 +158,10 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
 
 #ifdef SNDFILE_FOUND
     if (opts->decode_file) {
-        SF_INFO sf_info = {0};
-        sf_info.samplerate = fd->st->samplerate;
-        sf_info.channels = fd->st->channels;
+        SF_INFO sf_info;
+        memset(&sf_info, '\0', sizeof sf_info);
+        sf_info.samplerate = (int) fd->st->samplerate;
+        sf_info.channels = (int) fd->st->channels;
         sf_info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
         outfile = sf_open(opts->decode_file, SFM_WRITE, &sf_info);
         if (!outfile) {
@@ -179,7 +180,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
         result = ebur128_add_frames_float(fd->st, buffer, nr_frames_read);
 #ifdef SNDFILE_FOUND
         if (opts->decode_file) {
-            if (sf_writef_float(outfile, buffer, nr_frames_read) != nr_frames_read)
+            if (sf_writef_float(outfile, buffer, (sf_count_t) nr_frames_read) != (sf_count_t) nr_frames_read)
                 sf_perror(outfile);
         }
 #endif

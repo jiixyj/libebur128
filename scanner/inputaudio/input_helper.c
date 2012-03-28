@@ -1,6 +1,13 @@
 #include "input.h"
 
 #include <glib.h>
+
+#ifndef G_OS_WIN32
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
+#endif
+
 #include <fcntl.h>
 
 int input_open_fd(const char* filename)
@@ -29,6 +36,6 @@ int input_read_fd(int fd, void *buf, unsigned int count)
 #ifdef G_OS_WIN32
     return _read(fd, buf, count);
 #else
-    return read(fd, buf, count);
+    return (int) read(fd, buf, count);
 #endif
 }
