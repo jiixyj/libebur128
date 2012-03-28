@@ -37,7 +37,7 @@ if(GLIB_FOUND)
 
   if(FFMPEG_FOUND)
     include_directories(SYSTEM ${FFMPEG_INCLUDE_DIRS})
-    add_library(input_ffmpeg MODULE input_ffmpeg.c mp3_padding.c input_helper.c)
+    add_library(input_ffmpeg MODULE input_ffmpeg.c mp3_padding.c mp4_padding.c input_helper.c)
     target_link_libraries(input_ffmpeg ${FFMPEG_LIBRARIES} ${GLIB_LIBRARY})
   endif()
 

@@ -6,6 +6,8 @@
 
 #include "ebur128.h"
 #include "input.h"
+#include "mp3_padding.h"
+#include "mp4_padding.h"
 
 static GStaticMutex ffmpeg_mutex = G_STATIC_MUTEX_INIT;
 
@@ -153,6 +155,10 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
       else
         ih->mp3_padding_end -= 528;
     }
+  } else if (ih->codec_context->codec_id == CODEC_ID_AAC) {
+    input_read_mp4_padding(ih->format_context->filename,
+                           &ih->mp3_padding_start,
+                           &ih->mp3_padding_end);
   }
 
   return 0;
@@ -211,7 +217,8 @@ static size_t ffmpeg_get_total_frames(struct input_handle* ih) {
              / (double) ih->format_context->streams[ih->audio_stream]->time_base.den
              * (double) ih->codec_context->sample_rate;
 
-  if (ih->codec_context->codec_id == CODEC_ID_MP3) {
+  if (ih->codec_context->codec_id == CODEC_ID_MP3 ||
+      ih->codec_context->codec_id == CODEC_ID_AAC) {
     tmp -= ih->mp3_padding_start + ih->mp3_padding_end;
   }
 
@@ -351,7 +358,8 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
     frames_return = buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
     if (frames_return == 0) return 0;
 
-    if (ih->codec_context->codec_id == CODEC_ID_MP3) {
+    if (ih->codec_context->codec_id == CODEC_ID_MP3 ||
+        ih->codec_context->codec_id == CODEC_ID_AAC) {
         if (!ih->mp3_has_skipped_beginning) {
             memmove(ih->buffer, ih->buffer + ih->mp3_padding_start * ffmpeg_get_channels(ih),
                                 buf_pos - ih->mp3_padding_start * sizeof(float) * ffmpeg_get_channels(ih));

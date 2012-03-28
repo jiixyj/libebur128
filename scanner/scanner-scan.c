@@ -44,12 +44,13 @@ static void print_file_data(struct filename_list_node *fln, gpointer unused)
                 g_print(", %11.6f", fd->peak);
             if (!strcmp(peak, "true") || !strcmp(peak, "all"))
                 g_print(", %11.6f", fd->true_peak);
-            if (!strcmp(peak, "dbtp") || !strcmp(peak, "all"))
+            if (!strcmp(peak, "dbtp") || !strcmp(peak, "all")) {
                 if (fd->true_peak < DBL_MIN)
                     g_print(",  -inf dBTP");
                 else
                     g_print(", %5.1f dBTP",
                             20.0 * log(fd->true_peak) / log(10.0));
+            }
         }
         if (fln->fr->display[0]) {
             g_print(", ");

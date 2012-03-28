@@ -110,7 +110,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     size_t nr_frames_read;
 
 #ifdef SNDFILE_FOUND
-    SNDFILE *outfile;
+    SNDFILE *outfile = NULL;
 #endif
 
     result = open_plugin(fln->fr->raw, fln->fr->display, &ops, &ih);
@@ -163,6 +163,10 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
         sf_info.channels = fd->st->channels;
         sf_info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
         outfile = sf_open(opts->decode_file, SFM_WRITE, &sf_info);
+        if (!outfile) {
+            fprintf(stderr, "output file could not be opened\n");
+            exit(EXIT_FAILURE);
+        }
     }
 #endif
 
