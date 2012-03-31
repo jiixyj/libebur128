@@ -156,11 +156,11 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
     if (input_read_mp3_padding(ih->format_context->filename,
                                &ih->mp3_padding_start,
                                &ih->mp3_padding_end) == 0) {
-      ih->mp3_padding_start += 528;
-      if (ih->mp3_padding_end < 528)
+      ih->mp3_padding_start += 529;
+      if (ih->mp3_padding_end < 529)
         fprintf(stderr, "Weird end padding value, please investigate\n");
       else
-        ih->mp3_padding_end -= 528;
+        ih->mp3_padding_end -= 529;
     }
   } else if (ih->codec_context->codec_id == CODEC_ID_AAC) {
     input_read_mp4_padding(ih->format_context->filename,
