@@ -128,13 +128,20 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
      LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 4, 0))
   ih->codec_context->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 #endif
-  // Find the decoder for the video stream
   ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
   if (ih->codec == NULL) {
     fprintf(stderr, "Could not find a decoder for the audio format!\n");
     g_static_mutex_unlock(&ffmpeg_mutex);
     goto close_file;
   }
+
+  char *float_codec = g_malloc(strlen(ih->codec->name) + sizeof("float") + 1);
+  sprintf(float_codec, "%sfloat", ih->codec->name);
+  AVCodec *possible_float_codec = avcodec_find_decoder_by_name(float_codec);
+  if (possible_float_codec)
+    ih->codec = possible_float_codec;
+  g_free(float_codec);
+
   // Open codec
   if (avcodec_open(ih->codec_context, ih->codec) < 0) {
     fprintf(stderr, "Could not open the codec!\n");
