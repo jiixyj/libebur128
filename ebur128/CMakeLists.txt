@@ -19,7 +19,7 @@ set_target_properties(ebur128 PROPERTIES
     VERSION ${EBUR128_VERSION}
     LINK_INTERFACE_LIBRARIES "")
 
-if(SPEEXDSP_FOUND)
+if(USE_SPEEX_RESAMPLER)
     include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
     target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
 endif()

@@ -1,1 +1,1 @@
-#cmakedefine SNDFILE_FOUND
+#cmakedefine USE_SNDFILE

@@ -133,7 +133,7 @@ gboolean loudness_scan_parse(int *argc, char **argv[])
 {
     gboolean success = parse_mode_args(argc, argv, entries);
     if (peak && strcmp(peak, "sample")
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
              && strcmp(peak, "true")
              && strcmp(peak, "dbtp")
              && strcmp(peak, "all")

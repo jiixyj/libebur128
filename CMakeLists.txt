@@ -9,8 +9,22 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 include_directories(ebur128)
 include_directories(scanner)
+include_directories(${CMAKE_BINARY_DIR})
 
 enable_testing()
+
+
+include(GNUInstallDirs OPTIONAL)
+
+if(NOT DEFINED CMAKE_INSTALL_BINDIR)
+  set(CMAKE_INSTALL_BINDIR "bin")
+endif()
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+  set(CMAKE_INSTALL_LIBDIR "lib")
+endif()
+if(NOT DEFINED CMAKE_INSTALL_INCLUDEDIR)
+  set(CMAKE_INSTALL_INCLUDEDIR "include")
+endif()
 
 ######################################
 ##### Library setup              #####
@@ -22,12 +36,12 @@ if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-shlib-undefined")
 endif()
 
-find_package(SNDFILE)
-find_package(MPG123)
-find_package(MPCDEC)
 find_package(GLIB)
 find_package(GTK2)
 find_package(RSVG2)
+find_package(SNDFILE)
+find_package(MPG123)
+find_package(MPCDEC)
 find_package(SPEEXDSP)
 find_package(FFMPEG)
 find_package(TAGLIB)
@@ -35,15 +49,37 @@ find_package(GSTREAMER)
 find_package(Qt4 COMPONENTS QtGui QtSvg)
 find_library(M_LIBRARY m)
 
-set(EBUR128_USE_SPEEX_RESAMPLER ${SPEEXDSP_FOUND})
 
-set(USE_TAGLIB ${TAGLIB_FOUND} CACHE BOOL "Use taglib for ReplayGain compatible tagging")
-if(NOT USE_TAGLIB)
-  set(TAGLIB_FOUND FALSE)
+# set up install folders
+set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
+if(FLAT_INSTALL)
+  set(FOLDER_DOC .)
+  set(FOLDER_BIN .)
+  set(FOLDER_LIB .)
+  set(FOLDER_PLUGIN .)
+else()
+  set(FOLDER_BIN ${CMAKE_INSTALL_BINDIR})
+  set(FOLDER_LIB ${CMAKE_INSTALL_LIBDIR}/${CMAKE_LIBRARY_ARCHITECTURE})
+  set(FOLDER_PLUGIN ${CMAKE_INSTALL_LIBDIR}/${CMAKE_LIBRARY_ARCHITECTURE}/ebur128-loudness-tools)
+  set(FOLDER_INCLUDE ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 
-include_directories(${CMAKE_BINARY_DIR})
+set(USE_GLIB            ${GLIB_FOUND}      CACHE BOOL "Enable scanner support")
+set(USE_GTK2            ${GTK2_FOUND}      CACHE BOOL "Enable GTK GUI scanner")
+set(USE_RSVG2           ${RSVG2_FOUND}     CACHE BOOL "Needed for GTK GUI")
+set(USE_SNDFILE         ${SNDFILE_FOUND}   CACHE BOOL "Enable libsndfile plugin")
+set(USE_MPG123          ${MPG123_FOUND}    CACHE BOOL "Enable mpg123 plugin")
+set(USE_MPCDEC          ${MPCDEC_FOUND}    CACHE BOOL "Enable mpcdec plugin")
+set(USE_SPEEX_RESAMPLER ${SPEEXDSP_FOUND}  CACHE BOOL "Use speex resampler for true peak scanning")
+set(USE_FFMPEG          ${FFMPEG_FOUND}    CACHE BOOL "Enable FFmpeg/Libav plugin")
+set(USE_TAGLIB          ${TAGLIB_FOUND}    CACHE BOOL "Use taglib for ReplayGain compatible tagging")
+set(USE_GSTREAMER       ${GSTREAMER_FOUND} CACHE BOOL "Enable GStreamer plugin")
+set(USE_QT              ${QT_FOUND}        CACHE BOOL "Enable Qt4 GUI support")
+
+set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/${FOLDER_PLUGIN}")
+
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_speex.h.in
                ${CMAKE_BINARY_DIR}/use_speex.h)
 add_definitions(-DHAVE_CONFIG_USE_SPEEX_H)
@@ -56,43 +92,45 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_sndfile.h.in
                ${CMAKE_BINARY_DIR}/use_sndfile.h)
 add_definitions(-DHAVE_CONFIG_USE_SNDFILE_H)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/plugin_path.h.in
+               ${CMAKE_BINARY_DIR}/plugin_path.h)
+add_definitions(-DHAVE_CONFIG_PLUGIN_PATH_H)
+
 
 ######################################
 ##### Add libraries/executables  #####
 ######################################
+macro(to_yes_no vars)
+  foreach(var ${ARGV})
+    if(${var})
+      set(${var} yes)
+    else()
+      set(${var} no)
+    endif()
+  endforeach()
+endmacro()
+
+to_yes_no(GLIB_FOUND GTK2_FOUND RSVG2_FOUND SNDFILE_FOUND MPG123_FOUND MPCDEC_FOUND SPEEXDSP_FOUND FFMPEG_FOUND TAGLIB_FOUND GSTREAMER_FOUND QT_FOUND)
+to_yes_no(USE_GLIB USE_GTK2 USE_RSVG2 USE_SNDFILE USE_MPG123 USE_MPCDEC USE_SPEEX_RESAMPLER USE_FFMPEG USE_TAGLIB USE_GSTREAMER USE_QT)
 
 ##### Print status
-message(STATUS "status --")
-message(STATUS "glib-2.0:       ${GLIB_FOUND}")
-message(STATUS "gtk-2.0:        ${GTK2_FOUND}")
-message(STATUS "libsndfile:     ${SNDFILE_FOUND}")
-message(STATUS "libmpg123:      ${MPG123_FOUND}")
-message(STATUS "libmpcdec:      ${MPCDEC_FOUND}")
-message(STATUS "speexdsp:       ${SPEEXDSP_FOUND}")
-message(STATUS "ffmpeg:         ${FFMPEG_FOUND}")
-message(STATUS "taglib:         ${TAGLIB_FOUND}")
-message(STATUS "gstreamer:      ${GSTREAMER_FOUND}")
-message(STATUS "qt4:            ${QT_FOUND}")
-
-# set up install folders
-set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
-if(FLAT_INSTALL)
-  set(FOLDER_DOC .)
-  set(FOLDER_BIN .)
-  set(FOLDER_LIB .)
-  set(FOLDER_PLUGIN .)
-else()
-  set(FOLDER_BIN bin)
-  set(FOLDER_LIB lib)
-  set(FOLDER_PLUGIN lib/ebur128-loudness-tools)
-  set(FOLDER_INCLUDE include)
-endif()
+message(STATUS "status          found / use --")
+message(STATUS "glib-2.0:       ${GLIB_FOUND}"     "     ${USE_GLIB}")
+message(STATUS "gtk-2.0:        ${GTK2_FOUND}"     "     ${USE_GTK2}")
+message(STATUS "rsvg2:          ${RSVG2_FOUND}"    "     ${USE_RSVG2}")
+message(STATUS "libsndfile:     ${SNDFILE_FOUND}"  "     ${USE_SNDFILE}")
+message(STATUS "libmpg123:      ${MPG123_FOUND}"   "     ${USE_MPG123}")
+message(STATUS "libmpcdec:      ${MPCDEC_FOUND}"   "     ${USE_MPCDEC}")
+message(STATUS "speexdsp:       ${SPEEXDSP_FOUND}" "     ${USE_SPEEX_RESAMPLER}")
+message(STATUS "ffmpeg:         ${FFMPEG_FOUND}"   "     ${USE_FFMPEG}")
+message(STATUS "taglib:         ${TAGLIB_FOUND}"   "     ${USE_TAGLIB}")
+message(STATUS "gstreamer:      ${GSTREAMER_FOUND}""     ${USE_GSTREAMER}")
+message(STATUS "qt4:            ${QT_FOUND}"       "     ${USE_QT}")
 
 
 add_subdirectory(ebur128)
 add_subdirectory(scanner)
 add_subdirectory(test)
-
 
 ######################################
 ##### Install                    #####
@@ -126,11 +164,7 @@ if(SNDFILE_FOUND AND MPG123_FOUND AND MPCDEC_FOUND AND FFMPEG_FOUND AND
 
   set(CPACK_SOURCE_IGNORE_FILES "/TODO;/build.*/;/.git/;/.gitignore;/.gitmodules;/mingw.*/;swp$;~$;${CPACK_SOURCE_IGNORE_FILES}")
 
-  if(WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-    set(CPACK_SYSTEM_NAME "win64")
-  elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-    set(CPACK_SYSTEM_NAME "Linux64")
-  endif()
+  set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 
   include(CPack)
 endif()

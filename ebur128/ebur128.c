@@ -23,10 +23,10 @@
 #include <stdlib.h>
 
 #ifdef HAVE_CONFIG_USE_SPEEX_H
-  #include "use_speex.h" /* or define EBUR128_USE_SPEEX_RESAMPLER manually */
+  #include "use_speex.h" /* or define USE_SPEEX_RESAMPLER manually */
 #endif
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
   #include <speex/speex_resampler.h>
 #endif
 
@@ -79,7 +79,7 @@ struct ebur128_state_internal {
   double* sample_peak;
   /** Maximum true peak, one per channel */
   double* true_peak;
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
   SpeexResamplerState* resampler;
 #endif
   size_t oversample_factor;
@@ -169,7 +169,7 @@ static int ebur128_init_channel_map(ebur128_state* st) {
   return EBUR128_SUCCESS;
 }
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
 static int ebur128_init_resampler(ebur128_state* st) {
   int errcode = EBUR128_SUCCESS;
 
@@ -293,7 +293,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   SLIST_INIT(&st->d->short_term_block_list);
   st->d->short_term_frame_counter = 0;
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
   result = ebur128_init_resampler(st);
   CHECK_ERROR(result, 0, free_short_term_block_energy_histogram)
 #endif
@@ -356,7 +356,7 @@ void ebur128_destroy(ebur128_state** st) {
     SLIST_REMOVE_HEAD(&(*st)->d->short_term_block_list, entries);
     free(entry);
   }
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
   ebur128_destroy_resampler(*st);
 #endif
 
@@ -366,7 +366,7 @@ void ebur128_destroy(ebur128_state** st) {
 }
 
 static int ebur128_use_speex_resampler(ebur128_state* st) {
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
   return ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK);
 #else
   (void) st;
@@ -375,7 +375,7 @@ static int ebur128_use_speex_resampler(ebur128_state* st) {
 }
 
 static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
   size_t c, i;
   spx_uint32_t in_len = (spx_uint32_t) frames;
   spx_uint32_t out_len = (spx_uint32_t) st->d->resampler_buffer_output_frames;
@@ -593,7 +593,7 @@ int ebur128_change_parameters(ebur128_state* st,
     free(st->d->true_peak);   st->d->true_peak = NULL;
     st->channels = channels;
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
     ebur128_destroy_resampler(st);
     ebur128_init_resampler(st);
 #endif
@@ -979,7 +979,7 @@ int ebur128_sample_peak(ebur128_state* st,
   return EBUR128_SUCCESS;
 }
 
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
 int ebur128_true_peak(ebur128_state* st,
                       unsigned int channel_number,
                       double* out) {

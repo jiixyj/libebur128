@@ -64,14 +64,14 @@ static void print_help(void) {
     printf("  --no-sort                  do not sort command line arguments alphabetically\n");
     printf("  --force-plugin=PLUGIN      force input plugin; PLUGIN is one of:\n");
     printf("                             sndfile, mpg123, musepack, ffmpeg\n");
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
     printf("  --decode=FILE              decode one input to FILE (32 bit float WAV,\n");
     printf("                             only available in scan and tag mode)\n");
 #endif
     printf("\n");
     printf(" Scan options:\n");
     printf("  -l, --lra                  calculate loudness range in LRA\n");
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
     printf("  -p, --peak=sample|true|dbtp|all  -p sample: sample peak (float value)\n");
     printf("                                   -p true:   true peak (float value)\n");
     printf("                                   -p dbtp:   true peak (dB True Peak)\n");
@@ -109,7 +109,7 @@ static GOptionEntry entries[] =
     { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, NULL, NULL },
     { "histogram", 0, 0, G_OPTION_ARG_NONE, &histogram, NULL, NULL },
     { "force-plugin", 0, 0, G_OPTION_ARG_STRING, &forced_plugin, NULL, NULL },
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
     { "decode", 0, 0, G_OPTION_ARG_STRING, &decode_to_file, NULL, NULL },
 #endif
     { "help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL },

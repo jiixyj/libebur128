@@ -4,6 +4,12 @@
 #include <gmodule.h>
 #include <stdio.h>
 
+#ifdef HAVE_CONFIG_PLUGIN_PATH_H
+#include "plugin_path.h"
+#else
+#define PLUGIN_PATH ""
+#endif
+
 static const char* plugin_names[] = {
   "input_sndfile",
   "input_mpg123",
@@ -20,9 +26,7 @@ static const char* plugin_search_dirs[] = {
   "r128",
   "",
   NULL, /* = g_path_get_dirname(av0); */
-  "/usr/lib/r128",
-  "/usr/lib/ebur128",
-  "/usr/lib/ebur128-loudness-tools",
+  PLUGIN_PATH,
   NULL
 };
 

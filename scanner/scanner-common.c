@@ -12,7 +12,7 @@
   #include "use_sndfile.h"
 #endif
 
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
   #include <sndfile.h>
 #endif
 
@@ -109,7 +109,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     float *buffer = NULL;
     size_t nr_frames_read;
 
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
     SNDFILE *outfile = NULL;
 #endif
 
@@ -127,7 +127,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     if (opts->peak) {
         if (!strcmp(opts->peak, "sample") || !strcmp(opts->peak, "all"))
             r128_mode |= EBUR128_MODE_SAMPLE_PEAK;
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
         if (!strcmp(opts->peak, "true") || !strcmp(opts->peak, "dbtp") ||
             !strcmp(opts->peak, "all"))
             r128_mode |= EBUR128_MODE_TRUE_PEAK;
@@ -156,7 +156,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
     if (result) abort();
     buffer = ops->get_buffer(ih);
 
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
     if (opts->decode_file) {
         SF_INFO sf_info;
         memset(&sf_info, '\0', sizeof sf_info);
@@ -178,7 +178,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
         g_mutex_unlock(progress_mutex);
         fd->number_of_elapsed_frames += nr_frames_read;
         result = ebur128_add_frames_float(fd->st, buffer, nr_frames_read);
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
         if (opts->decode_file) {
             if (sf_writef_float(outfile, buffer, (sf_count_t) nr_frames_read) != (sf_count_t) nr_frames_read)
                 sf_perror(outfile);
@@ -187,7 +187,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
         if (result) abort();
     }
 
-#ifdef SNDFILE_FOUND
+#ifdef USE_SNDFILE
     if (opts->decode_file) {
         sf_close(outfile);
     }
@@ -220,7 +220,7 @@ void init_state_and_scan_work_item(struct filename_list_node *fln, struct scan_o
             }
         }
     }
-#ifdef EBUR128_USE_SPEEX_RESAMPLER
+#ifdef USE_SPEEX_RESAMPLER
     if ((fd->st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {
         for (i = 0; i < fd->st->channels; ++i) {
             double tp;
