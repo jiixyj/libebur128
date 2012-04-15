@@ -31,7 +31,7 @@
 #endif
 
 /* This can be replaced by any BSD-like queue implementation. */
-#include "queue.h"
+#include <sys/queue.h>
 
 #define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \

@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-find_path(QUEUE_INCLUDE_PATH queue.h PATH_SUFFIXES sys)
+find_path(QUEUE_INCLUDE_PATH sys/queue.h)
 if(QUEUE_INCLUDE_PATH)
     include_directories(SYSTEM ${QUEUE_INCLUDE_PATH})
 else()
-    include_directories(queue)
+    include_directories(SYSTEM queue)
 endif()
 
 set(EBUR128_VERSION_MAJOR 1)
