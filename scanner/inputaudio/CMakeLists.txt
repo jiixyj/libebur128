@@ -37,10 +37,10 @@ if(USE_GLIB)
     install(TARGETS input_musepack LIBRARY DESTINATION ${FOLDER_PLUGIN})
   endif()
 
-  if(USE_FFMPEG)
-    include_directories(SYSTEM ${FFMPEG_INCLUDE_DIRS})
+  if(USE_AVFORMAT)
+    include_directories(SYSTEM ${AVFORMAT_INCLUDE_DIRS})
     add_library(input_ffmpeg MODULE input_ffmpeg.c mp3_padding.c mp4_padding.c input_helper.c)
-    target_link_libraries(input_ffmpeg ${FFMPEG_LIBRARIES} ${GLIB_LIBRARY})
+    target_link_libraries(input_ffmpeg ${AVFORMAT_LIBRARIES} ${GLIB_LIBRARY})
     install(TARGETS input_ffmpeg LIBRARY DESTINATION ${FOLDER_PLUGIN})
   endif()
 

@@ -1,6 +1,5 @@
 /* See LICENSE file for copyright and license details. */
 #define _POSIX_C_SOURCE 1
-#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <gmodule.h>
 
