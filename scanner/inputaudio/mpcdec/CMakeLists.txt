@@ -1,0 +1,7 @@
+include_directories(SYSTEM ${MPCDEC_INCLUDE_DIRS})
+add_library(input_musepack MODULE input_mpcdec.c ../input_helper.c)
+target_link_libraries(input_musepack ${MPCDEC_LIBRARY})
+if(WIN32)
+    target_link_libraries(input_musepack ${GLIB_LIBRARY})
+endif()
+install(TARGETS input_musepack LIBRARY DESTINATION ${FOLDER_PLUGIN})

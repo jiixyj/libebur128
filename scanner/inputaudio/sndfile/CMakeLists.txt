@@ -1,0 +1,7 @@
+include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
+add_library(input_sndfile MODULE input_sndfile.c ../input_helper.c)
+target_link_libraries(input_sndfile ${SNDFILE_LIBRARIES})
+if(WIN32)
+    target_link_libraries(input_sndfile ${GLIB_LIBRARY})
+endif()
+install(TARGETS input_sndfile LIBRARY DESTINATION ${FOLDER_PLUGIN})
