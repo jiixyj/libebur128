@@ -5,7 +5,10 @@ include_directories(SYSTEM ${RSVG2_INCLUDE_DIRS})
 
 # we don't need pango and atk
 foreach(lib ${GTK2_LIBRARIES})
-    if(NOT "${lib}" MATCHES ".*pango.*" AND NOT "${lib}" MATCHES ".*atk.*")
+    if(NOT "${lib}" MATCHES ".*pango.*" AND
+       NOT "${lib}" MATCHES ".*atk.*" AND
+       NOT "${lib}" MATCHES ".*gdk_pixbuf-2.0.*" AND
+       NOT "${lib}" MATCHES ".*freetype.*")
         list(APPEND MY_GTK2_LIBRARIES ${lib})
     endif()
 endforeach()
