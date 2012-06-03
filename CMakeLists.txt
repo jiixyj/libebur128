@@ -32,8 +32,8 @@ endif()
 
 if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
   set(LSB_COMPILER_FOUND TRUE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--allow-shlib-undefined")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-shlib-undefined")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --lsb-shared-libs=tag:sndfile:rsvg-2 --lsb-besteffort -Wl,--allow-shlib-undefined")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --lsb-shared-libs=tag:sndfile:rsvg-2 --lsb-besteffort -Wl,--allow-shlib-undefined")
 endif()
 
 find_package(GLIB)
