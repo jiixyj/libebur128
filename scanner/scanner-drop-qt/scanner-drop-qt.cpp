@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     setContextMenuPolicy(Qt::ActionsContextMenu);
 
     QVBoxLayout *layout = new QVBoxLayout;
-    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setMargin(0);
     layout->setSpacing(0);
     render_area_ = new RenderArea;
     progress_bar_ = new QProgressBar;
@@ -204,6 +204,7 @@ void ResultWindow::tag_files() {
     GSList *iter = files_;
     int row_index = 0;
     tag_button->setEnabled(false);
+    QCoreApplication::processEvents();
     while (iter) {
         fln = (struct filename_list_node *) iter->data;
         fd = (struct file_data *) fln->d;
@@ -214,7 +215,9 @@ void ResultWindow::tag_files() {
                 if (!ret) fd->tagged = 1;
                 else fd->tagged = 2;
             }
-            view->update(proxyModel->mapFromSource(data.index(row_index, 0)));
+            emit view->dataChanged(proxyModel->mapFromSource(data.index(row_index, 0)),
+                                   proxyModel->mapFromSource(data.index(row_index, 0)));
+            QCoreApplication::processEvents();
             ++row_index;
         }
         iter = g_slist_next(iter);
