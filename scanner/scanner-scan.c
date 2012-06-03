@@ -1,8 +1,11 @@
 #include "scanner-scan.h"
 
-#include <glib/gstdio.h>
-#include <stdlib.h>
+#include <float.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <glib/gstdio.h>
 
 #include "input.h"
 #include "nproc.h"
