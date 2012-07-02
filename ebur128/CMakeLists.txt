@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-find_path(QUEUE_INCLUDE_PATH sys/queue.h)
-if(QUEUE_INCLUDE_PATH)
-    include_directories(SYSTEM ${QUEUE_INCLUDE_PATH})
-else()
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c
+"#include <sys/queue.h>\nLIST_HEAD(listhead, entry) head;\nint main() { return 0; }")
+try_compile(HAS_QUEUE ${CMAKE_CURRENT_BINARY_DIR}
+		      ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c)
+
+if(NOT HAS_QUEUE)
     include_directories(SYSTEM queue)
 endif()
 

@@ -1,5 +1,5 @@
-add_library(scanner-common-tag scanner-tag rgtag)
+add_library(scanner-tag scanner-tag rgtag)
 
 include_directories(${TAGLIB_INCLUDE_DIRS})
 
-target_link_libraries(scanner-common-tag scanner-common ${TAGLIB_LIBRARIES})
+target_link_libraries(scanner-tag scanner-common ${TAGLIB_LIBRARIES})

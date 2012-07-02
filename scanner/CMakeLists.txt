@@ -4,10 +4,10 @@ if(USE_GLIB)
   add_subdirectory(filetree)
   add_subdirectory(inputaudio)
 
-  include_directories(filetree inputaudio scanner-tag)
+  include_directories(filetree inputaudio scanner-common scanner-tag)
   include_directories(SYSTEM ${GLIB_INCLUDE_DIRS})
 
-  list(APPEND SCANNER_SRCS parse_args nproc scanner-scan scanner-dump scanner-common)
+  list(APPEND SCANNER_SRCS scanner-scan scanner-dump)
 
   # Enable globbing for MinGW builds
   if(WIN32)
@@ -20,18 +20,13 @@ if(USE_GLIB)
     endif()
   endif()
 
-  add_library(scanner-common ${SCANNER_SRCS})
-  target_link_libraries(scanner-common ebur128 input filetree ${GLIB_LIBRARY} ${GTHREAD_LIBRARY})
-  if(USE_TAGLIB)
-    add_subdirectory(scanner-tag)
-    target_link_libraries(scanner-common scanner-common-tag)
-  endif()
-  if(USE_SNDFILE)
-    target_link_libraries(scanner-common ${SNDFILE_LIBRARIES})
-  endif()
+  add_library(scanner-lib ${SCANNER_SRCS})
+
+  add_subdirectory(scanner-common)
+  target_link_libraries(scanner-lib scanner-common)
 
   add_executable(loudness scanner)
-  target_link_libraries(loudness scanner-common)
+  target_link_libraries(loudness scanner-lib)
   if(M_LIBRARY)
     target_link_libraries(loudness ${M_LIBRARY})
   endif()
@@ -40,10 +35,17 @@ if(USE_GLIB)
           RUNTIME DESTINATION ${FOLDER_BIN}
           LIBRARY DESTINATION ${FOLDER_PLUGIN})
 
-  if(USE_RSVG2 AND USE_GTK2 AND USE_TAGLIB)
-    add_subdirectory(scanner-drop-gtk)
-  endif()
-  if(USE_QT AND USE_TAGLIB)
-    add_subdirectory(scanner-drop-qt)
+  if(USE_TAGLIB)
+    add_subdirectory(scanner-tag)
+
+    target_link_libraries(loudness scanner-tag)
+
+    if(USE_RSVG2 AND USE_GTK2)
+      add_subdirectory(scanner-drop-gtk)
+    endif()
+
+    if(USE_QT)
+      add_subdirectory(scanner-drop-qt)
+    endif()
   endif()
 endif()
