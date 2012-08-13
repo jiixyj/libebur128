@@ -96,19 +96,12 @@ static void print_summary(GSList *files)
 void loudness_scan(GSList *files)
 {
     struct scan_opts opts = {lra, peak, histogram, FALSE, decode_to_file};
-    GThreadPool *pool;
-    GThread *progress_bar_thread;
     int do_scan = FALSE;
 
     g_slist_foreach(files, (GFunc) init_and_get_number_of_frames, &do_scan);
     if (do_scan) {
-        pool = g_thread_pool_new((GFunc) init_state_and_scan_work_item,
-                                 &opts, nproc(), FALSE, NULL);
-        g_slist_foreach(files, (GFunc) init_state_and_scan, pool);
-        progress_bar_thread = g_thread_create(print_progress_bar,
-                                            NULL, TRUE, NULL);
-        g_thread_pool_free(pool, FALSE, TRUE);
-        g_thread_join(progress_bar_thread);
+
+        process_files(files, &opts);
 
         clear_line();
         fprintf(stderr, "  Loudness");

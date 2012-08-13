@@ -156,19 +156,12 @@ void tag_file(struct filename_list_node *fln, int *ret)
 int scan_files(GSList *files) {
     struct scan_opts opts = {FALSE, tag_tp ? "true" : "sample", histogram,
                              TRUE, decode_to_file};
-    GThreadPool *pool;
-    GThread *progress_bar_thread;
     int do_scan = 0;
 
     g_slist_foreach(files, (GFunc) init_and_get_number_of_frames, &do_scan);
     if (do_scan) {
-        pool = g_thread_pool_new((GFunc) init_state_and_scan_work_item,
-                                &opts, nproc(), FALSE, NULL);
-        g_slist_foreach(files, (GFunc) init_state_and_scan, pool);
-        progress_bar_thread = g_thread_create(print_progress_bar,
-                                              NULL, TRUE, NULL);
-        g_thread_pool_free(pool, FALSE, TRUE);
-        g_thread_join(progress_bar_thread);
+
+        process_files(files, &opts);
 
         if (!track) {
             g_slist_foreach(files, (GFunc) calculate_album_gain_and_peak, NULL);

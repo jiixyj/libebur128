@@ -273,14 +273,20 @@ void get_max_peaks(struct filename_list_node *fln, struct file_data *result)
     }
 }
 
-gpointer print_progress_bar(gpointer unused)
+static gpointer print_progress_bar(gpointer p_started)
 {
     int percent, bars, i;
     static char progress_bar[81];
 
-    (void) unused;
+    int *started = (int *) p_started;
+
     for (;;) {
         g_mutex_lock(progress_mutex);
+        // signal calling thread that we are ready
+        if (!*started) {
+            *started = 1;
+            g_cond_signal(progress_cond);
+        }
         g_cond_wait(progress_cond, progress_mutex);
         if (total_frames) {
             bars = (int) (elapsed_frames * G_GUINT64_CONSTANT(72) / total_frames);
@@ -315,4 +321,26 @@ void clear_line(void) {
         fputc(' ', stderr);
     }
     fputc('\r', stderr);
+}
+
+void process_files(GSList *files, struct scan_opts *opts) {
+    GThreadPool *pool;
+    GThread *progress_bar_thread;
+
+    int started = 0;
+
+    // Start the progress bar thread. It misuses progress_mutex and
+    // progress_cond to signal when it is ready.
+    g_mutex_lock(progress_mutex);
+    progress_bar_thread = g_thread_create(print_progress_bar,
+                                          &started, TRUE, NULL);
+    while (!started)
+        g_cond_wait(progress_cond, progress_mutex);
+    g_mutex_unlock(progress_mutex);
+
+    pool = g_thread_pool_new((GFunc) init_state_and_scan_work_item,
+                             opts, nproc(), FALSE, NULL);
+    g_slist_foreach(files, (GFunc) init_state_and_scan, pool);
+    g_thread_pool_free(pool, FALSE, TRUE);
+    g_thread_join(progress_bar_thread);
 }
