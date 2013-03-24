@@ -15,6 +15,7 @@ enable_testing()
 
 
 include(GNUInstallDirs OPTIONAL)
+include(utils)
 
 if(NOT DEFINED CMAKE_INSTALL_BINDIR)
   set(CMAKE_INSTALL_BINDIR "bin")
@@ -100,15 +101,6 @@ add_definitions(-DHAVE_CONFIG_PLUGIN_PATH_H)
 ######################################
 ##### Add libraries/executables  #####
 ######################################
-macro(to_yes_no vars)
-  foreach(var ${ARGV})
-    if(${var})
-      set(${var} yes)
-    else()
-      set(${var} no)
-    endif()
-  endforeach()
-endmacro()
 
 to_yes_no(GLIB_FOUND GTK2_FOUND RSVG2_FOUND SNDFILE_FOUND MPG123_FOUND MPCDEC_FOUND SPEEXDSP_FOUND AVFORMAT_FOUND TAGLIB_FOUND GSTREAMER_FOUND QT_FOUND)
 to_yes_no(USE_GLIB USE_GTK2 USE_RSVG2 USE_SNDFILE USE_MPG123 USE_MPCDEC USE_SPEEX_RESAMPLER USE_AVFORMAT USE_TAGLIB USE_GSTREAMER USE_QT)
