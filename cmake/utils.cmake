@@ -1,0 +1,8 @@
+function(to_space_list sc_list)
+    set(ret)
+    foreach(val ${${sc_list}})
+        set(ret "${ret} ${val}")
+    endforeach()
+    string(STRIP ${ret} ret)
+    set(${sc_list} "${ret}" PARENT_SCOPE)
+endfunction()
