@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 2.6.4)
+cmake_minimum_required(VERSION 2.8)
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c
 "#include <sys/queue.h>\nLIST_HEAD(listhead, entry) head;\nint main() { return 0; }")
 try_compile(HAS_QUEUE ${CMAKE_CURRENT_BINARY_DIR}
-		      ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c)
+                      ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c)
 
 if(NOT HAS_QUEUE)
     include_directories(SYSTEM queue)
@@ -20,6 +20,8 @@ set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION}
     LINK_INTERFACE_LIBRARIES "")
+
+set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "ebur128.h path")
 
 if(USE_SPEEX_RESAMPLER)
     include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
