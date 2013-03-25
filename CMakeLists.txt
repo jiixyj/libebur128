@@ -11,7 +11,6 @@ include(utils)
 
 add_subdirectory(ebur128)
 add_subdirectory(scanner)
-add_subdirectory(test)
 
 
 ######################################
@@ -27,7 +26,6 @@ find_package(MPCDEC)
 find_package(TAGLIB)
 find_package(GSTREAMER)
 find_package(Qt4 COMPONENTS QtGui QtSvg)
-find_library(M_LIBRARY m)
 
 set(USE_GLIB            ${GLIB_FOUND}      CACHE BOOL "Enable scanner support")
 set(USE_GTK2            ${GTK2_FOUND}      CACHE BOOL "Enable GTK GUI scanner")
