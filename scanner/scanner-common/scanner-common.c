@@ -4,13 +4,7 @@
 #include <stdio.h>
 #include <glib/gstdio.h>
 
-#ifdef HAVE_CONFIG_USE_SPEEX_H
-  #include "use_speex.h"
-#endif
-
-#ifdef HAVE_CONFIG_USE_SNDFILE_H
-  #include "use_sndfile.h"
-#endif
+/* knobs: USE_SNDFILE, USE_SPEEX_RESAMPLER */
 
 #ifdef USE_SNDFILE
   #include <sndfile.h>

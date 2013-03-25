@@ -12,9 +12,8 @@
 #include "parse_args.h"
 #include "scanner-common.h"
 
-#ifdef HAVE_CONFIG_USE_SPEEX_H
-  #include "use_speex.h"
-#endif
+/* knob: USE_SPEEX_RESAMPLER */
+
 
 static struct file_data empty;
 

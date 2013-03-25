@@ -41,18 +41,6 @@ set(USE_TAGLIB          ${TAGLIB_FOUND}    CACHE BOOL "Use taglib for ReplayGain
 set(USE_GSTREAMER       ${GSTREAMER_FOUND} CACHE BOOL "Enable GStreamer plugin")
 set(USE_QT              ${QT_FOUND}        CACHE BOOL "Enable Qt4 GUI support")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_speex.h.in
-               ${CMAKE_BINARY_DIR}/use_speex.h)
-add_definitions(-DHAVE_CONFIG_USE_SPEEX_H)
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_taglib.h.in
-               ${CMAKE_BINARY_DIR}/use_taglib.h)
-add_definitions(-DHAVE_CONFIG_USE_TAGLIB_H)
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_sndfile.h.in
-               ${CMAKE_BINARY_DIR}/use_sndfile.h)
-add_definitions(-DHAVE_CONFIG_USE_SNDFILE_H)
-
 
 ######################################
 ##### Add libraries/executables  #####
