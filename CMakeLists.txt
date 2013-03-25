@@ -53,10 +53,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_sndfile.h.in
                ${CMAKE_BINARY_DIR}/use_sndfile.h)
 add_definitions(-DHAVE_CONFIG_USE_SNDFILE_H)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/plugin_path.h.in
-               ${CMAKE_BINARY_DIR}/plugin_path.h)
-add_definitions(-DHAVE_CONFIG_PLUGIN_PATH_H)
-
 
 ######################################
 ##### Add libraries/executables  #####

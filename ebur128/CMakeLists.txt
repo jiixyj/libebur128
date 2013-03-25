@@ -33,6 +33,11 @@ if(NOT DISABLE_SPEEXDSP)
 endif()
 
 
+if(MSVC)
+    add_definitions(-D_USE_MATH_DEFINES)
+endif()
+
+
 set(EBUR128_VERSION_MAJOR 1)
 set(EBUR128_VERSION 1.0.0)
 

@@ -1,15 +1,9 @@
 /* See LICENSE file for copyright and license details. */
 #include "ebur128.h"
 
-/* This should be defined in the build system
-#if defined(_MSC_VER) && !defined(_USE_MATH_DEFINES)
-  #define _USE_MATH_DEFINES
-#endif
-*/
-
 #include <float.h>
 #include <limits.h>
-#include <math.h>
+#include <math.h> /* You may have to define _USE_MATH_DEFINES if you use MSVC */
 #include <stdio.h>
 #include <stdlib.h>
 

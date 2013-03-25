@@ -4,12 +4,6 @@
 #include <gmodule.h>
 #include <stdio.h>
 
-#ifdef HAVE_CONFIG_PLUGIN_PATH_H
-#include "plugin_path.h"
-#else
-#define PLUGIN_PATH ""
-#endif
-
 static const char* plugin_names[] = {
   "input_sndfile",
   "input_mpg123",
@@ -26,7 +20,6 @@ static const char* plugin_search_dirs[] = {
   "r128",
   "",
   NULL, /* = g_path_get_dirname(av0); */
-  PLUGIN_PATH,
   NULL
 };
 
