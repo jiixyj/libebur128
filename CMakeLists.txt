@@ -2,40 +2,21 @@
 ##### CMake environment setup    #####
 ######################################
 project(ebur128-loudness-tools)
-cmake_minimum_required(VERSION 2.6.4)
+cmake_minimum_required(VERSION 2.8)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
-include_directories(ebur128)
-include_directories(scanner)
-include_directories(${CMAKE_BINARY_DIR})
-
-enable_testing()
-
-
-include(GNUInstallDirs OPTIONAL)
 include(utils)
 
-if(NOT DEFINED CMAKE_INSTALL_BINDIR)
-  set(CMAKE_INSTALL_BINDIR "bin")
-endif()
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR "lib")
-endif()
-if(NOT DEFINED CMAKE_INSTALL_INCLUDEDIR)
-  set(CMAKE_INSTALL_INCLUDEDIR "include")
-endif()
+add_subdirectory(ebur128)
+add_subdirectory(scanner)
+add_subdirectory(test)
+
 
 ######################################
 ##### Library setup              #####
 ######################################
-
-if("${CMAKE_C_COMPILER}" MATCHES ".*lsb.*")
-  set(LSB_COMPILER_FOUND TRUE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --lsb-shared-libs=tag:sndfile:rsvg-2 --lsb-besteffort -Wl,--allow-shlib-undefined")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --lsb-shared-libs=tag:sndfile:rsvg-2 --lsb-besteffort -Wl,--allow-shlib-undefined")
-endif()
 
 find_package(GLIB)
 find_package(GTK2)
@@ -43,28 +24,10 @@ find_package(RSVG2)
 find_package(SNDFILE)
 find_package(MPG123)
 find_package(MPCDEC)
-find_package(SPEEXDSP)
-find_package(AVFORMAT)
 find_package(TAGLIB)
 find_package(GSTREAMER)
 find_package(Qt4 COMPONENTS QtGui QtSvg)
 find_library(M_LIBRARY m)
-
-
-# set up install folders
-set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
-if(FLAT_INSTALL)
-  set(FOLDER_DOC .)
-  set(FOLDER_BIN .)
-  set(FOLDER_LIB .)
-  set(FOLDER_PLUGIN .)
-else()
-  set(FOLDER_BIN ${CMAKE_INSTALL_BINDIR})
-  set(FOLDER_LIB ${CMAKE_INSTALL_LIBDIR})
-  set(FOLDER_PLUGIN ${CMAKE_INSTALL_LIBDIR}/ebur128-loudness-tools)
-  set(FOLDER_INCLUDE ${CMAKE_INSTALL_INCLUDEDIR})
-endif()
-
 
 set(USE_GLIB            ${GLIB_FOUND}      CACHE BOOL "Enable scanner support")
 set(USE_GTK2            ${GTK2_FOUND}      CACHE BOOL "Enable GTK GUI scanner")
@@ -77,9 +40,6 @@ set(USE_AVFORMAT        ${AVFORMAT_FOUND}  CACHE BOOL "Enable FFmpeg/Libav plugi
 set(USE_TAGLIB          ${TAGLIB_FOUND}    CACHE BOOL "Use taglib for ReplayGain compatible tagging")
 set(USE_GSTREAMER       ${GSTREAMER_FOUND} CACHE BOOL "Enable GStreamer plugin")
 set(USE_QT              ${QT_FOUND}        CACHE BOOL "Enable Qt4 GUI support")
-
-set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/${FOLDER_PLUGIN}")
-
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/use_speex.h.in
                ${CMAKE_BINARY_DIR}/use_speex.h)
@@ -119,14 +79,34 @@ message(STATUS "taglib:         ${TAGLIB_FOUND}"   "     ${USE_TAGLIB}")
 message(STATUS "gstreamer:      ${GSTREAMER_FOUND}""     ${USE_GSTREAMER}")
 message(STATUS "qt4:            ${QT_FOUND}"       "     ${USE_QT}")
 
-
-add_subdirectory(ebur128)
-add_subdirectory(scanner)
-add_subdirectory(test)
-
 ######################################
 ##### Install                    #####
 ######################################
+
+#ebur128 install stuff
+if(FOLDER_INCLUDE)
+    install(FILES ebur128.h DESTINATION ${FOLDER_INCLUDE})
+endif()
+
+install(TARGETS ebur128 ebur128_static
+        LIBRARY DESTINATION ${FOLDER_LIB}
+        ARCHIVE DESTINATION ${FOLDER_LIB})
+
+# set up install folders
+set(FLAT_INSTALL FALSE CACHE BOOL "Install everything in one folder")
+if(FLAT_INSTALL)
+  set(FOLDER_DOC .)
+  set(FOLDER_BIN .)
+  set(FOLDER_LIB .)
+  set(FOLDER_PLUGIN .)
+else()
+  set(FOLDER_BIN ${CMAKE_INSTALL_BINDIR})
+  set(FOLDER_LIB ${CMAKE_INSTALL_LIBDIR})
+  set(FOLDER_PLUGIN ${CMAKE_INSTALL_LIBDIR}/ebur128-loudness-tools)
+  set(FOLDER_INCLUDE ${CMAKE_INSTALL_INCLUDEDIR})
+endif()
+set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/${FOLDER_PLUGIN}")
+
 if(FOLDER_DOC)
     install(FILES COPYING README.md DESTINATION ${FOLDER_DOC})
     install(DIRECTORY doc/license DESTINATION ${FOLDER_DOC})

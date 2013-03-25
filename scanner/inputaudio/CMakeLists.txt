@@ -22,10 +22,6 @@ if(GMODULE20_FOUND)
              LINK_FLAGS ${INPUT_LDFLAGS})
 
 
-  if(WIN32 AND NOT "${CMAKE_SHARED_MODULE_PREFIX}")
-    set(CMAKE_SHARED_MODULE_PREFIX "lib")
-  endif()
-
   add_subdirectory(sndfile)
   add_subdirectory(mpg123)
   add_subdirectory(mpcdec)

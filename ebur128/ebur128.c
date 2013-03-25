@@ -1,37 +1,24 @@
 /* See LICENSE file for copyright and license details. */
-#if defined(_MSC_VER)
-  #pragma warning(disable:4127) /* from queue.h */
-  #pragma warning(disable:4711) /* automatic inline warnings */
-  #pragma warning(disable:4738) /* storing floats to resampler_buffer_input */
-  #pragma warning(disable:4820) /* struct padding warnings */
-#endif
-
 #include "ebur128.h"
 
+/* This should be defined in the build system
 #if defined(_MSC_VER) && !defined(_USE_MATH_DEFINES)
-  /* This is to get the M_PI etc. defines. */
   #define _USE_MATH_DEFINES
 #endif
-#include <math.h>
-#ifndef M_PI
-  #define M_PI 3.14159265358979323846
-#endif
+*/
 
 #include <float.h>
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef HAVE_CONFIG_USE_SPEEX_H
-  #include "use_speex.h" /* or define USE_SPEEX_RESAMPLER manually */
-#endif
+/* This can be replaced by any BSD-like queue implementation. */
+#include <sys/queue.h>
 
 #ifdef USE_SPEEX_RESAMPLER
   #include <speex/speex_resampler.h>
 #endif
-
-/* This can be replaced by any BSD-like queue implementation. */
-#include <sys/queue.h>
 
 #define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \

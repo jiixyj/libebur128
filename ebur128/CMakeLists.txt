@@ -1,13 +1,37 @@
 cmake_minimum_required(VERSION 2.8)
 
+include(utils)
+
+#### queue.h
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c
 "#include <sys/queue.h>\nLIST_HEAD(listhead, entry) head;\nint main() { return 0; }")
 try_compile(HAS_QUEUE ${CMAKE_CURRENT_BINARY_DIR}
                       ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c)
 
-if(NOT HAS_QUEUE)
+if(NOT HAS_QUEUE AND NOT ENABLE_INTERNAL_QUEUE_H)
+    message(FATAL_ERROR "queue.h not found, please set ENABLE_INTERNAL_QUEUE_H")
+elseif(NOT HAS_QUEUE)
     include_directories(SYSTEM queue)
 endif()
+
+
+#### speexdsp
+if(NOT DISABLE_SPEEXDSP)
+    find_package(PkgConfig)
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(SPEEXDSP speexdsp)
+
+        if(SPEEXDSP_FOUND)
+            to_space_list(SPEEXDSP_CFLAGS)
+            to_space_list(SPEEXDSP_LDFLAGS)
+        endif()
+    endif()
+
+    if (NOT SPEEXDSP_FOUND)
+        message(FATAL_ERROR "speexdsp not found, please define SPEEXDSP_FOUND, SPEEXDSP_CFLAGS and SPEEXDSP_LDFLAGS manually if you want speex resampling")
+    endif()
+endif()
+
 
 set(EBUR128_VERSION_MAJOR 1)
 set(EBUR128_VERSION 1.0.0)
@@ -21,21 +45,13 @@ set_target_properties(ebur128 PROPERTIES
     VERSION ${EBUR128_VERSION}
     LINK_INTERFACE_LIBRARIES "")
 
+if(NOT DISABLE_SPEEXDSP AND SPEEXDSP_FOUND)
+    add_definitions(-DUSE_SPEEX_RESAMPLER)
+    set_target_properties(ebur128_static PROPERTIES
+                COMPILE_FLAGS ${SPEEXDSP_CFLAGS})
+    set_target_properties(ebur128 PROPERTIES
+                COMPILE_FLAGS ${SPEEXDSP_CFLAGS}
+                LINK_FLAGS    ${SPEEXDSP_LDFLAGS})
+endif()
+
 set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "ebur128.h path")
-
-if(USE_SPEEX_RESAMPLER)
-    include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
-    target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
-endif()
-
-if(M_LIBRARY)
-    target_link_libraries(ebur128 ${M_LIBRARY})
-endif()
-
-if(FOLDER_INCLUDE)
-    install(FILES ebur128.h DESTINATION ${FOLDER_INCLUDE})
-endif()
-
-install(TARGETS ebur128 ebur128_static
-        LIBRARY DESTINATION ${FOLDER_LIB}
-        ARCHIVE DESTINATION ${FOLDER_LIB})
