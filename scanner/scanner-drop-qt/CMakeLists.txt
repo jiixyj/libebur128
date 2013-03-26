@@ -1,12 +1,16 @@
-include(${QT_USE_FILE})
-qt4_automoc(scanner-drop-qt.cpp)
-add_executable(loudness-drop-qt scanner-drop-qt)
+if(TARGET scanner-tag)
+  find_package(Qt4 COMPONENTS QtGui QtSvg)
 
-include_directories(SYSTEM ${QT_INCLUDES})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+  if(QT4_FOUND)
+    include(${QT_USE_FILE})
+    qt4_automoc(scanner-drop-qt.cpp)
+    add_executable(loudness-drop-qt scanner-drop-qt)
 
-target_link_libraries(loudness-drop-qt scanner-tag ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSVG_LIBRARY})
+    include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SCANNERCOMMON_INCLUDE_DIRS} ${LOGO_INCLUDE_DIR})
+    target_link_libraries(loudness-drop-qt scanner-tag filetree input ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSVG_LIBRARY})
 
-install(TARGETS loudness-drop-qt
-        RUNTIME DESTINATION ${FOLDER_BIN}
-        LIBRARY DESTINATION ${FOLDER_PLUGIN})
+    set_target_properties(loudness-drop-qt PROPERTIES
+            COMPILE_FLAGS ${LOUDNESS_CFLAGS}
+               LINK_FLAGS ${LOUDNESS_LDFLAGS})
+  endif()
+endif()

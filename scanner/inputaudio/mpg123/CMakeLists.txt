@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 include(utils)
 
 find_package(MPG123)
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 
 if(GMODULE20_FOUND AND MPG123_FOUND AND

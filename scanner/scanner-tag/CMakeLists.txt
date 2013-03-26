@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 include(utils)
 
 find_package(TAGLIB)
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 pkg_check_modules(GLIB20 glib-2.0)
 
 if(TAGLIB_FOUND AND GLIB20_FOUND AND NOT DISABLE_TAGLIB)

@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 set(SCANNERCOMMON_INCLUDE_DIRS 
-    ${CMAKE_CURRENT_SOURCE_DIR}/scanner-common 
+    ${CMAKE_CURRENT_SOURCE_DIR}/scanner-common
+    ${CMAKE_CURRENT_SOURCE_DIR}/scanner-tag
     ${CMAKE_CURRENT_SOURCE_DIR}/filetree
     ${CMAKE_CURRENT_SOURCE_DIR}/inputaudio
     ${EBUR128_INCLUDE_DIR})
@@ -12,7 +13,7 @@ add_subdirectory(scanner-tag)
 
 include(utils)
 
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 pkg_check_modules(GLIB20 glib-2.0)
 pkg_check_modules(GTHREAD20 gthread-2.0)
 
@@ -41,8 +42,6 @@ if(GLIB20_FOUND AND GTHREAD20_FOUND AND NOT DISABLE_GLIB20)
 
   add_library(scanner-lib ${SCANNER_SRCS})
   target_link_libraries(scanner-lib scanner-common ebur128)
-  set_target_properties(scanner-lib PROPERTIES
-         COMPILE_FLAGS "${GLIB20_CFLAGS}  ${GTHREAD20_CFLAGS}")
 
   add_executable(loudness scanner)
   target_link_libraries(loudness scanner-lib filetree input)
@@ -54,18 +53,14 @@ if(GLIB20_FOUND AND GTHREAD20_FOUND AND NOT DISABLE_GLIB20)
           COMPILE_FLAGS ${LOUDNESS_CFLAGS}
              LINK_FLAGS ${LOUDNESS_LDFLAGS})
   set_target_properties(scanner-lib PROPERTIES
-          COMPILE_FLAGS ${LOUDNESS_CFLAGS}
-             LINK_FLAGS ${LOUDNESS_LDFLAGS})
+          COMPILE_FLAGS ${LOUDNESS_CFLAGS})
 
-  if(TAGLIB_FOUND AND NOT DISABLE_TAGLIB)
+  if(TARGET scanner-tag)
     target_link_libraries(loudness scanner-tag)
-
-    # if(USE_RSVG2 AND USE_GTK2)
-    #   add_subdirectory(scanner-drop-gtk)
-    # endif()
-
-    # if(USE_QT)
-    #   add_subdirectory(scanner-drop-qt)
-    # endif()
   endif()
+
+  set(LOGO_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+  add_subdirectory(scanner-drop-gtk)
+  add_subdirectory(scanner-drop-qt)
 endif()

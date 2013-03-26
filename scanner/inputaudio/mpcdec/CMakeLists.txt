@@ -3,12 +3,12 @@ cmake_minimum_required(VERSION 2.8)
 include(utils)
 
 find_package(MPCDEC)
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 
 if(GMODULE20_FOUND AND MPCDEC_FOUND AND
    INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR)
-  add_library(input_musepack MODULE input_mpcdec.c ../input_helper.c)
+  add_library(input_musepack MODULE input_mpcdec.c)
 
   include_directories(SYSTEM ${MPCDEC_INCLUDE_DIRS})
   include_directories(${INPUT_INCLUDE_DIR} ${EBUR128_INCLUDE_DIR})

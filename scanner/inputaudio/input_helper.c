@@ -2,12 +2,12 @@
 
 
 #ifndef G_OS_WIN32
-    #include <glib.h>
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <unistd.h>
 #endif
 
+#include <glib.h>
 #include <fcntl.h>
 
 int input_open_fd(const char* filename)

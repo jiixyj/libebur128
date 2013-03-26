@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 include(utils)
 
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 pkg_check_modules(GSTREAMER_APP   gstreamer-app-0.10)
 pkg_check_modules(GSTREAMER_AUDIO gstreamer-audio-0.10)

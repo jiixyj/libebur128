@@ -1,6 +1,7 @@
 include_directories(${SCANNERCOMMON_INCLUDE_DIRS})
 
 add_library(scanner-common parse_args nproc scanner-common)
+target_link_libraries(scanner-common ebur128)
 
 set_target_properties(scanner-common PROPERTIES
         COMPILE_FLAGS ${GLIB20_CFLAGS}
