@@ -18,7 +18,7 @@ endif()
 
 set(DISABLE_SPEEXDSP OFF CACHE BOOL "Don't build with speexdsp support")
 if (NOT SUMMARY_SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
-    message(FATAL_ERROR "speexdsp not found, please define SPEEXDSP_FOUND, SPEEXDSP_CFLAGS and SPEEXDSP_LDFLAGS manually if you want speex resampling. Alternatively, set DISABLE_SPEEXDSP to ON")
+    message(WARNING "speexdsp not found, please define SPEEXDSP_FOUND, SPEEXDSP_CFLAGS and SPEEXDSP_LDFLAGS manually if you want speex resampling. Alternatively, set DISABLE_SPEEXDSP to ON to suppress this warning")
 endif()
 
 # to_yes_no(GTK2_FOUND RSVG2_FOUND SNDFILE_FOUND MPG123_FOUND MPCDEC_FOUND SPEEXDSP_FOUND AVFORMAT_FOUND TAGLIB_FOUND GSTREAMER_FOUND QT_FOUND)
