@@ -17,9 +17,10 @@ if(GMODULE20_FOUND)
   to_space_list(INPUT_CFLAGS)
   to_space_list(INPUT_LDFLAGS)
 
+  set(INPUT_LDFLAGS ${INPUT_LDFLAGS} PARENT_SCOPE)
+
   set_target_properties(input PROPERTIES
-          COMPILE_FLAGS ${INPUT_CFLAGS}
-             LINK_FLAGS ${INPUT_LDFLAGS})
+          COMPILE_FLAGS ${INPUT_CFLAGS})
 
 
   add_subdirectory(sndfile)

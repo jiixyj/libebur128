@@ -13,7 +13,9 @@
 #include "parse_args.h"
 
 #include "scanner-scan.h"
+#ifdef USE_TAGLIB
 #include "scanner-tag.h"
+#endif
 #include "scanner-dump.h"
 #include "scanner-common.h"
 

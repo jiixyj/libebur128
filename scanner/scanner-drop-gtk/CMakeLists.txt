@@ -14,7 +14,3 @@ foreach(lib ${GTK2_LIBRARIES})
 endforeach()
 
 target_link_libraries(loudness-drop-gtk scanner-tag ${RSVG2_LIBRARIES} ${MY_GTK2_LIBRARIES})
-
-install(TARGETS loudness-drop-gtk
-        RUNTIME DESTINATION ${FOLDER_BIN}
-        LIBRARY DESTINATION ${FOLDER_PLUGIN})
