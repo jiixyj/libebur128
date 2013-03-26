@@ -8,9 +8,9 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c
 try_compile(HAS_QUEUE ${CMAKE_CURRENT_BINARY_DIR}
                       ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c)
 
-if(NOT HAS_QUEUE AND NOT ENABLE_INTERNAL_QUEUE_H)
-    message(FATAL_ERROR "queue.h not found, please set ENABLE_INTERNAL_QUEUE_H")
-elseif(NOT HAS_QUEUE)
+set(SUMMARY_HAS_QUEUE ${HAS_QUEUE} CACHE INTERNAL "")
+
+if(ENABLE_INTERNAL_QUEUE_H)
     include_directories(SYSTEM queue)
 endif()
 
@@ -27,9 +27,7 @@ if(NOT DISABLE_SPEEXDSP)
         endif()
     endif()
 
-    if (NOT SPEEXDSP_FOUND)
-        message(FATAL_ERROR "speexdsp not found, please define SPEEXDSP_FOUND, SPEEXDSP_CFLAGS and SPEEXDSP_LDFLAGS manually if you want speex resampling")
-    endif()
+    set(SUMMARY_SPEEXDSP_FOUND ${SPEEXDSP_FOUND} CACHE INTERNAL "")
 endif()
 
 
