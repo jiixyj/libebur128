@@ -5,7 +5,7 @@ include(utils)
 find_package(PkgConfig)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 
-if(GMODULE20_FOUND)
+if(GMODULE20_FOUND AND NOT DISABLE_GLIB20)
   set(INPUT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 

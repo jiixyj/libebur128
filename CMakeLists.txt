@@ -10,16 +10,45 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 add_subdirectory(ebur128)
 add_subdirectory(scanner)
 
+include(utils)
+
 
 set(ENABLE_INTERNAL_QUEUE_H OFF CACHE BOOL "Use own queue.h")
+set(DISABLE_SPEEXDSP        OFF CACHE BOOL "Don't build with speexdsp")
+set(DISABLE_GLIB20          OFF CACHE BOOL "Don't build with glib")
+set(DISABLE_SNDFILE         OFF CACHE BOOL "Don't build with sndfile")
+set(DISABLE_TAGLIB          OFF CACHE BOOL "Don't build with taglib")
+
+to_yes_no(SUMMARY_HAS_QUEUE SUMMARY_SPEEXDSP_FOUND SUMMARY_GLIB20_FOUND
+          SUMMARY_GTHREAD20_FOUND SUMMARY_SNDFILE_FOUND SUMMARY_TAGLIB_FOUND)
+to_yes_no(DISABLE_SPEEXDSP DISABLE_GLIB20 DISABLE_SNDFILE DISABLE_TAGLIB)
+
+if(ENABLE_INTERNAL_QUEUE_H)
+    set(USE_QUEUE "using own copy of queue.h")
+else()
+    set(USE_QUEUE "using system copy of queue.h")
+endif()
+
+##### Print status
+message(STATUS "status          found / disabled --")
+message(STATUS "queue.h:        ${SUMMARY_HAS_QUEUE}"        "     ${USE_QUEUE}")
+message(STATUS "speexdsp:       ${SUMMARY_SPEEXDSP_FOUND}"   "     ${DISABLE_SPEEXDSP}")
+message(STATUS "glib-2.0:       ${SUMMARY_GLIB20_FOUND}"     "     ${DISABLE_GLIB20}")
+message(STATUS "gthread-2.0:    ${SUMMARY_GTHREAD20_FOUND}"  "     ${DISABLE_GLIB20}")
+message(STATUS "sndfile:        ${SUMMARY_SNDFILE_FOUND}"    "     ${DISABLE_SNDFILE}")
+message(STATUS "taglib:         ${SUMMARY_TAGLIB_FOUND}"     "     ${DISABLE_TAGLIB}")
+
+
+
 if(NOT SUMMARY_HAS_QUEUE AND NOT ENABLE_INTERNAL_QUEUE_H)
     message(FATAL_ERROR "queue.h not found, please set ENABLE_INTERNAL_QUEUE_H to ON")
 endif()
 
-set(DISABLE_SPEEXDSP OFF CACHE BOOL "Don't build with speexdsp support")
-if (NOT SUMMARY_SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
-    message(WARNING "speexdsp not found, please define SPEEXDSP_FOUND, SPEEXDSP_CFLAGS and SPEEXDSP_LDFLAGS manually if you want speex resampling. Alternatively, set DISABLE_SPEEXDSP to ON to suppress this warning")
-endif()
+# if(NOT SUMMARY_SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
+#     message(WARNING "speexdsp not found, please define SPEEXDSP_FOUND, SPEEXDSP_CFLAGS and SPEEXDSP_LDFLAGS manually if you want speex resampling. Alternatively, set DISABLE_SPEEXDSP to ON to suppress this warning")
+# endif()
+
+
 
 # to_yes_no(GTK2_FOUND RSVG2_FOUND SNDFILE_FOUND MPG123_FOUND MPCDEC_FOUND SPEEXDSP_FOUND AVFORMAT_FOUND TAGLIB_FOUND GSTREAMER_FOUND QT_FOUND)
 # to_yes_no(USE_GTK2 USE_RSVG2 USE_SNDFILE USE_MPG123 USE_MPCDEC USE_SPEEX_RESAMPLER USE_AVFORMAT USE_TAGLIB USE_GSTREAMER USE_QT)

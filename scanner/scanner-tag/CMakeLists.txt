@@ -6,7 +6,10 @@ find_package(TAGLIB)
 find_package(PkgConfig)
 pkg_check_modules(GLIB20 glib-2.0)
 
-if(TAGLIB_FOUND AND GLIB20_FOUND AND NOT DISABLE_TAGLIB)
+set(SUMMARY_TAGLIB_FOUND ${TAGLIB_FOUND} CACHE INTERNAL "")
+
+if(TAGLIB_FOUND AND NOT DISABLE_TAGLIB AND
+   GLIB20_FOUND AND NOT DISABLE_GLIB20)
   add_library(scanner-tag scanner-tag rgtag)
   include_directories(
     ${TAGLIB_INCLUDE_DIRS}

@@ -21,10 +21,8 @@ if(NOT DISABLE_SPEEXDSP)
     if(PKG_CONFIG_FOUND)
         pkg_check_modules(SPEEXDSP speexdsp)
 
-        if(SPEEXDSP_FOUND)
-            to_space_list(SPEEXDSP_CFLAGS)
-            to_space_list(SPEEXDSP_LDFLAGS)
-        endif()
+        to_space_list(SPEEXDSP_CFLAGS)
+        to_space_list(SPEEXDSP_LDFLAGS)
     endif()
 
     set(SUMMARY_SPEEXDSP_FOUND ${SPEEXDSP_FOUND} CACHE INTERNAL "")
