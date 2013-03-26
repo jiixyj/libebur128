@@ -18,10 +18,17 @@ set(DISABLE_SPEEXDSP        OFF CACHE BOOL "Don't build with speexdsp")
 set(DISABLE_GLIB20          OFF CACHE BOOL "Don't build with glib")
 set(DISABLE_SNDFILE         OFF CACHE BOOL "Don't build with sndfile")
 set(DISABLE_TAGLIB          OFF CACHE BOOL "Don't build with taglib")
+set(DISABLE_MPG123          OFF CACHE BOOL "Don't build with mpg123")
+set(DISABLE_MPCDEC          OFF CACHE BOOL "Don't build with mpcdec")
+set(DISABLE_GSTREAMER       OFF CACHE BOOL "Don't build with gstreamer")
+set(DISABLE_FFMPEG          OFF CACHE BOOL "Don't build with ffmpeg")
 
 to_yes_no(SUMMARY_HAS_QUEUE SUMMARY_SPEEXDSP_FOUND SUMMARY_GLIB20_FOUND
-          SUMMARY_GTHREAD20_FOUND SUMMARY_SNDFILE_FOUND SUMMARY_TAGLIB_FOUND)
-to_yes_no(DISABLE_SPEEXDSP DISABLE_GLIB20 DISABLE_SNDFILE DISABLE_TAGLIB)
+          SUMMARY_GTHREAD20_FOUND SUMMARY_SNDFILE_FOUND SUMMARY_TAGLIB_FOUND
+          SUMMARY_MPG123_FOUND SUMMARY_MPCDEC_FOUND SUMMARY_GSTREAMER_FOUND
+          SUMMARY_FFMPEG_FOUND)
+to_yes_no(DISABLE_SPEEXDSP DISABLE_GLIB20 DISABLE_SNDFILE DISABLE_TAGLIB
+          DISABLE_MPG123 DISABLE_MPCDEC DISABLE_GSTREAMER DISABLE_FFMPEG)
 
 if(ENABLE_INTERNAL_QUEUE_H)
     set(USE_QUEUE "using own copy of queue.h")
@@ -37,6 +44,10 @@ message(STATUS "glib-2.0:       ${SUMMARY_GLIB20_FOUND}"     "     ${DISABLE_GLI
 message(STATUS "gthread-2.0:    ${SUMMARY_GTHREAD20_FOUND}"  "     ${DISABLE_GLIB20}")
 message(STATUS "sndfile:        ${SUMMARY_SNDFILE_FOUND}"    "     ${DISABLE_SNDFILE}")
 message(STATUS "taglib:         ${SUMMARY_TAGLIB_FOUND}"     "     ${DISABLE_TAGLIB}")
+message(STATUS "mpg123:         ${SUMMARY_MPG123_FOUND}"     "     ${DISABLE_MPG123}")
+message(STATUS "mpcdec:         ${SUMMARY_MPCDEC_FOUND}"     "     ${DISABLE_MPCDEC}")
+message(STATUS "gstreamer:      ${SUMMARY_GSTREAMER_FOUND}"  "     ${DISABLE_GSTREAMER}")
+message(STATUS "ffmpeg:         ${SUMMARY_FFMPEG_FOUND}"     "     ${DISABLE_FFMPEG}")
 
 
 

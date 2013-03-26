@@ -7,7 +7,8 @@ find_package(PkgConfig)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 
 if(GMODULE20_FOUND AND SNDFILE_FOUND AND
-   INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR)
+   INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR AND
+   NOT DISABLE_GLIB20 AND NOT DISABLE_SNDFILE)
   add_library(input_sndfile MODULE input_sndfile.c ../input_helper.c)
 
   include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
@@ -23,18 +24,4 @@ if(GMODULE20_FOUND AND SNDFILE_FOUND AND
   set_target_properties(input_sndfile PROPERTIES
           COMPILE_FLAGS ${INPUT_SNDFILE_CFLAGS}
              LINK_FLAGS ${INPUT_SNDFILE_LDFLAGS})
-
-
-
-
-else()
-  message(STATUS "-----------------------------------------------------------")
-  message(WARNING "Could not find dependencies for input_sndfile plugin:")
-  to_yes_no(SNDFILE_FOUND GMODULE20_FOUND)
-  if_empty_print_missing(INPUT_INCLUDE_DIR EBUR128_INCLUDE_DIR)
-  message(STATUS "input_sndfile dependency sndfile:     ${SNDFILE_FOUND}")
-  message(STATUS "input_sndfile dependency gmodule-2.0: ${GMODULE20_FOUND}")
-  message(STATUS "input_sndfile dependency input.h:     ${INPUT_INCLUDE_DIR}")
-  message(STATUS "input_sndfile dependency ebur128.h:   ${EBUR128_INCLUDE_DIR}")
-  message(STATUS "-----------------------------------------------------------")
 endif()

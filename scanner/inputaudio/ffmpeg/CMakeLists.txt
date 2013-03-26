@@ -6,8 +6,11 @@ find_package(PkgConfig)
 pkg_check_modules(LIBAVFORMAT libavformat)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 
+set(SUMMARY_FFMPEG_FOUND ${LIBAVFORMAT_FOUND} CACHE INTERNAL "")
+
 if(LIBAVFORMAT_FOUND AND GMODULE20_FOUND AND
-   INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR)
+   INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR AND
+   NOT DISABLE_GLIB20 AND NOT DISABLE_FFMPEG)
   add_library(input_ffmpeg MODULE input_ffmpeg.c mp3_padding.c mp4_padding.c ../input_helper.c)
 
   include_directories(${INPUT_INCLUDE_DIR} ${EBUR128_INCLUDE_DIR})
@@ -23,18 +26,4 @@ if(LIBAVFORMAT_FOUND AND GMODULE20_FOUND AND
   set_target_properties(input_ffmpeg PROPERTIES
           COMPILE_FLAGS ${INPUT_FFMPEG_CFLAGS}
              LINK_FLAGS ${INPUT_FFMPEG_LDFLAGS})
-
-  # if(DO_INSTALL)
-  #   install(TARGETS input_ffmpeg LIBRARY DESTINATION ${FOLDER_PLUGIN})
-  # endif()
-else()
-  message(STATUS "-----------------------------------------------------------")
-  message(WARNING "Could not find dependencies for input_ffmpeg plugin:")
-  to_yes_no(LIBAVFORMAT_FOUND GMODULE20_FOUND)
-  if_empty_print_missing(INPUT_INCLUDE_DIR EBUR128_INCLUDE_DIR)
-  message(STATUS "input_ffmpeg dependency libavformat: ${LIBAVFORMAT_FOUND}")
-  message(STATUS "input_ffmpeg dependency gmodule-2.0: ${GMODULE20_FOUND}")
-  message(STATUS "input_ffmpeg dependency input.h:     ${INPUT_INCLUDE_DIR}")
-  message(STATUS "input_ffmpeg dependency ebur128.h:   ${EBUR128_INCLUDE_DIR}")
-  message(STATUS "-----------------------------------------------------------")
 endif()

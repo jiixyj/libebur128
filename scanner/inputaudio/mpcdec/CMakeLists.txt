@@ -6,8 +6,11 @@ find_package(MPCDEC)
 find_package(PkgConfig)
 pkg_check_modules(GMODULE20 gmodule-2.0)
 
+set(SUMMARY_MPCDEC_FOUND ${MPCDEC_FOUND} CACHE INTERNAL "")
+
 if(GMODULE20_FOUND AND MPCDEC_FOUND AND
-   INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR)
+   INPUT_INCLUDE_DIR AND EBUR128_INCLUDE_DIR AND
+   NOT DISABLE_GLIB20 AND NOT DISABLE_MPCDEC)
   add_library(input_musepack MODULE input_mpcdec.c)
 
   include_directories(SYSTEM ${MPCDEC_INCLUDE_DIRS})
@@ -23,18 +26,4 @@ if(GMODULE20_FOUND AND MPCDEC_FOUND AND
   set_target_properties(input_musepack PROPERTIES
           COMPILE_FLAGS ${INPUT_MPCDEC_CFLAGS}
              LINK_FLAGS ${INPUT_MPCDEC_LDFLAGS})
-  # if(WIN32)
-  #     target_link_libraries(input_musepack ${GLIB_LIBRARY})
-  # endif()
-  # install(TARGETS input_musepack LIBRARY DESTINATION ${FOLDER_PLUGIN})
-else()
-  message(STATUS "-----------------------------------------------------------")
-  message(WARNING "Could not find dependencies for input_mpcdec plugin:")
-  to_yes_no(MPCDEC_FOUND GMODULE20_FOUND)
-  if_empty_print_missing(INPUT_INCLUDE_DIR EBUR128_INCLUDE_DIR)
-  message(STATUS "input_mpcdec dependency mpcdec:      ${MPCDEC_FOUND}")
-  message(STATUS "input_mpcdec dependency gmodule-2.0: ${GMODULE20_FOUND}")
-  message(STATUS "input_mpcdec dependency input.h:     ${INPUT_INCLUDE_DIR}")
-  message(STATUS "input_mpcdec dependency ebur128.h:   ${EBUR128_INCLUDE_DIR}")
-  message(STATUS "-----------------------------------------------------------")
 endif()
