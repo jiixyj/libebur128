@@ -6,6 +6,8 @@ if(PKG_CONFIG_FOUND)
 endif()
 
 if(GMODULE20_FOUND AND NOT DISABLE_GLIB20)
+  set(INPUT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
   add_subdirectory(sndfile)
   add_subdirectory(mpg123)
   add_subdirectory(mpcdec)
