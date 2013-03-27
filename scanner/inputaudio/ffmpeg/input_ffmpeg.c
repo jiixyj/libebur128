@@ -72,15 +72,8 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
 
   g_static_mutex_lock(&ffmpeg_mutex);
   ih->format_context = NULL;
-#if LIBAVFORMAT_VERSION_MAJOR >= 54 || \
-    (LIBAVFORMAT_VERSION_MAJOR == 53 && \
-     LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0)) || \
-    (LIBAVFORMAT_VERSION_MAJOR == 52 && \
-     LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+
   if (avformat_open_input(&ih->format_context, filename, NULL, NULL) != 0) {
-#else
-  if (av_open_input_file(&ih->format_context, filename, NULL, 0, NULL) != 0) {
-#endif
     fprintf(stderr, "Could not open input file!\n");
     g_static_mutex_unlock(&ffmpeg_mutex);
     return 1;
@@ -95,15 +88,8 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   // Find the first audio stream
   ih->audio_stream = -1;
   for (j = 0; j < ih->format_context->nb_streams; ++j) {
-    if (ih->format_context->streams[j]->codec->codec_type ==
-#if LIBAVCODEC_VERSION_MAJOR >= 53 || \
-    (LIBAVCODEC_VERSION_MAJOR == 52 && \
-     LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 64, 0))
-            AVMEDIA_TYPE_AUDIO
-#else
-            CODEC_TYPE_AUDIO
-#endif
-        ) {
+    if (ih->format_context->streams[j]->codec->codec_type
+            == AVMEDIA_TYPE_AUDIO) {
       ih->audio_stream = (int) j;
       break;
     }
@@ -116,12 +102,8 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   // Get a pointer to the codec context for the audio stream
   ih->codec_context = ih->format_context->streams[ih->audio_stream]->codec;
 
-  // request float output if supported
-#if LIBAVCODEC_VERSION_MAJOR >= 54 || \
-    (LIBAVCODEC_VERSION_MAJOR == 53 && \
-     LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 4, 0))
   ih->codec_context->request_sample_fmt = AV_SAMPLE_FMT_FLT;
-#endif
+
   ih->codec = avcodec_find_decoder(ih->codec_context->codec_id);
   if (ih->codec == NULL) {
     fprintf(stderr, "Could not find a decoder for the audio format!\n");
@@ -227,15 +209,8 @@ static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
       }
       while (ih->packet.size > 0) {
         int data_size = sizeof(ih->audio_buf);
-#if LIBAVCODEC_VERSION_MAJOR >= 53 || \
-    (LIBAVCODEC_VERSION_MAJOR == 52 && \
-     LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 23, 0))
         int len = avcodec_decode_audio3(ih->codec_context, (int16_t*) &ih->audio_buf,
                                         &data_size, &ih->packet);
-#else
-        int len = avcodec_decode_audio2(ih->codec_context, (int16_t*) &ih->audio_buf,
-                                        &data_size, ih->packet.data, ih->packet.size);
-#endif
         if (len < 0) {
           ih->packet.size = 0;
           break;
