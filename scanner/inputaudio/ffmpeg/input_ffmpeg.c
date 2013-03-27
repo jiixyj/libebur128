@@ -1,12 +1,9 @@
 /* See LICENSE file for copyright and license details. */
-#define _POSIX_C_SOURCE 1
 #include <libavformat/avformat.h>
 #include <gmodule.h>
 
 #include "ebur128.h"
 #include "input.h"
-#include "mp3_padding.h"
-#include "mp4_padding.h"
 
 static GStaticMutex ffmpeg_mutex = G_STATIC_MUTEX_INIT;
 
@@ -35,8 +32,6 @@ struct input_handle {
   GSList *buffer_list;
   size_t current_bytes;
 
-  unsigned mp3_padding_start;
-  unsigned mp3_padding_end;
   int mp3_has_skipped_beginning;
   int mp3_stop;
 };
@@ -151,22 +146,6 @@ static int ffmpeg_open_file(struct input_handle* ih, const char* filename) {
   ih->need_new_frame = TRUE;
   ih->old_data = NULL;
 
-  if (ih->codec_context->codec_id == CODEC_ID_MP3) {
-    if (input_read_mp3_padding(ih->format_context->filename,
-                               &ih->mp3_padding_start,
-                               &ih->mp3_padding_end) == 0) {
-      ih->mp3_padding_start += 529;
-      if (ih->mp3_padding_end < 529)
-        fprintf(stderr, "Weird end padding value, please investigate\n");
-      else
-        ih->mp3_padding_end -= 529;
-    }
-  } else if (ih->codec_context->codec_id == CODEC_ID_AAC) {
-    input_read_mp4_padding(ih->format_context->filename,
-                           &ih->mp3_padding_start,
-                           &ih->mp3_padding_end);
-  }
-
   return 0;
 
 close_file:
@@ -222,11 +201,6 @@ static size_t ffmpeg_get_total_frames(struct input_handle* ih) {
              * (double) ih->format_context->streams[ih->audio_stream]->time_base.num
              / (double) ih->format_context->streams[ih->audio_stream]->time_base.den
              * (double) ih->codec_context->sample_rate;
-
-  if (ih->codec_context->codec_id == CODEC_ID_MP3 ||
-      ih->codec_context->codec_id == CODEC_ID_AAC) {
-    tmp -= ih->mp3_padding_start + ih->mp3_padding_end;
-  }
 
   if (tmp <= 0.0) {
     return 0;
@@ -362,25 +336,6 @@ static size_t ffmpeg_read_frames(struct input_handle* ih) {
 
 
     frames_return = buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
-    if (frames_return == 0) return 0;
-
-    if (ih->codec_context->codec_id == CODEC_ID_MP3 ||
-        ih->codec_context->codec_id == CODEC_ID_AAC) {
-        if (!ih->mp3_has_skipped_beginning) {
-            memmove(ih->buffer, ih->buffer + ih->mp3_padding_start * ffmpeg_get_channels(ih),
-                                buf_pos - ih->mp3_padding_start * sizeof(float) * ffmpeg_get_channels(ih));
-            frames_return -= ih->mp3_padding_start;
-
-            ih->mp3_has_skipped_beginning = 1;
-        }
-
-        if (!ih->buffer_list) {
-            frames_return -= ih->mp3_padding_end;
-        } else if (ih->mp3_padding_end > ih->current_bytes / sizeof(float) / ffmpeg_get_channels(ih)) {
-            frames_return -= ih->mp3_padding_end - ih->current_bytes / sizeof(float) / ffmpeg_get_channels(ih);
-            ih->mp3_stop = 1;
-        }
-    }
 
     return frames_return;
 }
