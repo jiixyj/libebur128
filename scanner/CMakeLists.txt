@@ -9,7 +9,6 @@ set(SCANNERCOMMON_INCLUDE_DIRS
 
 add_subdirectory(filetree)
 add_subdirectory(inputaudio)
-add_subdirectory(scanner-tag)
 
 include(utils)
 
@@ -18,15 +17,6 @@ if(PKG_CONFIG_FOUND)
   pkg_check_modules(GLIB20    glib-2.0)
   pkg_check_modules(GTHREAD20 gthread-2.0)
   pkg_check_modules(SPEEXDSP  speexdsp)
-
-  to_space_list(GLIB20_CFLAGS)
-  to_space_list(GLIB20_LDFLAGS)
-
-  to_space_list(GTHREAD20_CFLAGS)
-  to_space_list(GTHREAD20_LDFLAGS)
-
-  to_space_list(SPEEXDSP_CFLAGS)
-  to_space_list(SPEEXDSP_LDFLAGS)
 endif()
 find_package(SNDFILE)
 
@@ -36,12 +26,16 @@ set(SUMMARY_SNDFILE_FOUND   ${SNDFILE_FOUND}   CACHE INTERNAL "")
 set(SUMMARY_SPEEXDSP_FOUND  ${SPEEXDSP_FOUND}  CACHE INTERNAL "")
 
 if(GLIB20_FOUND AND GTHREAD20_FOUND AND NOT DISABLE_GLIB20)
-
-  add_subdirectory(scanner-common)
   include_directories(${SCANNERCOMMON_INCLUDE_DIRS})
 
-  set(LOUDNESS_CFLAGS  "${GLIB20_CFLAGS}  ${GTHREAD20_CFLAGS}")
-  set(LOUDNESS_LDFLAGS "${GLIB20_LDFLAGS} ${GTHREAD20_LDFLAGS} ${INPUT_LDFLAGS}")
+  add_subdirectory(scanner-common)
+  add_subdirectory(scanner-tag)
+
+
+  include_directories(SYSTEM ${GLIB20_INCLUDE_DIRS} ${GTHREAD20_INCLUDE_DIRS})
+  link_directories(          ${GLIB20_LIBRARY_DIRS} ${GTHREAD20_LIBRARY_DIRS})
+  add_definitions(           ${GLIB20_CFLAGS_OTHER} ${GTHREAD20_CFLAGS_OTHER})
+
 
   set(LOGO_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
   add_subdirectory(scanner-drop-gtk)
@@ -52,15 +46,10 @@ if(GLIB20_FOUND AND GTHREAD20_FOUND AND NOT DISABLE_GLIB20)
   target_link_libraries(scanner-lib scanner-common ebur128)
 
   add_executable(loudness scanner)
-  target_link_libraries(loudness scanner-lib filetree input)
+  target_link_libraries(loudness
+        scanner-lib filetree input
+        ${GLIB20_LIBRARIES} ${GTHREAD20_LIBRARIES})
 
-
-  set_target_properties(loudness PROPERTIES
-          COMPILE_FLAGS ${LOUDNESS_CFLAGS}
-             LINK_FLAGS ${LOUDNESS_LDFLAGS})
-
-  set_target_properties(scanner-lib PROPERTIES
-          COMPILE_FLAGS ${LOUDNESS_CFLAGS})
 
 
   if(SNDFILE_FOUND AND NOT DISABLE_SNDFILE)
