@@ -271,6 +271,7 @@ static gpointer print_progress_bar(gpointer p_started)
 {
     int percent, bars, i;
     static char progress_bar[81];
+    gint64 last_time = -1;
 
     int *started = (int *) p_started;
 
@@ -282,6 +283,17 @@ static gpointer print_progress_bar(gpointer p_started)
             g_cond_signal(progress_cond);
         }
         g_cond_wait(progress_cond, progress_mutex);
+
+        /* refresh progress bar at max 10 times per second */
+        gint64 current_time = g_get_monotonic_time();
+        if (last_time == -1 || current_time >= last_time + 100 * 1000 ||
+                total_frames == elapsed_frames) {
+            last_time = current_time;
+        } else {
+            g_mutex_unlock(progress_mutex);
+            continue;
+        }
+
         if (total_frames) {
             bars = (int) (elapsed_frames * G_GUINT64_CONSTANT(72) / total_frames);
             percent = (int) (elapsed_frames * G_GUINT64_CONSTANT(100) / total_frames);
