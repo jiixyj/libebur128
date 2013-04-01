@@ -13,11 +13,6 @@ struct _buffer {
   uint8_t audio_buf[BUFFER_SIZE];
 } __attribute__ ((aligned (16)));
 
-struct buffer_list_node {
-  guint8 *data;
-  size_t size;
-};
-
 struct input_handle {
   AVFormatContext* format_context;
   AVCodecContext* codec_context;
@@ -28,12 +23,6 @@ struct input_handle {
   uint8_t* old_data;
   struct _buffer audio_buf;
   float buffer[BUFFER_SIZE / 2 + 1];
-
-  GSList *buffer_list;
-  size_t current_bytes;
-
-  int mp3_has_skipped_beginning;
-  int mp3_stop;
 };
 
 static unsigned ffmpeg_get_channels(struct input_handle* ih) {
@@ -53,10 +42,6 @@ static struct input_handle* ffmpeg_handle_init() {
   ret = malloc(sizeof(struct input_handle));
 
   av_init_packet(&ret->packet);
-  ret->buffer_list = NULL;
-  ret->current_bytes = 0;
-  ret->mp3_has_skipped_beginning = 0;
-  ret->mp3_stop = 0;
 
   return ret;
 }
@@ -192,127 +177,85 @@ static size_t ffmpeg_get_total_frames(struct input_handle* ih) {
 }
 
 static size_t ffmpeg_read_one_packet(struct input_handle* ih) {
-  for (;;) {
-    if (ih->need_new_frame && av_read_frame(ih->format_context, &ih->packet) < 0) {
+next_frame:
+  do {
+    if (av_read_frame(ih->format_context, &ih->packet) < 0) {
       return 0;
     }
+  } while (ih->packet.stream_index != ih->audio_stream);
 
-    ih->need_new_frame = FALSE;
-    if (ih->packet.stream_index == ih->audio_stream) {
-      int16_t* data_short =  (int16_t*) &ih->audio_buf;
-      int32_t* data_int =    (int32_t*) &ih->audio_buf;
-      float*   data_float =  (float*)   &ih->audio_buf;
-      double*  data_double = (double*)  &ih->audio_buf;
+  size_t nr_frames_read, i;
 
-      if (!ih->old_data) {
-        ih->old_data = ih->packet.data;
-      }
-      while (ih->packet.size > 0) {
-        int data_size = sizeof(ih->audio_buf);
-        int len = avcodec_decode_audio3(ih->codec_context, (int16_t*) &ih->audio_buf,
-                                        &data_size, &ih->packet);
-        if (len < 0) {
-          ih->packet.size = 0;
-          break;
-        }
-        ih->packet.data += len;
-        ih->packet.size -= len;
-        if (!data_size) {
-          continue;
-        }
-        if (ih->packet.size < 0) {
-            fprintf(stderr, "Error in decoder!\n");
-            return 0;
-        }
-        size_t nr_frames_read, i;
-        switch (ih->codec_context->sample_fmt) {
-          case AV_SAMPLE_FMT_U8:
-            fprintf(stderr, "8 bit audio not supported by libebur128!\n");
-            return 0;
-          case AV_SAMPLE_FMT_S16:
-            nr_frames_read = (size_t) data_size / sizeof(int16_t) /
-                             (size_t) ih->codec_context->channels;
-            for (i = 0; i < (size_t) data_size / sizeof(int16_t); ++i) {
-              ih->buffer[i] = ((float) data_short[i]) /
-                              MAX(-(float) SHRT_MIN, (float) SHRT_MAX);
-            }
-            break;
-          case AV_SAMPLE_FMT_S32:
-            nr_frames_read = (size_t) data_size / sizeof(int32_t) /
-                             (size_t) ih->codec_context->channels;
-            for (i = 0; i < (size_t) data_size / sizeof(int32_t); ++i) {
-              ih->buffer[i] = ((float) data_int[i]) /
-                              MAX(-(float) INT_MIN, (float) INT_MAX);
-            }
-            break;
-          case AV_SAMPLE_FMT_FLT:
-            nr_frames_read = (size_t) data_size / sizeof(float) /
-                             (size_t) ih->codec_context->channels;
-            for (i = 0; i < (size_t) data_size / sizeof(float); ++i) {
-              ih->buffer[i] = data_float[i];
-            }
-            break;
-          case AV_SAMPLE_FMT_DBL:
-            nr_frames_read = (size_t) data_size / sizeof(double) /
-                             (size_t) ih->codec_context->channels;
-            for (i = 0; i < (size_t) data_size / sizeof(double); ++i) {
-              ih->buffer[i] = (float) data_double[i];
-            }
-            break;
-          case AV_SAMPLE_FMT_NONE:
-          case AV_SAMPLE_FMT_NB:
-          default:
-            fprintf(stderr, "Unknown sample format!\n");
-            return 0;
-        }
-        return nr_frames_read;
-      }
-      ih->packet.data = ih->old_data;
-      ih->old_data = NULL;
-    }
-    av_free_packet(&ih->packet);
-    ih->need_new_frame = TRUE;
+  int data_size = sizeof(ih->audio_buf);
+  int len = avcodec_decode_audio3(ih->codec_context,
+                                  (int16_t*) &ih->audio_buf,
+                                  &data_size, &ih->packet);
+  if (len < 0 || data_size < 0) {
+    fprintf(stderr, "Error in decoder!\n");
+    nr_frames_read = 0;
+    goto out;
   }
+
+  /* No data used, (happens with metadata frames for example) */
+  if (len <= 0 || data_size <= 0) {
+    av_free_packet(&ih->packet);
+    goto next_frame;
+  }
+
+  int16_t* data_short =  (int16_t*) &ih->audio_buf;
+  int32_t* data_int =    (int32_t*) &ih->audio_buf;
+  float*   data_float =  (float*)   &ih->audio_buf;
+  double*  data_double = (double*)  &ih->audio_buf;
+
+  switch (ih->codec_context->sample_fmt) {
+    case AV_SAMPLE_FMT_U8:
+      fprintf(stderr, "8 bit audio not supported by libebur128!\n");
+      nr_frames_read = 0;
+      goto out;
+    case AV_SAMPLE_FMT_S16:
+      nr_frames_read = (size_t) data_size / sizeof(int16_t) /
+                       (size_t) ih->codec_context->channels;
+      for (i = 0; i < (size_t) data_size / sizeof(int16_t); ++i) {
+        ih->buffer[i] = ((float) data_short[i]) /
+                        MAX(-(float) SHRT_MIN, (float) SHRT_MAX);
+      }
+      break;
+    case AV_SAMPLE_FMT_S32:
+      nr_frames_read = (size_t) data_size / sizeof(int32_t) /
+                       (size_t) ih->codec_context->channels;
+      for (i = 0; i < (size_t) data_size / sizeof(int32_t); ++i) {
+        ih->buffer[i] = ((float) data_int[i]) /
+                        MAX(-(float) INT_MIN, (float) INT_MAX);
+      }
+      break;
+    case AV_SAMPLE_FMT_FLT:
+      nr_frames_read = (size_t) data_size / sizeof(float) /
+                       (size_t) ih->codec_context->channels;
+      for (i = 0; i < (size_t) data_size / sizeof(float); ++i) {
+        ih->buffer[i] = data_float[i];
+      }
+      break;
+    case AV_SAMPLE_FMT_DBL:
+      nr_frames_read = (size_t) data_size / sizeof(double) /
+                       (size_t) ih->codec_context->channels;
+      for (i = 0; i < (size_t) data_size / sizeof(double); ++i) {
+        ih->buffer[i] = (float) data_double[i];
+      }
+      break;
+    case AV_SAMPLE_FMT_NONE:
+    case AV_SAMPLE_FMT_NB:
+    default:
+      fprintf(stderr, "Unknown sample format!\n");
+      nr_frames_read = 0;
+      goto out;
+  }
+out:
+  av_free_packet(&ih->packet);
+  return nr_frames_read;
 }
 
 static size_t ffmpeg_read_frames(struct input_handle* ih) {
-    size_t buf_pos = 0, nr_frames_read;
-    GSList *next;
-    struct buffer_list_node *buf_node;
-    size_t frames_return;
-
-    if (ih->mp3_stop) return 0;
-
-    while (ih->current_bytes < BUFFER_SIZE * 2) {
-        nr_frames_read = ffmpeg_read_one_packet(ih);
-        if (!nr_frames_read) {
-            break;
-        }
-        buf_node = g_new(struct buffer_list_node, 1);
-        buf_node->size = nr_frames_read * ffmpeg_get_channels(ih) * sizeof(float);
-        buf_node->data = g_memdup(ih->buffer, (guint) buf_node->size);
-        ih->buffer_list = g_slist_append(ih->buffer_list, buf_node);
-        ih->current_bytes += buf_node->size;
-    }
-
-    while (ih->buffer_list &&
-           ((struct buffer_list_node *) ih->buffer_list->data)->size + buf_pos <= BUFFER_SIZE) {
-        memcpy((guint8 *) ih->buffer + buf_pos,
-               ((struct buffer_list_node *) ih->buffer_list->data)->data,
-               ((struct buffer_list_node *) ih->buffer_list->data)->size);
-        buf_pos           += ((struct buffer_list_node *) ih->buffer_list->data)->size;
-        ih->current_bytes -= ((struct buffer_list_node *) ih->buffer_list->data)->size;
-
-        g_free(((struct buffer_list_node *) ih->buffer_list->data)->data);
-        next = ih->buffer_list->next;
-        g_slist_free_1(ih->buffer_list);
-        ih->buffer_list = next;
-    }
-
-
-    frames_return = buf_pos / sizeof(float) / ffmpeg_get_channels(ih);
-
-    return frames_return;
+  return ffmpeg_read_one_packet(ih);
 }
 
 static void ffmpeg_free_buffer(struct input_handle* ih) {
