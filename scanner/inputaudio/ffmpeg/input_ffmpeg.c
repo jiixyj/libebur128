@@ -298,4 +298,4 @@ G_MODULE_EXPORT struct input_ops ip_ops = {
   ffmpeg_exit_library
 };
 
-G_MODULE_EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", "m4a", "mp4", "aac", NULL};
+G_MODULE_EXPORT const char* ip_exts[] = {"wav", "flac", "ogg", "oga", "mp3", "mp2", "mpc", "ac3", "wv", "mpg", "avi", "mkv", "m4a", "mp4", "aac", "mov", "mxf", NULL};
