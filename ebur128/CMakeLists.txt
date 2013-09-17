@@ -40,6 +40,8 @@ set(EBUR128_VERSION 1.0.0)
 add_library(ebur128_static STATIC ebur128.c)
 set_target_properties(ebur128_static PROPERTIES
     OUTPUT_NAME ebur128)
+set_target_properties(ebur128_static PROPERTIES
+    COMPILE_FLAGS "-fPIC")
 add_library(ebur128 SHARED ebur128.c)
 set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
