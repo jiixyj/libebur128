@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #include "parse_args.h"
 
 #include <stdio.h>

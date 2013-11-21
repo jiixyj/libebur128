@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #include <sndfile.h>
 #include <string.h>
 #include <stdlib.h>

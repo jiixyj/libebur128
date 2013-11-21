@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifndef SCANNER_DUMP_H
 #define SCANNER_DUMP_H
 

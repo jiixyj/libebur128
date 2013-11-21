@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifndef NPROC_H
 #define NPROC_H
 

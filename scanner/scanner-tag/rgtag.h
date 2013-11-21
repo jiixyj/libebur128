@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #ifndef _RGTAG_H_
 #define _RGTAG_H_
 

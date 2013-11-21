@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <librsvg/rsvg.h>

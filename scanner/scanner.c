@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifdef G_OS_WIN32
 #include <windows.h>
 #endif

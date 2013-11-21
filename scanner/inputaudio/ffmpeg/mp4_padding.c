@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #include "mp4_padding.h"
 
 #include <limits.h>

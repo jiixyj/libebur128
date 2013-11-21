@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #include "mp3_padding.h"
 
 #include <stdio.h>

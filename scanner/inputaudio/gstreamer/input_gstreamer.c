@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 #include <gst/audio/multichannel.h>

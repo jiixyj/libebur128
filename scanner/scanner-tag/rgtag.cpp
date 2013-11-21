@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #include "rgtag.h"
 
 #include <id3v2tag.h>

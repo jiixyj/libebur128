@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifndef MP3_PADDING_H
 #define MP3_PADDING_H
 

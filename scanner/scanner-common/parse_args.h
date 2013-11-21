@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifndef PARSE_GLOBAL_ARGS_H
 #define PARSE_GLOBAL_ARGS_H
 

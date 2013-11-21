@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #define _POSIX_C_SOURCE 1
 #include <mpg123.h>
 #include <stdio.h>

@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifndef SCANNER_TAG_H
 #define SCANNER_TAG_H
 

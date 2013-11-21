@@ -1,3 +1,5 @@
+/* See COPYING file for copyright and license details. */
+
 #ifndef MP4_PADDING_H
 #define MP4_PADDING_H
 
