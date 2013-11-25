@@ -34,7 +34,7 @@ endif()
 
 
 set(EBUR128_VERSION_MAJOR 1)
-set(EBUR128_VERSION 1.0.0)
+set(EBUR128_VERSION 1.0.1)
 
 add_library(ebur128_static STATIC ebur128.c)
 set_property(TARGET ebur128_static PROPERTY OUTPUT_NAME ebur128)
