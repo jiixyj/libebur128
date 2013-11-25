@@ -12,6 +12,10 @@
 extern "C" {
 #endif
 
+#define EBUR128_VERSION_MAJOR 1
+#define EBUR128_VERSION_MINOR 0
+#define EBUR128_VERSION_PATCH 0
+
 #include <stddef.h>       /* for size_t */
 
 /** \enum channel
@@ -73,6 +77,14 @@ typedef struct {
   unsigned long samplerate;           /**< The sample rate. */
   struct ebur128_state_internal* d;   /**< Internal state. */
 } ebur128_state;
+
+/** \brief Get library version number. Do not pass null pointers here.
+ *
+ *  @param major major version number of library
+ *  @param minor minor version number of library
+ *  @param patch patch version number of library
+ */
+void ebur128_get_version(int* major, int* minor, int* patch);
 
 /** \brief Initialize library state.
  *

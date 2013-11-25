@@ -210,6 +210,12 @@ static void ebur128_destroy_resampler(ebur128_state* st) {
 }
 #endif
 
+void ebur128_get_version(int* major, int* minor, int* patch) {
+  *major = EBUR128_VERSION_MAJOR;
+  *minor = EBUR128_VERSION_MINOR;
+  *patch = EBUR128_VERSION_PATCH;
+}
+
 ebur128_state* ebur128_init(unsigned int channels,
                             unsigned long samplerate,
                             int mode) {
