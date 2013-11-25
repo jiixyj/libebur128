@@ -260,9 +260,13 @@ int ebur128_sample_peak(ebur128_state* st,
 
 /** \brief Get maximum true peak of selected channel in float format.
  *
- *  Uses the Speex resampler with quality level 8 to calculate true peak. Will
- *  oversample 4x for sample rates < 96000 Hz, 2x for sample rates < 192000 Hz
- *  and leave the signal unchanged for 192000 Hz.
+ *  Uses an implementation defined algorithm to calculate the true peak. Do not
+ *  try to compare resulting values across different versions of the library,
+ *  as the algorithm may change.
+ *
+ *  The current implementation uses the Speex resampler with quality level 8 to
+ *  calculate true peak. Will oversample 4x for sample rates < 96000 Hz, 2x for
+ *  sample rates < 192000 Hz and leave the signal unchanged for 192000 Hz.
  *
  *  @param st library state
  *  @param channel_number channel to analyse
