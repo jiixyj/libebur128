@@ -137,15 +137,28 @@ static int ebur128_init_channel_map(ebur128_state* st) {
   size_t i;
   st->d->channel_map = (int*) malloc(st->channels * sizeof(int));
   if (!st->d->channel_map) return EBUR128_ERROR_NOMEM;
-  for (i = 0; i < st->channels; ++i) {
-    switch (i) {
-      case 0:  st->d->channel_map[i] = EBUR128_LEFT;           break;
-      case 1:  st->d->channel_map[i] = EBUR128_RIGHT;          break;
-      case 2:  st->d->channel_map[i] = EBUR128_CENTER;         break;
-      case 3:  st->d->channel_map[i] = EBUR128_UNUSED;         break;
-      case 4:  st->d->channel_map[i] = EBUR128_LEFT_SURROUND;  break;
-      case 5:  st->d->channel_map[i] = EBUR128_RIGHT_SURROUND; break;
-      default: st->d->channel_map[i] = EBUR128_UNUSED;         break;
+  if (st->channels == 4) {
+    st->d->channel_map[0] = EBUR128_LEFT;
+    st->d->channel_map[1] = EBUR128_RIGHT;
+    st->d->channel_map[2] = EBUR128_LEFT_SURROUND;
+    st->d->channel_map[3] = EBUR128_RIGHT_SURROUND;
+  } else if (st->channels == 5) {
+    st->d->channel_map[0] = EBUR128_LEFT;
+    st->d->channel_map[1] = EBUR128_RIGHT;
+    st->d->channel_map[2] = EBUR128_CENTER;
+    st->d->channel_map[3] = EBUR128_LEFT_SURROUND;
+    st->d->channel_map[4] = EBUR128_RIGHT_SURROUND;
+  } else {
+    for (i = 0; i < st->channels; ++i) {
+      switch (i) {
+        case 0:  st->d->channel_map[i] = EBUR128_LEFT;           break;
+        case 1:  st->d->channel_map[i] = EBUR128_RIGHT;          break;
+        case 2:  st->d->channel_map[i] = EBUR128_CENTER;         break;
+        case 3:  st->d->channel_map[i] = EBUR128_UNUSED;         break;
+        case 4:  st->d->channel_map[i] = EBUR128_LEFT_SURROUND;  break;
+        case 5:  st->d->channel_map[i] = EBUR128_RIGHT_SURROUND; break;
+        default: st->d->channel_map[i] = EBUR128_UNUSED;         break;
+      }
     }
   }
   return EBUR128_SUCCESS;
