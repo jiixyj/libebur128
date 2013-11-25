@@ -48,4 +48,4 @@ Usage
 
 Library usage should be pretty straightforward. All exported symbols are
 documented in the ebur128.h header file. For a usage example, see
-minimal-example.c.
+minimal-example.c in the tests folder.
