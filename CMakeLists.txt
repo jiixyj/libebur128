@@ -6,6 +6,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 include(utils)
+include(GNUInstallDirs)
 
 add_subdirectory(ebur128)
 add_subdirectory(test)
