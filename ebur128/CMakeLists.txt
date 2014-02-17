@@ -47,6 +47,9 @@ set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION})
 
+if(UNIX)
+  target_link_libraries(ebur128 -lm)
+endif(UNIX)
 
 if(SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
     set_property(TARGET ebur128_static APPEND_STRING PROPERTY
