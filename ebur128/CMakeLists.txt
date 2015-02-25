@@ -23,7 +23,7 @@ if(NOT DISABLE_SPEEXDSP)
     find_pkg_config(SPEEXDSP speexdsp)
     if(SPEEXDSP_FOUND)
         include_directories(SYSTEM ${SPEEXDSP_INCLUDE_DIRS})
-        add_definitions(-DUSE_SPEEX_RESAMPLER)
+        add_definitions(-DUSE_SPEEX_RESAMPLER -DHAVE_STDINT_H)
     endif()
 endif()
 
