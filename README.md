@@ -4,7 +4,7 @@ libebur128
 libebur128 is a library that implements the EBU R 128 standard for loudness
 normalisation.
 
-All source code is licensed under the MIT license. See LICENSE file for
+All source code is licensed under the MIT license. See COPYING file for
 details.
 
 News
@@ -21,7 +21,6 @@ Features
 * Implements loudness range measurement (EBU - TECH 3342)
 * True peak scanning
 * Supports all samplerates by recalculation of the filter coefficients
-
 
 Requirements
 ------------
