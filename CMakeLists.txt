@@ -15,6 +15,12 @@ add_subdirectory(test)
 to_yes_no(SUMMARY_HAS_QUEUE SUMMARY_SPEEXDSP_FOUND)
 to_yes_no(DISABLE_SPEEXDSP)
 
+if(ENABLE_STATIC_LIBS)
+  message(STATUS "build static library and shared library!")
+else()
+  message(STATUS "not building static library, set ENABLE_STATIC_LIBS to ON to enable")
+endif()
+
 if(ENABLE_INTERNAL_QUEUE_H)
   set(USE_QUEUE "using own copy of queue.h")
 else()
@@ -22,7 +28,7 @@ else()
 endif()
 
 ##### Print status
-message(STATUS "status          found / disabled --")
+message(STATUS "Status          found / disabled --")
 message(STATUS "queue.h:        ${SUMMARY_HAS_QUEUE}"        "     ${USE_QUEUE}")
 message(STATUS "speexdsp:       ${SUMMARY_SPEEXDSP_FOUND}"   "     ${DISABLE_SPEEXDSP}")
 
