@@ -11,15 +11,8 @@ include(GNUInstallDirs)
 add_subdirectory(ebur128)
 add_subdirectory(test)
 
-
 to_yes_no(SUMMARY_HAS_QUEUE SUMMARY_SPEEXDSP_FOUND)
 to_yes_no(DISABLE_SPEEXDSP)
-
-if(ENABLE_STATIC_LIBS)
-  message(STATUS "build static library and shared library!")
-else()
-  message(STATUS "not building static library, set ENABLE_STATIC_LIBS to ON to enable")
-endif()
 
 if(ENABLE_INTERNAL_QUEUE_H)
   set(USE_QUEUE "using own copy of queue.h")
@@ -31,6 +24,12 @@ endif()
 message(STATUS "Status          found / disabled --")
 message(STATUS "queue.h:        ${SUMMARY_HAS_QUEUE}"        "     ${USE_QUEUE}")
 message(STATUS "speexdsp:       ${SUMMARY_SPEEXDSP_FOUND}"   "     ${DISABLE_SPEEXDSP}")
+
+if(BUILD_STATIC_LIBS)
+  message(STATUS "build static library and shared library!")
+else()
+  message(STATUS "not building static library, set BUILD_STATIC_LIBS to ON to enable")
+endif()
 
 if(NOT SUMMARY_HAS_QUEUE AND NOT ENABLE_INTERNAL_QUEUE_H)
   message(FATAL_ERROR "queue.h not found, please set ENABLE_INTERNAL_QUEUE_H to ON")
