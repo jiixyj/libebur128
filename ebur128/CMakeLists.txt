@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.9)
 
-set(ENABLE_STATIC_LIBS      ON  CACHE BOOL "Build static library")
+set(BUILD_STATIC_LIBS       ON  CACHE BOOL "Build static library")
 set(WITH_STATIC_PIC         OFF CACHE BOOL "Compile static library with -fPIC flag")
 set(ENABLE_INTERNAL_QUEUE_H OFF CACHE BOOL "Use own queue.h")
 set(DISABLE_SPEEXDSP        OFF CACHE BOOL "Don't build with speexdsp")
@@ -36,7 +36,7 @@ endif()
 set(EBUR128_VERSION_MAJOR 1)
 set(EBUR128_VERSION 1.0.1)
 
-if(ENABLE_STATIC_LIBS)
+if(BUILD_STATIC_LIBS)
 add_library(ebur128_static STATIC ebur128.c)
 set_property(TARGET ebur128_static PROPERTY OUTPUT_NAME ebur128)
 endif()
@@ -51,24 +51,24 @@ set_target_properties(ebur128 PROPERTIES
     VERSION ${EBUR128_VERSION})
 
 if(UNIX)
-  target_link_libraries(ebur128 -lm)
+  target_link_libraries(ebur128 m)
 endif(UNIX)
 
 if(SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
-    if(ENABLE_STATIC_LIBS)
+    if(BUILD_STATIC_LIBS)
       set_property(TARGET ebur128_static APPEND_STRING PROPERTY
           COMPILE_FLAGS " ${SPEEXDSP_CFLAGS}")
     endif()
-set_property(TARGET ebur128 APPEND_STRING PROPERTY
-    COMPILE_FLAGS " ${SPEEXDSP_CFLAGS}")
-target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
+  set_property(TARGET ebur128 APPEND_STRING PROPERTY
+      COMPILE_FLAGS " ${SPEEXDSP_CFLAGS}")
+  target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
 endif()
 
 set(SUMMARY_SPEEXDSP_FOUND ${SPEEXDSP_FOUND} CACHE INTERNAL "")
 set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")
 
 install(FILES ebur128.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-if(ENABLE_STATIC_LIBS)
+if(BUILD_STATIC_LIBS)
 install(TARGETS ebur128 ebur128_static DESTINATION ${CMAKE_INSTALL_LIBDIR})
 else()
 install(TARGETS ebur128 DESTINATION ${CMAKE_INSTALL_LIBDIR})
