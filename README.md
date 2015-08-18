@@ -25,8 +25,7 @@ Features
 Requirements
 ------------
 
-The library itself has no requirements besides ANSI C.
-
+* [libspeexdsp](http://www.speex.org/) - Needed for `ebur128_true_peak`.
 
 Installation
 ------------
@@ -50,4 +49,4 @@ documented in the ebur128.h header file. For a usage example, see
 minimal-example.c in the tests folder.
 
 On some operating systems, static libraries should be compiled as position
-independent code. You can enable that by turning on WITH\_STATIC\_PIC.
+independent code. You can enable that by turning on `WITH_STATIC_PIC`.
