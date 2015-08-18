@@ -17,7 +17,7 @@ int main(int ac, const char* av[]) {
   int i;
 
   if (ac < 2) {
-    fprintf(stderr, "usage: r128-test FILENAME...\n");
+    fprintf(stderr, "usage: %s FILENAME...\n", av[0]);
     exit(1);
   }
 
