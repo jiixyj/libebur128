@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 2.8.9)
 set(ENABLE_TESTS OFF CACHE BOOL "Build test binaries, needs libsndfile")
 
 if(ENABLE_TESTS)
-  find_pkg_config(SNDFILE sndfile REQUIRED)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(SNDFILE REQUIRED sndfile)
 
   include_directories(${EBUR128_INCLUDE_DIR})
   include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
