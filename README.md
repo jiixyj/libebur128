@@ -7,11 +7,17 @@ normalisation.
 All source code is licensed under the MIT license. See COPYING file for
 details.
 
+See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
+
 News
 ----
 
-The loudness scanning tool has moved to its own repository at
-https://github.com/jiixyj/loudness-scanner
+v1.0.3 Released:
+
+ * Fix build with recent speexdsp
+ * Correct license file name
+ * CMake option to disable static library
+ * minimal-example.c: do not hard code program name in usage
 
 Features
 --------
