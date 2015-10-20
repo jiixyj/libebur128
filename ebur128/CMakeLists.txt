@@ -42,7 +42,7 @@ set_target_properties(ebur128 PROPERTIES
 
 #### speexdsp
 if(NOT DISABLE_SPEEXDSP)
-  find_package(SpeexDSP)
+  find_pkg_config(SPEEXDSP speexdsp)
     if(SPEEXDSP_FOUND)
       target_include_directories(ebur128 PRIVATE
                                  ${SPEEXDSP_INCLUDE_DIRS})
