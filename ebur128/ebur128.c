@@ -147,11 +147,6 @@ static int ebur128_init_channel_map(ebur128_state* st) {
       default: st->d->channel_map[i] = EBUR128_UNUSED;         break;
     }
   }
-  //map 5 channels streams as L/R/C/Ls/Rs
-  if (st->channels == 5) {
-    st->d->channel_map[3] = EBUR128_LEFT_SURROUND;
-    st->d->channel_map[4] = EBUR128_RIGHT_SURROUND;
-  }
   return EBUR128_SUCCESS;
 }
 
