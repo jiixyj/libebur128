@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #include <math.h>
 #include <sndfile.h>
 #include <string.h>
@@ -188,13 +189,13 @@ int main() {
 
   TEST_GLOBAL_LOUDNESS("seq-3341-1-16bit.wav", 0)
   TEST_GLOBAL_LOUDNESS("seq-3341-2-16bit.wav", 1)
-  TEST_GLOBAL_LOUDNESS("seq-3341-3-16bit.wav", 2)
-  TEST_GLOBAL_LOUDNESS("seq-3341-4-16bit.wav", 3)
-  TEST_GLOBAL_LOUDNESS("seq-3341-5-16bit.wav", 4)
+  TEST_GLOBAL_LOUDNESS("seq-3341-3-16bit-v02.wav", 2)
+  TEST_GLOBAL_LOUDNESS("seq-3341-4-16bit-v02.wav", 3)
+  TEST_GLOBAL_LOUDNESS("seq-3341-5-16bit-v02.wav", 4)
   TEST_GLOBAL_LOUDNESS("seq-3341-6-5channels-16bit.wav", 5)
   TEST_GLOBAL_LOUDNESS("seq-3341-6-6channels-WAVEEX-16bit.wav", 6)
   TEST_GLOBAL_LOUDNESS("seq-3341-7_seq-3342-5-24bit.wav", 7)
-  TEST_GLOBAL_LOUDNESS("seq-3341-8_seq-3342-6-24bit.wav", 8)
+  TEST_GLOBAL_LOUDNESS("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 8)
 
 
 #define TEST_LRA(filename, i)                                                  \
@@ -211,7 +212,7 @@ int main() {
   TEST_LRA("seq-3342-3-16bit.wav", 2)
   TEST_LRA("seq-3342-4-16bit.wav", 3)
   TEST_LRA("seq-3341-7_seq-3342-5-24bit.wav", 4)
-  TEST_LRA("seq-3341-8_seq-3342-6-24bit.wav", 5)
+  TEST_LRA("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 5)
 
   return 0;
 }

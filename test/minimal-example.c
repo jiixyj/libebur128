@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #include <sndfile.h>
 #include <string.h>
 #include <stdlib.h>
@@ -16,7 +17,7 @@ int main(int ac, const char* av[]) {
   int i;
 
   if (ac < 2) {
-    fprintf(stderr, "usage: r128-test FILENAME...\n");
+    fprintf(stderr, "usage: %s FILENAME...\n", av[0]);
     exit(1);
   }
 

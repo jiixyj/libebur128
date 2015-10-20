@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #include "ebur128.h"
 
 #include <float.h>
@@ -136,15 +137,28 @@ static int ebur128_init_channel_map(ebur128_state* st) {
   size_t i;
   st->d->channel_map = (int*) malloc(st->channels * sizeof(int));
   if (!st->d->channel_map) return EBUR128_ERROR_NOMEM;
-  for (i = 0; i < st->channels; ++i) {
-    switch (i) {
-      case 0:  st->d->channel_map[i] = EBUR128_LEFT;           break;
-      case 1:  st->d->channel_map[i] = EBUR128_RIGHT;          break;
-      case 2:  st->d->channel_map[i] = EBUR128_CENTER;         break;
-      case 3:  st->d->channel_map[i] = EBUR128_UNUSED;         break;
-      case 4:  st->d->channel_map[i] = EBUR128_LEFT_SURROUND;  break;
-      case 5:  st->d->channel_map[i] = EBUR128_RIGHT_SURROUND; break;
-      default: st->d->channel_map[i] = EBUR128_UNUSED;         break;
+  if (st->channels == 4) {
+    st->d->channel_map[0] = EBUR128_LEFT;
+    st->d->channel_map[1] = EBUR128_RIGHT;
+    st->d->channel_map[2] = EBUR128_LEFT_SURROUND;
+    st->d->channel_map[3] = EBUR128_RIGHT_SURROUND;
+  } else if (st->channels == 5) {
+    st->d->channel_map[0] = EBUR128_LEFT;
+    st->d->channel_map[1] = EBUR128_RIGHT;
+    st->d->channel_map[2] = EBUR128_CENTER;
+    st->d->channel_map[3] = EBUR128_LEFT_SURROUND;
+    st->d->channel_map[4] = EBUR128_RIGHT_SURROUND;
+  } else {
+    for (i = 0; i < st->channels; ++i) {
+      switch (i) {
+        case 0:  st->d->channel_map[i] = EBUR128_LEFT;           break;
+        case 1:  st->d->channel_map[i] = EBUR128_RIGHT;          break;
+        case 2:  st->d->channel_map[i] = EBUR128_CENTER;         break;
+        case 3:  st->d->channel_map[i] = EBUR128_UNUSED;         break;
+        case 4:  st->d->channel_map[i] = EBUR128_LEFT_SURROUND;  break;
+        case 5:  st->d->channel_map[i] = EBUR128_RIGHT_SURROUND; break;
+        default: st->d->channel_map[i] = EBUR128_UNUSED;         break;
+      }
     }
   }
   return EBUR128_SUCCESS;
@@ -209,6 +223,12 @@ static void ebur128_destroy_resampler(ebur128_state* st) {
 }
 #endif
 
+void ebur128_get_version(int* major, int* minor, int* patch) {
+  *major = EBUR128_VERSION_MAJOR;
+  *minor = EBUR128_VERSION_MINOR;
+  *patch = EBUR128_VERSION_PATCH;
+}
+
 ebur128_state* ebur128_init(unsigned int channels,
                             unsigned long samplerate,
                             int mode) {
@@ -244,7 +264,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   } else if ((mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
     st->d->audio_data_frames = st->d->samples_in_100ms * 4;
   } else {
-    return NULL;
+    goto free_true_peak;
   }
   st->d->audio_data = (double*) malloc(st->d->audio_data_frames *
                                        st->channels *

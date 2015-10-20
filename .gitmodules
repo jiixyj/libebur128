@@ -1,3 +1,0 @@
-[submodule "scanner/filetree"]
-	path = scanner/filetree
-	url = git://github.com/jiixyj/filewalk.git

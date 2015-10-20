@@ -1,4 +1,5 @@
-/* See LICENSE file for copyright and license details. */
+/* See COPYING file for copyright and license details. */
+
 #ifndef EBUR128_H_
 #define EBUR128_H_
 
@@ -10,6 +11,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define EBUR128_VERSION_MAJOR 1
+#define EBUR128_VERSION_MINOR 0
+#define EBUR128_VERSION_PATCH 3
 
 #include <stddef.h>       /* for size_t */
 
@@ -46,7 +51,7 @@ enum mode {
   EBUR128_MODE_M           = (1 << 0),
   /** can call ebur128_loudness_shortterm */
   EBUR128_MODE_S           = (1 << 1) | EBUR128_MODE_M,
-  /** can call ebur128_gated_loudness_* */
+  /** can call ebur128_loudness_global_* */
   EBUR128_MODE_I           = (1 << 2) | EBUR128_MODE_M,
   /** can call ebur128_loudness_range */
   EBUR128_MODE_LRA         = (1 << 3) | EBUR128_MODE_S,
@@ -72,6 +77,14 @@ typedef struct {
   unsigned long samplerate;           /**< The sample rate. */
   struct ebur128_state_internal* d;   /**< Internal state. */
 } ebur128_state;
+
+/** \brief Get library version number. Do not pass null pointers here.
+ *
+ *  @param major major version number of library
+ *  @param minor minor version number of library
+ *  @param patch patch version number of library
+ */
+void ebur128_get_version(int* major, int* minor, int* patch);
 
 /** \brief Initialize library state.
  *
@@ -247,9 +260,13 @@ int ebur128_sample_peak(ebur128_state* st,
 
 /** \brief Get maximum true peak of selected channel in float format.
  *
- *  Uses the Speex resampler with quality level 8 to calculate true peak. Will
- *  oversample 4x for sample rates < 96000 Hz, 2x for sample rates < 192000 Hz
- *  and leave the signal unchanged for 192000 Hz.
+ *  Uses an implementation defined algorithm to calculate the true peak. Do not
+ *  try to compare resulting values across different versions of the library,
+ *  as the algorithm may change.
+ *
+ *  The current implementation uses the Speex resampler with quality level 8 to
+ *  calculate true peak. Will oversample 4x for sample rates < 96000 Hz, 2x for
+ *  sample rates < 192000 Hz and leave the signal unchanged for 192000 Hz.
  *
  *  @param st library state
  *  @param channel_number channel to analyse
