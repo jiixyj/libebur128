@@ -456,7 +456,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
   for (c = 0; c < st->channels; ++c) {                                         \
     int ci = st->d->channel_map[c] - 1;                                        \
     if (ci < 0) continue;                                                      \
-    else if (ci > 4) ci = 0; /* dual mono */                                   \
+    else if (ci == EBUR128_DUAL_MONO - 1) ci = 0; /*dual mono */               \
     for (i = 0; i < frames; ++i) {                                             \
       st->d->v[ci][0] = (double) (src[i * st->channels + c] / scaling_factor)  \
                    - st->d->a[1] * st->d->v[ci][1]                             \
@@ -532,8 +532,12 @@ static int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
                        st->d->audio_data[i * st->channels + c];
       }
     }
-    if (st->d->channel_map[c] == EBUR128_LEFT_SURROUND ||
-        st->d->channel_map[c] == EBUR128_RIGHT_SURROUND) {
+    if (st->d->channel_map[c] == EBUR128_Mp110 ||
+        st->d->channel_map[c] == EBUR128_Mm110 ||
+        st->d->channel_map[c] == EBUR128_Mp060 ||
+        st->d->channel_map[c] == EBUR128_Mm060 ||
+        st->d->channel_map[c] == EBUR128_Mp090 ||
+        st->d->channel_map[c] == EBUR128_Mm090) {
       channel_sum *= 1.41;
     } else if (st->d->channel_map[c] == EBUR128_DUAL_MONO) {
       channel_sum *= 2.0;
