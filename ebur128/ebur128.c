@@ -776,6 +776,35 @@ static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
   return EBUR128_SUCCESS;
 }
 
+int ebur128_relative_threshold(ebur128_state* st, double* out) {
+  struct ebur128_dq_entry* it;
+  double relative_threshold = 0.0;
+  size_t above_thresh_counter = 0;
+  size_t i;
+
+  if (st && (st->mode & EBUR128_MODE_I) != EBUR128_MODE_I)
+    return EBUR128_ERROR_INVALID_MODE;
+
+  if (st->d->use_histogram) {
+    for (i = 0; i < 1000; ++i) {
+      relative_threshold += st->d->block_energy_histogram[i] *
+                            histogram_energies[i];
+      above_thresh_counter += st->d->block_energy_histogram[i];
+    }
+  } else {
+    SLIST_FOREACH(it, &st->d->block_list, entries) {
+      ++above_thresh_counter;
+      relative_threshold += it->z;
+    }
+  }
+
+  relative_threshold /= (double) above_thresh_counter;
+  relative_threshold *= relative_gate_factor;
+
+  *out = ebur128_energy_to_loudness(relative_threshold);
+  return EBUR128_SUCCESS;
+}
+
 int ebur128_loudness_global(ebur128_state* st, double* out) {
   return ebur128_gated_loudness(&st, 1, out);
 }
