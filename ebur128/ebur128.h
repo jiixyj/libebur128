@@ -13,8 +13,8 @@ extern "C" {
 #endif
 
 #define EBUR128_VERSION_MAJOR 1
-#define EBUR128_VERSION_MINOR 0
-#define EBUR128_VERSION_PATCH 4
+#define EBUR128_VERSION_MINOR 1
+#define EBUR128_VERSION_PATCH 0
 
 #include <stddef.h>       /* for size_t */
 
