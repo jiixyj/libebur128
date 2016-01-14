@@ -727,8 +727,10 @@ static int ebur128_calc_relative_threshold(ebur128_state* st,
     }
   }
 
-  *relative_threshold /= (double) *above_thresh_counter;
-  *relative_threshold *= relative_gate_factor;
+  if (*above_thresh_counter != 0) {
+    *relative_threshold /= (double) *above_thresh_counter;
+    *relative_threshold *= relative_gate_factor;
+  }
 
   return EBUR128_SUCCESS;
 }
