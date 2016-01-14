@@ -13,8 +13,8 @@ extern "C" {
 #endif
 
 #define EBUR128_VERSION_MAJOR 1
-#define EBUR128_VERSION_MINOR 0
-#define EBUR128_VERSION_PATCH 3
+#define EBUR128_VERSION_MINOR 1
+#define EBUR128_VERSION_PATCH 0
 
 #include <stddef.h>       /* for size_t */
 
@@ -82,7 +82,7 @@ enum mode {
   EBUR128_MODE_M           = (1 << 0),
   /** can call ebur128_loudness_shortterm */
   EBUR128_MODE_S           = (1 << 1) | EBUR128_MODE_M,
-  /** can call ebur128_loudness_global_* */
+  /** can call ebur128_loudness_global_* and ebur128_relative_threshold */
   EBUR128_MODE_I           = (1 << 2) | EBUR128_MODE_M,
   /** can call ebur128_loudness_range */
   EBUR128_MODE_LRA         = (1 << 3) | EBUR128_MODE_S,
@@ -311,6 +311,17 @@ int ebur128_sample_peak(ebur128_state* st,
 int ebur128_true_peak(ebur128_state* st,
                       unsigned int channel_number,
                       double* out);
+
+/** \brief Get relative threshold in LUFS.
+ *
+ *  @param st library state
+ *  @param out relative threshold in LUFS.
+ *  @return
+ *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_I" has not
+ *      been set.
+ */
+int ebur128_relative_threshold(ebur128_state* st, double* out);
 
 #ifdef __cplusplus
 }
