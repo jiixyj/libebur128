@@ -800,6 +800,11 @@ int ebur128_relative_threshold(ebur128_state* st, double* out) {
 
   ebur128_calc_relative_threshold(st, &above_thresh_counter, &relative_threshold);
 
+  if (!above_thresh_counter) {
+      *out = -70.0;
+      return EBUR128_SUCCESS;
+  }
+
   *out = ebur128_energy_to_loudness(relative_threshold);
   return EBUR128_SUCCESS;
 }
