@@ -11,6 +11,9 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 
 News
 ----
+v1.1 Released:
+
+  * Add `ebur128_relative_threshold()`
 
 v1.0.3 Released:
 
