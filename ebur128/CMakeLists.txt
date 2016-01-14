@@ -22,7 +22,7 @@ endif()
 
 
 set(EBUR128_VERSION_MAJOR 1)
-set(EBUR128_VERSION 1.0.3)
+set(EBUR128_VERSION 1.1.0)
 
 #### static
 if(BUILD_STATIC_LIBS)
