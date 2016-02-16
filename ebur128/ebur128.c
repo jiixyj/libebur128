@@ -232,7 +232,10 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
 ebur128_state* ebur128_init(unsigned int channels,
                             unsigned long samplerate,
                             int mode) {
-  int errcode, result;
+#ifdef USE_SPEEX_RESAMPLER
+  int result;
+#endif
+  int errcode;
   ebur128_state* st;
   unsigned int i;
 
@@ -319,8 +322,10 @@ ebur128_state* ebur128_init(unsigned int channels,
 
   return st;
 
+#ifdef USE_SPEEX_RESAMPLER
 free_short_term_block_energy_histogram:
   free(st->d->short_term_block_energy_histogram);
+#endif
 free_block_energy_histogram:
   free(st->d->block_energy_histogram);
 free_audio_data:
