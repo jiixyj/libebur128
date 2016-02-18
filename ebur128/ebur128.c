@@ -587,10 +587,10 @@ int ebur128_set_channel(ebur128_state* st,
 int ebur128_change_parameters(ebur128_state* st,
                               unsigned int channels,
                               unsigned long samplerate) {
-  int errcode;
+  int errcode = EBUR128_SUCCESS;
   if (channels == st->channels &&
       samplerate == st->samplerate) {
-    return 2;
+    return EBUR128_ERROR_NO_CHANGE;
   }
   free(st->d->audio_data);
   st->d->audio_data = NULL;
@@ -602,11 +602,6 @@ int ebur128_change_parameters(ebur128_state* st,
     free(st->d->sample_peak); st->d->sample_peak = NULL;
     free(st->d->true_peak);   st->d->true_peak = NULL;
     st->channels = channels;
-
-#ifdef USE_SPEEX_RESAMPLER
-    ebur128_destroy_resampler(st);
-    ebur128_init_resampler(st);
-#endif
 
     errcode = ebur128_init_channel_map(st);
     CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
@@ -622,6 +617,7 @@ int ebur128_change_parameters(ebur128_state* st,
   }
   if (samplerate != st->samplerate) {
     st->samplerate = samplerate;
+    st->d->samples_in_100ms = (st->samplerate + 5) / 10;
     ebur128_init_filter(st);
   }
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S) {
@@ -629,12 +625,18 @@ int ebur128_change_parameters(ebur128_state* st,
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
     st->d->audio_data_frames = st->d->samples_in_100ms * 4;
   } else {
-    return 1;
+    return EBUR128_ERROR_INVALID_MODE;
   }
   st->d->audio_data = (double*) malloc(st->d->audio_data_frames *
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
+
+#ifdef USE_SPEEX_RESAMPLER
+  ebur128_destroy_resampler(st);
+  errcode = ebur128_init_resampler(st);
+  CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
+#endif
 
   /* the first block needs 400ms of audio data */
   st->d->needed_frames = st->d->samples_in_100ms * 4;
@@ -643,10 +645,8 @@ int ebur128_change_parameters(ebur128_state* st,
   /* reset short term frame counter */
   st->d->short_term_frame_counter = 0;
 
-  return 0;
-
 exit:
-  return 1;
+  return errcode;
 }
 
 
