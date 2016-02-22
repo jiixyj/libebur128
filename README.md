@@ -12,7 +12,13 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
-v1.0.3 Released:
+v1.1.0 released:
+
+ * Add `ebur128_relative_threshold()`
+ * Add channel definitions from ITU R-REC-BS 1770-4 to channel enum
+ * Fix some minor build issues
+
+v1.0.3 released:
 
  * Fix build with recent speexdsp
  * Correct license file name
