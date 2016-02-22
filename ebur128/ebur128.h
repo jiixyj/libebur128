@@ -70,7 +70,8 @@ enum error {
   EBUR128_ERROR_NOMEM,
   EBUR128_ERROR_INVALID_MODE,
   EBUR128_ERROR_INVALID_CHANNEL_INDEX,
-  EBUR128_ERROR_NO_CHANGE
+  EBUR128_ERROR_NO_CHANGE,
+  EBUR128_ERROR_INSUFFICIENT_DATA
 };
 
 /** \enum mode
@@ -244,6 +245,7 @@ int ebur128_loudness_global_multiple(ebur128_state** sts,
  *             infinity.
  *  @return
  *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_INSUFFICIENT_DATA if more data is needed.
  */
 int ebur128_loudness_momentary(ebur128_state* st, double* out);
 /** \brief Get short-term loudness (last 3s) in LUFS.
@@ -254,6 +256,7 @@ int ebur128_loudness_momentary(ebur128_state* st, double* out);
  *  @return
  *    - EBUR128_SUCCESS on success.
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_S" has not been set.
+ *    - EBUR128_ERROR_INSUFFICIENT_DATA if more data is needed.
  */
 int ebur128_loudness_shortterm(ebur128_state* st, double* out);
 
@@ -268,6 +271,7 @@ int ebur128_loudness_shortterm(ebur128_state* st, double* out);
  *  @return
  *    - EBUR128_SUCCESS on success.
  *    - EBUR128_ERROR_INVALID_MODE if window > st->window.
+ *    - EBUR128_ERROR_INSUFFICIENT_DATA if more data is needed.
  */
 int ebur128_loudness_window(ebur128_state* st,
                             unsigned int window,

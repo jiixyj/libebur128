@@ -34,6 +34,8 @@ struct ebur128_state_internal {
   size_t audio_data_frames;
   /** Current index for audio_data. */
   size_t audio_data_index;
+  /** Number of audio frames in audio_data. */
+  size_t audio_data_frame_count;
   /** How many frames are needed for a gating block. Will correspond to 400ms
    *  of audio at initialization, and 100ms after the first block (75% overlap
    *  as specified in the 2011 revision of BS1770). */
@@ -280,6 +282,7 @@ ebur128_state* ebur128_init(unsigned int channels,
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
+  st->d->audio_data_frame_count = 0;
   ebur128_init_filter(st);
 
   if (st->d->use_histogram) {
@@ -683,6 +686,7 @@ int ebur128_set_max_window(ebur128_state* st, unsigned int window)
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
+  st->d->audio_data_frame_count = 0;
 
   /* the first block needs 400ms of audio data */
   st->d->needed_frames = st->d->samples_in_100ms * 4;
@@ -707,6 +711,9 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       src_index += st->d->needed_frames * st->channels;                        \
       frames -= st->d->needed_frames;                                          \
       st->d->audio_data_index += st->d->needed_frames * st->channels;          \
+      if (st->d->audio_data_frame_count < st->d->audio_data_frames ) {         \
+        st->d->audio_data_frame_count += st->d->needed_frames;                 \
+      }                                                                        \
       /* calculate the new gating block */                                     \
       if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                     \
         if (ebur128_calc_gating_block(st, st->d->samples_in_100ms * 4, NULL)) {\
@@ -743,6 +750,9 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
     } else {                                                                   \
       ebur128_filter_##type(st, src + src_index, frames);                      \
       st->d->audio_data_index += frames * st->channels;                        \
+      if (st->d->audio_data_frame_count < st->d->audio_data_frames ) {         \
+        st->d->audio_data_frame_count += frames;                               \
+      }                                                                        \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->d->short_term_frame_counter += frames;                             \
       }                                                                        \
@@ -876,6 +886,9 @@ static int ebur128_energy_in_interval(ebur128_state* st,
                                       double* out) {
   if (interval_frames > st->d->audio_data_frames) {
     return EBUR128_ERROR_INVALID_MODE;
+  }
+  if (interval_frames > st->d->audio_data_frame_count) {
+    return EBUR128_ERROR_INSUFFICIENT_DATA;
   }
   ebur128_calc_gating_block(st, interval_frames, out);
   return EBUR128_SUCCESS;
