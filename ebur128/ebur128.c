@@ -17,10 +17,10 @@
     goto goto_point;                                                           \
   }
 
-SLIST_HEAD(ebur128_double_queue, ebur128_dq_entry);
+STAILQ_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {
   double z;
-  SLIST_ENTRY(ebur128_dq_entry) entries;
+  STAILQ_ENTRY(ebur128_dq_entry) entries;
 };
 
 #define ALMOST_ZERO 0.000001
@@ -62,8 +62,12 @@ struct ebur128_state_internal {
   double v[5][5];
   /** Linked list of block energies. */
   struct ebur128_double_queue block_list;
+  unsigned long block_list_max;
+  unsigned long block_list_size;
   /** Linked list of 3s-block energies, used to calculate LRA. */
   struct ebur128_double_queue short_term_block_list;
+  unsigned long st_block_list_max;
+  unsigned long st_block_list_size;
   int use_histogram;
   unsigned long *block_energy_histogram;
   unsigned long *short_term_block_energy_histogram;
@@ -80,6 +84,7 @@ struct ebur128_state_internal {
   size_t resampler_buffer_output_frames;
   /** The maximum window duration in ms. */
   unsigned long window;
+  unsigned long history;
 };
 
 static double relative_gate = -10.0;
@@ -350,7 +355,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   }
 
   st->d->use_histogram = mode & EBUR128_MODE_HISTOGRAM ? 1 : 0;
-
+  st->d->history = ULONG_MAX;
   st->samplerate = samplerate;
   st->d->samples_in_100ms = (st->samplerate + 5) / 10;
   st->mode = mode;
@@ -396,8 +401,12 @@ ebur128_state* ebur128_init(unsigned int channels,
   } else {
     st->d->short_term_block_energy_histogram = NULL;
   }
-  SLIST_INIT(&st->d->block_list);
-  SLIST_INIT(&st->d->short_term_block_list);
+  STAILQ_INIT(&st->d->block_list);
+  st->d->block_list_size = 0;
+  st->d->block_list_max = st->d->history / 100;
+  STAILQ_INIT(&st->d->short_term_block_list);
+  st->d->st_block_list_size = 0;
+  st->d->st_block_list_max = st->d->history / 3000;
   st->d->short_term_frame_counter = 0;
 
   result = ebur128_init_resampler(st);
@@ -451,14 +460,14 @@ void ebur128_destroy(ebur128_state** st) {
   free((*st)->d->channel_map);
   free((*st)->d->sample_peak);
   free((*st)->d->true_peak);
-  while (!SLIST_EMPTY(&(*st)->d->block_list)) {
-    entry = SLIST_FIRST(&(*st)->d->block_list);
-    SLIST_REMOVE_HEAD(&(*st)->d->block_list, entries);
+  while (!STAILQ_EMPTY(&(*st)->d->block_list)) {
+    entry = STAILQ_FIRST(&(*st)->d->block_list);
+    STAILQ_REMOVE_HEAD(&(*st)->d->block_list, entries);
     free(entry);
   }
-  while (!SLIST_EMPTY(&(*st)->d->short_term_block_list)) {
-    entry = SLIST_FIRST(&(*st)->d->short_term_block_list);
-    SLIST_REMOVE_HEAD(&(*st)->d->short_term_block_list, entries);
+  while (!STAILQ_EMPTY(&(*st)->d->short_term_block_list)) {
+    entry = STAILQ_FIRST(&(*st)->d->short_term_block_list);
+    STAILQ_REMOVE_HEAD(&(*st)->d->short_term_block_list, entries);
     free(entry);
   }
   ebur128_destroy_resampler(*st);
@@ -638,10 +647,16 @@ static int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
       ++st->d->block_energy_histogram[find_histogram_index(sum)];
     } else {
       struct ebur128_dq_entry* block;
-      block = (struct ebur128_dq_entry*) malloc(sizeof(struct ebur128_dq_entry));
-      if (!block) return EBUR128_ERROR_NOMEM;
+      if (st->d->block_list_size == st->d->block_list_max) {
+        block = STAILQ_FIRST(&st->d->block_list);
+        STAILQ_REMOVE_HEAD(&st->d->block_list, entries);
+      } else {
+        block = (struct ebur128_dq_entry*) malloc(sizeof(struct ebur128_dq_entry));
+        if (!block) return EBUR128_ERROR_NOMEM;
+        st->d->block_list_size++;
+      }
       block->z = sum;
-      SLIST_INSERT_HEAD(&st->d->block_list, block, entries);
+      STAILQ_INSERT_TAIL(&st->d->block_list, block, entries);
     }
     return EBUR128_SUCCESS;
   } else {
@@ -775,6 +790,33 @@ exit:
   return errcode;
 }
 
+int ebur128_set_max_history(ebur128_state* st, unsigned long history)
+{
+  if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA && history < 3000) {
+    history = 3000;
+  } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && history < 400) {
+    history = 400;
+  }
+  if (history == st->d->history) {
+    return EBUR128_ERROR_NO_CHANGE;
+  }
+  st->d->history = history;
+  st->d->block_list_max = st->d->history / 100;
+  st->d->st_block_list_max = st->d->history / 3000;
+  while (st->d->block_list_size > st->d->block_list_max) {
+    struct ebur128_dq_entry* block = STAILQ_FIRST(&st->d->block_list);
+    STAILQ_REMOVE_HEAD(&st->d->block_list, entries);
+    free(block);
+    st->d->block_list_size--;
+  }
+  while (st->d->st_block_list_size > st->d->st_block_list_max) {
+    struct ebur128_dq_entry* block = STAILQ_FIRST(&st->d->short_term_block_list);
+    STAILQ_REMOVE_HEAD(&st->d->short_term_block_list, entries);
+    free(block);
+    st->d->st_block_list_size--;
+  }
+  return EBUR128_SUCCESS;
+}
 
 static int ebur128_energy_shortterm(ebur128_state* st, double* out);
 #define EBUR128_ADD_FRAMES(type)                                               \
@@ -804,11 +846,18 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
               ++st->d->short_term_block_energy_histogram[                      \
                                               find_histogram_index(st_energy)];\
             } else {                                                           \
-              block = (struct ebur128_dq_entry*)                               \
-                      malloc(sizeof(struct ebur128_dq_entry));                 \
-              if (!block) return EBUR128_ERROR_NOMEM;                          \
+              if (st->d->st_block_list_size == st->d->st_block_list_max) {     \
+                block = STAILQ_FIRST(&st->d->short_term_block_list);           \
+                STAILQ_REMOVE_HEAD(&st->d->short_term_block_list, entries);    \
+              } else {                                                         \
+                block = (struct ebur128_dq_entry*)                             \
+                        malloc(sizeof(struct ebur128_dq_entry));               \
+                if (!block) return EBUR128_ERROR_NOMEM;                        \
+                st->d->st_block_list_size++;                                   \
+              }                                                                \
               block->z = st_energy;                                            \
-              SLIST_INSERT_HEAD(&st->d->short_term_block_list, block, entries);\
+              STAILQ_INSERT_TAIL(&st->d->short_term_block_list,                \
+                                 block, entries);                              \
             }                                                                  \
           }                                                                    \
           st->d->short_term_frame_counter = st->d->samples_in_100ms * 20;      \
@@ -852,7 +901,7 @@ static int ebur128_calc_relative_threshold(ebur128_state* st,
       *above_thresh_counter += st->d->block_energy_histogram[i];
     }
   } else {
-    SLIST_FOREACH(it, &st->d->block_list, entries) {
+    STAILQ_FOREACH(it, &st->d->block_list, entries) {
       ++*above_thresh_counter;
       *relative_threshold += it->z;
     }
@@ -907,7 +956,7 @@ static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
         above_thresh_counter += sts[i]->d->block_energy_histogram[j];
       }
     } else {
-      SLIST_FOREACH(it, &sts[i]->d->block_list, entries) {
+      STAILQ_FOREACH(it, &sts[i]->d->block_list, entries) {
         if (it->z >= relative_threshold) {
           ++above_thresh_counter;
           gated_loudness += it->z;
@@ -1102,7 +1151,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
     stl_size = 0;
     for (i = 0; i < size; ++i) {
       if (!sts[i]) continue;
-      SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
+      STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
         ++stl_size;
       }
     }
@@ -1116,7 +1165,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
 
     for (j = 0, i = 0; i < size; ++i) {
       if (!sts[i]) continue;
-      SLIST_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
+      STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
         stl_vector[j] = it->z;
         ++j;
       }

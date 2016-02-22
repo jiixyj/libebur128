@@ -188,6 +188,25 @@ int ebur128_change_parameters(ebur128_state* st,
  */
 int ebur128_set_max_window(ebur128_state* st, unsigned long window);
 
+/** \brief Set the maximum history.
+ *
+ *  Set the maximum history that will be stored for loudness integration.
+ *  More history provides more accurate results, but requires more resources.
+ *
+ *  Applies to ebur128_loudness_range() and ebur128_loudness_global() when
+ *  EBUR128_MODE_HISTOGRAM is not set.
+ *
+ *  Default is ULONG_MAX (at least ~50 days).
+ *  Minimum is 3000ms for EBUR128_MODE_LRA and 400ms for EBUR128_MODE_M.
+ *
+ *  @param st library state.
+ *  @param history duration of history in ms.
+ *  @return
+ *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_NO_CHANGE if history not changed.
+ */
+int ebur128_set_max_history(ebur128_state* st, unsigned long history);
+
 /** \brief Add frames to be processed.
  *
  *  @param st library state.
