@@ -107,7 +107,8 @@ typedef struct {
   int mode;                           /**< The current mode. */
   unsigned int channels;              /**< The number of channels. */
   unsigned long samplerate;           /**< The sample rate. */
-  unsigned int window;                /**< The maximum window duration. */
+  unsigned int window;                /**< The maximum window duration. (ms)*/
+  unsigned int history;               /**< The maximum history duration. (ms)*/
   struct ebur128_state_internal* d;   /**< Internal state. */
 } ebur128_state;
 
@@ -188,6 +189,25 @@ int ebur128_change_parameters(ebur128_state* st,
  *    - EBUR128_ERROR_NO_CHANGE if window duration not changed.
  */
 int ebur128_set_max_window(ebur128_state* st, unsigned int window);
+
+/** \brief Set the maximum history.
+ *
+ *  Set the maximum history that will be stored for loudness integration.
+ *  More history provides more accurate results, but requires more resources.
+ *
+ *  Applies to ebur128_loudness_range() and ebur128_loudness_global() when
+ *  EBUR128_MODE_HISTOGRAM is not set.
+ *
+ *  Default is UINT_MAX (approximately 50 days).
+ *  Minimum is 300ms for EBUR128_MODE_LRA and 400ms for
+ *
+ *  @param st library state.
+ *  @param history duration of history in ms.
+  *  @return
+ *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_NO_CHANGE if history not changed.
+ */
+int ebur128_set_max_history(ebur128_state* st, unsigned int history);
 
 /** \brief Add frames to be processed.
  *
