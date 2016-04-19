@@ -1,7 +1,6 @@
 set(BUILD_STATIC_LIBS       ON  CACHE BOOL "Build static library")
 set(WITH_STATIC_PIC         OFF CACHE BOOL "Compile static library with -fPIC flag")
 set(ENABLE_INTERNAL_QUEUE_H OFF CACHE BOOL "Use own queue.h")
-set(DISABLE_SPEEXDSP        OFF CACHE BOOL "Don't build with speexdsp")
 
 #### queue.h
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c
@@ -40,31 +39,10 @@ set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION})
 
-#### speexdsp
-if(NOT DISABLE_SPEEXDSP)
-  find_pkg_config(SPEEXDSP speexdsp)
-    if(SPEEXDSP_FOUND)
-      target_include_directories(ebur128 PRIVATE
-                                 ${SPEEXDSP_INCLUDE_DIRS})
-      target_compile_definitions(ebur128 PRIVATE
-                                 -DUSE_SPEEX_RESAMPLER
-                                 -DHAVE_STDINT_H)
-    endif()
-endif()
-
 if(UNIX)
   target_link_libraries(ebur128 m)
 endif()
 
-if(SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
-    if(BUILD_STATIC_LIBS)
-      target_compile_options(ebur128_static PRIVATE ${SPEEXDSP_CFLAGS})
-    endif()
-  target_compile_options(ebur128 PRIVATE ${SPEEXDSP_CFLAGS})
-  target_link_libraries(ebur128 ${SPEEXDSP_LIBRARIES})
-endif()
-
-set(SUMMARY_SPEEXDSP_FOUND ${SPEEXDSP_FOUND} CACHE INTERNAL "")
 set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")
 
 install(FILES ebur128.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
