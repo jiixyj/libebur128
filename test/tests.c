@@ -100,6 +100,7 @@ double test_true_peak(const char* filename) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
+  int i;
 
   ebur128_state* st = NULL;
   double true_peak;
@@ -128,7 +129,7 @@ double test_true_peak(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
   }
 
-  for (int i = 0; i < file_info.channels; i++) {
+  for (i = 0; i < file_info.channels; i++) {
     ebur128_true_peak(st, i, &true_peak);
     if (true_peak > max_true_peak)
       max_true_peak = true_peak;
