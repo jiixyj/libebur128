@@ -18,6 +18,8 @@ endif()
 
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
+  add_definitions(/arch:SSE2)
+  add_definitions(-D __SSE2_MATH__)
 endif()
 
 
@@ -35,7 +37,13 @@ if(WITH_STATIC_PIC)
 endif()
 
 #### shared
-add_library(ebur128 SHARED ebur128.c)
+# set source file for library, which includes def file if using MSVC
+set(EBUR128_SHARED_SOURCE ebur128.c)
+if(MSVC)
+  set(EBUR128_SHARED_SOURCE ${EBUR128_SHARED_SOURCE} ebur128.def)
+endif()
+
+add_library(ebur128 SHARED ${EBUR128_SHARED_SOURCE})
 set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION})
