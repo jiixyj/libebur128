@@ -31,7 +31,7 @@ else()
   message(STATUS "not building static library, set BUILD_STATIC_LIBS to ON to enable")
 endif()
 
-if(NOT SUMMARY_HAS_QUEUE AND NOT ENABLE_INTERNAL_QUEUE_H)
+if(NOT ${SUMMARY_HAS_QUEUE} AND NOT ${ENABLE_INTERNAL_QUEUE_H})
   message(FATAL_ERROR "queue.h not found, please set ENABLE_INTERNAL_QUEUE_H to ON")
 endif()
 
