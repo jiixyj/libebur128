@@ -95,7 +95,6 @@ double test_loudness_range(const char* filename) {
   return loudness_range;
 }
 
-#ifdef TEST_TRUE_PEAK
 double test_true_peak(const char* filename) {
   SF_INFO file_info;
   SNDFILE* file;
@@ -144,7 +143,6 @@ double test_true_peak(const char* filename) {
   }
   return 20 * log10(max_true_peak);
 }
-#endif
 
 double gr[] = {-23.0,
                -33.0,
@@ -221,7 +219,6 @@ int main() {
   TEST_LRA("seq-3341-7_seq-3342-5-24bit.wav", 4)
   TEST_LRA("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 5)
 
-#ifdef TEST_TRUE_PEAK
 #define TEST_MAX_TRUE_PEAK(filename, expected)                                \
   result = test_true_peak(filename);                                          \
   if (result == result) {                                                     \
@@ -239,7 +236,6 @@ int main() {
   TEST_MAX_TRUE_PEAK("seq-3341-21-24bit.wav.wav", 0.0)
   TEST_MAX_TRUE_PEAK("seq-3341-22-24bit.wav.wav", 0.0)
   TEST_MAX_TRUE_PEAK("seq-3341-23-24bit.wav.wav", 0.0)
-#endif
 
   return 0;
 }

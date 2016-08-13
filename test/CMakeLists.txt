@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 2.8.9)
 set(ENABLE_TESTS OFF CACHE BOOL "Build test binaries, needs libsndfile")
 
 if(ENABLE_TESTS)
-  if(SUMMARY_SPEEXDSP_FOUND AND NOT DISABLE_SPEEXDSP)
-    add_definitions(-DTEST_TRUE_PEAK)
-  endif() 
   find_package(PkgConfig REQUIRED)
   find_pkg_config(SNDFILE sndfile REQUIRED)
 
