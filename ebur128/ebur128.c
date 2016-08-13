@@ -240,6 +240,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   int errcode;
   ebur128_state* st;
   unsigned int i;
+  size_t j;
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, 0, exit)
@@ -282,7 +283,7 @@ ebur128_state* ebur128_init(unsigned int channels,
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
-  for (size_t i = 0; i < st->d->audio_data_frames * st->channels; ++i) {
+  for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
     st->d->audio_data[i] = 0.0;
   }
 
@@ -601,6 +602,8 @@ int ebur128_change_parameters(ebur128_state* st,
                               unsigned int channels,
                               unsigned long samplerate) {
   int errcode = EBUR128_SUCCESS;
+  size_t j;
+
   if (channels == st->channels &&
       samplerate == st->samplerate) {
     return EBUR128_ERROR_NO_CHANGE;
@@ -644,8 +647,8 @@ int ebur128_change_parameters(ebur128_state* st,
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
-  for (size_t i = 0; i < st->d->audio_data_frames * st->channels; ++i) {
-    st->d->audio_data[i] = 0.0;
+  for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
+    st->d->audio_data[j] = 0.0;
   }
 
 #ifdef USE_SPEEX_RESAMPLER
@@ -668,6 +671,7 @@ exit:
 int ebur128_set_max_window(ebur128_state* st, unsigned long window)
 {
   int errcode = EBUR128_SUCCESS;
+  size_t j;
 
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S && window < 3000) {
     window = 3000;
@@ -692,8 +696,8 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window)
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
-  for (size_t i = 0; i < st->d->audio_data_frames * st->channels; ++i) {
-    st->d->audio_data[i] = 0.0;
+  for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
+    st->d->audio_data[j] = 0.0;
   }
 
   /* the first block needs 400ms of audio data */
