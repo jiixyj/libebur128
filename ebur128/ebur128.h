@@ -173,6 +173,21 @@ int ebur128_change_parameters(ebur128_state* st,
                               unsigned int channels,
                               unsigned long samplerate);
 
+/** \brief Set the maximum window duration.
+ *
+ *  Set the maximum duration that will be used for ebur128_window_loudness().
+ *  Note that this destroys the current content of the audio buffer.
+ *
+ *  @param st library state.
+ *  @param window duration of the window in ms.
+ *  @return
+ *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_NOMEM on memory allocation error. The state will be
+ *      invalid and must be destroyed.
+ *    - EBUR128_ERROR_NO_CHANGE if window duration not changed.
+ */
+int ebur128_set_max_window(ebur128_state* st, unsigned long window);
+
 /** \brief Add frames to be processed.
  *
  *  @param st library state.
@@ -241,6 +256,22 @@ int ebur128_loudness_momentary(ebur128_state* st, double* out);
  *    - EBUR128_ERROR_INVALID_MODE if mode "EBUR128_MODE_S" has not been set.
  */
 int ebur128_loudness_shortterm(ebur128_state* st, double* out);
+
+/** \brief Get loudness of the specified window in LUFS.
+ *
+ *  window must not be larger than the current window set in st.
+ *  The current window can be changed by calling ebur128_set_max_window().
+ *
+ *  @param st library state.
+ *  @param window window in ms to calculate loudness.
+ *  @param out loudness in LUFS. -HUGE_VAL if result is negative infinity.
+ *  @return
+ *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_INVALID_MODE if window larger than current window in st.
+ */
+int ebur128_loudness_window(ebur128_state* st,
+                            unsigned long window,
+                            double* out);
 
 /** \brief Get loudness range (LRA) of programme in LU.
  *
