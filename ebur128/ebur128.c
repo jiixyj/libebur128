@@ -282,6 +282,10 @@ ebur128_state* ebur128_init(unsigned int channels,
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
+  for (size_t i = 0; i < st->d->audio_data_frames * st->channels; ++i) {
+    st->d->audio_data[i] = 0.0;
+  }
+
   ebur128_init_filter(st);
 
   if (st->d->use_histogram) {
@@ -640,6 +644,9 @@ int ebur128_change_parameters(ebur128_state* st,
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
+  for (size_t i = 0; i < st->d->audio_data_frames * st->channels; ++i) {
+    st->d->audio_data[i] = 0.0;
+  }
 
 #ifdef USE_SPEEX_RESAMPLER
   ebur128_destroy_resampler(st);
@@ -685,6 +692,9 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window)
                                        st->channels *
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
+  for (size_t i = 0; i < st->d->audio_data_frames * st->channels; ++i) {
+    st->d->audio_data[i] = 0.0;
+  }
 
   /* the first block needs 400ms of audio data */
   st->d->needed_frames = st->d->samples_in_100ms * 4;
