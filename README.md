@@ -34,11 +34,6 @@ Features
 * True peak scanning
 * Supports all samplerates by recalculation of the filter coefficients
 
-Requirements
-------------
-
-* [libspeexdsp](http://www.speex.org/) - Needed for `ebur128_true_peak`.
-
 Installation
 ------------
 
