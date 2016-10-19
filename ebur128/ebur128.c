@@ -125,8 +125,8 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
 
     if (fabs(c) > ALMOST_ZERO) { // Ignore any zero coeffs.
       // Put the coefficient into the correct subfilter
-      int f = j % interp->factor;
-      int t = interp->filter[f].count++;
+      unsigned int f = j % interp->factor;
+      unsigned int t = interp->filter[f].count++;
       interp->filter[f].coeff[t] = c;
       interp->filter[f].index[t] = j / interp->factor;
     }
@@ -149,8 +149,8 @@ static void interp_destroy(interpolator* interp) {
   free(interp);
 }
 
-static void interp_process(interpolator* interp, unsigned int frames, float* in, float* out) {
-  unsigned int frame = 0;
+static void interp_process(interpolator* interp, size_t frames, float* in, float* out) {
+  size_t frame = 0;
   unsigned int chan = 0;
   unsigned int f = 0;
   unsigned int t = 0;
@@ -169,7 +169,7 @@ static void interp_process(interpolator* interp, unsigned int frames, float* in,
           double c = interp->filter[f].coeff[t];
           acc += interp->z[chan][i] * c;
         }
-        *outp = acc;
+        *outp = (float)acc;
         outp += interp->channels;
       }
     }
@@ -870,8 +870,8 @@ static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
                                   double* out) {
   struct ebur128_dq_entry* it;
   double gated_loudness = 0.0;
-  double relative_threshold;
-  size_t above_thresh_counter;
+  double relative_threshold = 0.0;
+  size_t above_thresh_counter = 0;
   size_t i, j, start_index;
 
   for (i = 0; i < size; i++) {

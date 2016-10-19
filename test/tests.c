@@ -22,8 +22,8 @@ double test_global_loudness(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0;
   }
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
                     EBUR128_MODE_I);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -66,8 +66,8 @@ double test_loudness_range(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0;
   }
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
                     EBUR128_MODE_LRA);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -112,8 +112,8 @@ double test_true_peak(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0;
   }
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
                     EBUR128_MODE_TRUE_PEAK);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -129,7 +129,7 @@ double test_true_peak(const char* filename) {
   }
 
   for (i = 0; i < file_info.channels; i++) {
-    ebur128_true_peak(st, i, &true_peak);
+    ebur128_true_peak(st, (unsigned)i, &true_peak);
     if (true_peak > max_true_peak)
       max_true_peak = true_peak;
   }
