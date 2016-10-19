@@ -103,7 +103,7 @@ double test_true_peak(const char* filename) {
 
   ebur128_state* st = NULL;
   double true_peak;
-  double max_true_peak;
+  double max_true_peak = -HUGE_VAL;
   double* buffer;
 
   memset(&file_info, '\0', sizeof(file_info));
