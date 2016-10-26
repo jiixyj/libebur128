@@ -12,7 +12,7 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
-v1.2.0 released:
+v1.2.0 (unreleased):
 
  * New functions for real time loudness monitoring:
    * `ebur128_loudness_window()`
