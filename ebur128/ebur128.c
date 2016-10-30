@@ -75,8 +75,10 @@ struct ebur128_state_internal {
   size_t short_term_frame_counter;
   /** Maximum sample peak, one per channel */
   double* sample_peak;
+  double* prev_sample_peak;
   /** Maximum true peak, one per channel */
   double* true_peak;
+  double* prev_true_peak;
   interpolator* interp;
   float* resampler_buffer_input;
   size_t resampler_buffer_input_frames;
@@ -347,11 +349,17 @@ ebur128_state* ebur128_init(unsigned int channels,
 
   st->d->sample_peak = (double*) malloc(channels * sizeof(double));
   CHECK_ERROR(!st->d->sample_peak, 0, free_channel_map)
+  st->d->prev_sample_peak = (double*) malloc(channels * sizeof(double));
+  CHECK_ERROR(!st->d->prev_sample_peak, 0, free_sample_peak)
   st->d->true_peak = (double*) malloc(channels * sizeof(double));
-  CHECK_ERROR(!st->d->true_peak, 0, free_sample_peak)
+  CHECK_ERROR(!st->d->true_peak, 0, free_prev_sample_peak)
+  st->d->prev_true_peak = (double*) malloc(channels * sizeof(double));
+  CHECK_ERROR(!st->d->prev_true_peak, 0, free_true_peak)
   for (i = 0; i < channels; ++i) {
     st->d->sample_peak[i] = 0.0;
+    st->d->prev_sample_peak[i] = 0.0;
     st->d->true_peak[i] = 0.0;
+    st->d->prev_true_peak[i] = 0.0;
   }
 
   st->d->use_histogram = mode & EBUR128_MODE_HISTOGRAM ? 1 : 0;
@@ -364,7 +372,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   } else if ((mode & EBUR128_MODE_M) == EBUR128_MODE_M) {
     st->d->window = 400;
   } else {
-    goto free_true_peak;
+    goto free_prev_true_peak;
   }
   st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
   if (st->d->audio_data_frames % st->d->samples_in_100ms) {
@@ -438,8 +446,12 @@ free_block_energy_histogram:
   free(st->d->block_energy_histogram);
 free_audio_data:
   free(st->d->audio_data);
+free_prev_true_peak:
+  free(st->d->prev_true_peak);
 free_true_peak:
   free(st->d->true_peak);
+free_prev_sample_peak:
+  free(st->d->prev_sample_peak);
 free_sample_peak:
   free(st->d->sample_peak);
 free_channel_map:
@@ -459,7 +471,9 @@ void ebur128_destroy(ebur128_state** st) {
   free((*st)->d->audio_data);
   free((*st)->d->channel_map);
   free((*st)->d->sample_peak);
+  free((*st)->d->prev_sample_peak);
   free((*st)->d->true_peak);
+  free((*st)->d->prev_true_peak);
   while (!STAILQ_EMPTY(&(*st)->d->block_list)) {
     entry = STAILQ_FIRST(&(*st)->d->block_list);
     STAILQ_REMOVE_HEAD(&(*st)->d->block_list, entries);
@@ -484,12 +498,12 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
   for (c = 0; c < st->channels; ++c) {
     for (i = 0; i < st->d->resampler_buffer_output_frames; ++i) {
       if (st->d->resampler_buffer_output[i * st->channels + c] >
-                                                         st->d->true_peak[c]) {
-        st->d->true_peak[c] =
+                                                         st->d->prev_true_peak[c]) {
+        st->d->prev_true_peak[c] =
             st->d->resampler_buffer_output[i * st->channels + c];
       } else if (-st->d->resampler_buffer_output[i * st->channels + c] >
-                                                         st->d->true_peak[c]) {
-        st->d->true_peak[c] =
+                                                         st->d->prev_true_peak[c]) {
+        st->d->prev_true_peak[c] =
            -st->d->resampler_buffer_output[i * st->channels + c];
       }
     }
@@ -535,7 +549,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
         }                                                                      \
       }                                                                        \
       max /= scaling_factor;                                                   \
-      if (max > st->d->sample_peak[c]) st->d->sample_peak[c] = max;            \
+      if (max > st->d->prev_sample_peak[c]) st->d->prev_sample_peak[c] = max;  \
     }                                                                          \
   }                                                                            \
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {         \
@@ -697,7 +711,9 @@ int ebur128_change_parameters(ebur128_state* st,
 
     free(st->d->channel_map); st->d->channel_map = NULL;
     free(st->d->sample_peak); st->d->sample_peak = NULL;
+    free(st->d->prev_sample_peak); st->d->prev_sample_peak = NULL;
     free(st->d->true_peak);   st->d->true_peak = NULL;
+    free(st->d->prev_true_peak); st->d->prev_true_peak = NULL;
     st->channels = channels;
 
     errcode = ebur128_init_channel_map(st);
@@ -705,11 +721,17 @@ int ebur128_change_parameters(ebur128_state* st,
 
     st->d->sample_peak = (double*) malloc(channels * sizeof(double));
     CHECK_ERROR(!st->d->sample_peak, EBUR128_ERROR_NOMEM, exit)
+    st->d->prev_sample_peak = (double*) malloc(channels * sizeof(double));
+    CHECK_ERROR(!st->d->prev_sample_peak, EBUR128_ERROR_NOMEM, exit)
     st->d->true_peak = (double*) malloc(channels * sizeof(double));
     CHECK_ERROR(!st->d->true_peak, EBUR128_ERROR_NOMEM, exit)
+    st->d->prev_true_peak = (double*) malloc(channels * sizeof(double));
+    CHECK_ERROR(!st->d->prev_true_peak, EBUR128_ERROR_NOMEM, exit)
     for (i = 0; i < channels; ++i) {
       st->d->sample_peak[i] = 0.0;
+      st->d->prev_sample_peak[i] = 0.0;
       st->d->true_peak[i] = 0.0;
+      st->d->prev_true_peak[i] = 0.0;
     }
   }
   if (samplerate != st->samplerate) {
@@ -823,6 +845,11 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
 int ebur128_add_frames_##type(ebur128_state* st,                               \
                               const type* src, size_t frames) {                \
   size_t src_index = 0;                                                        \
+  unsigned int c = 0;                                                          \
+  for (c = 0; c < st->channels; c++) {                                         \
+    st->d->prev_sample_peak[c] = 0.0;                                          \
+    st->d->prev_true_peak[c] = 0.0;                                            \
+  }                                                                            \
   while (frames > 0) {                                                         \
     if (frames >= st->d->needed_frames) {                                      \
       ebur128_filter_##type(st, src + src_index, st->d->needed_frames);        \
@@ -877,6 +904,14 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       }                                                                        \
       st->d->needed_frames -= frames;                                          \
       frames = 0;                                                              \
+    }                                                                          \
+  }                                                                            \
+  for (c = 0; c < st->channels; c++) {                                         \
+    if (st->d->prev_sample_peak[c] > st->d->sample_peak[c]) {                  \
+      st->d->sample_peak[c] = st->d->prev_sample_peak[c];                      \
+    }                                                                          \
+    if (st->d->prev_true_peak[c] > st->d->true_peak[c]) {                      \
+      st->d->true_peak[c] = st->d->prev_true_peak[c];                          \
     }                                                                          \
   }                                                                            \
   return EBUR128_SUCCESS;                                                      \
@@ -1215,6 +1250,18 @@ int ebur128_sample_peak(ebur128_state* st,
   return EBUR128_SUCCESS;
 }
 
+int ebur128_prev_sample_peak(ebur128_state* st,
+                             unsigned int channel_number,
+                             double* out) {
+  if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK) {
+    return EBUR128_ERROR_INVALID_MODE;
+  } else if (channel_number >= st->channels) {
+    return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
+  }
+  *out = st->d->prev_sample_peak[channel_number];
+  return EBUR128_SUCCESS;
+}
+
 int ebur128_true_peak(ebur128_state* st,
                       unsigned int channel_number,
                       double* out) {
@@ -1226,5 +1273,20 @@ int ebur128_true_peak(ebur128_state* st,
   *out = st->d->true_peak[channel_number] > st->d->sample_peak[channel_number]
        ? st->d->true_peak[channel_number]
        : st->d->sample_peak[channel_number];
+  return EBUR128_SUCCESS;
+}
+
+int ebur128_prev_true_peak(ebur128_state* st,
+                      unsigned int channel_number,
+                      double* out) {
+  if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK) {
+    return EBUR128_ERROR_INVALID_MODE;
+  } else if (channel_number >= st->channels) {
+    return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
+  }
+  *out = st->d->prev_true_peak[channel_number]
+                              > st->d->prev_sample_peak[channel_number]
+       ? st->d->prev_true_peak[channel_number]
+       : st->d->prev_sample_peak[channel_number];
   return EBUR128_SUCCESS;
 }
