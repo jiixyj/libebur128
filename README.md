@@ -12,12 +12,14 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
-v1.2.0 (unreleased):
+v1.2.0 released:
 
- * New functions for real time loudness monitoring:
+ * New functions for real time loudness/peak monitoring:
    * `ebur128_loudness_window()`
    * `ebur128_set_max_window()`
    * `ebur128_set_max_history()`
+   * `ebur128_prev_sample_peak()`
+   * `ebur128_prev_true_peak()`
  * New FIR resampler for true peak calculation, removing Speex dependency
  * Add true peak conformance tests
  * Bug fixes
