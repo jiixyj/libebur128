@@ -20,5 +20,7 @@ EXPORTS
 	ebur128_loudness_range
 	ebur128_loudness_range_multiple
 	ebur128_sample_peak
+	ebur128_prev_sample_peak
 	ebur128_true_peak
+	ebur128_prev_true_peak
 	ebur128_relative_threshold
