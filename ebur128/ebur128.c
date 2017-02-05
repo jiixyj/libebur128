@@ -555,7 +555,8 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
       if (max > st->d->prev_sample_peak[c]) st->d->prev_sample_peak[c] = max;  \
     }                                                                          \
   }                                                                            \
-  if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK) {         \
+  if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK &&         \
+      st->d->interp) {                                                         \
     for (c = 0; c < st->channels; ++c) {                                       \
       for (i = 0; i < frames; ++i) {                                           \
         st->d->resampler_buffer_input[i * st->channels + c] =                  \
