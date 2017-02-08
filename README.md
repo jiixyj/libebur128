@@ -12,6 +12,9 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
+v1.2.1 released:
+ * Fix a null pointer dereference when doing true peak scanning of 192kHz data
+
 v1.2.0 released:
 
  * New functions for real time loudness/peak monitoring:
