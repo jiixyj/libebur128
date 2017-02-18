@@ -59,3 +59,9 @@ if(BUILD_STATIC_LIBS)
 else()
   install(TARGETS ebur128 DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
+
+#### pkg-config
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libebur128.pc.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/libebur128.pc @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libebur128.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
