@@ -24,16 +24,16 @@ extern "C" {
  */
 enum channel {
   EBUR128_UNUSED = 0,     /**< unused channel (for example LFE channel) */
-  EBUR128_LEFT,
-  EBUR128_Mp030 = 1,      /**< itu M+030 */
-  EBUR128_RIGHT,
-  EBUR128_Mm030 = 2,      /**< itu M-030 */
-  EBUR128_CENTER,
-  EBUR128_Mp000 = 3,      /**< itu M+000 */
-  EBUR128_LEFT_SURROUND,
-  EBUR128_Mp110 = 4,      /**< itu M+110 */
-  EBUR128_RIGHT_SURROUND,
-  EBUR128_Mm110 = 5,      /**< itu M-110 */
+  EBUR128_LEFT   = 1,
+  EBUR128_Mp030  = 1,     /**< itu M+030 */
+  EBUR128_RIGHT  = 2,
+  EBUR128_Mm030  = 2,     /**< itu M-030 */
+  EBUR128_CENTER = 3,
+  EBUR128_Mp000  = 3,     /**< itu M+000 */
+  EBUR128_LEFT_SURROUND  = 4,
+  EBUR128_Mp110  = 4,     /**< itu M+110 */
+  EBUR128_RIGHT_SURROUND = 5,
+  EBUR128_Mm110  = 5,     /**< itu M-110 */
   EBUR128_DUAL_MONO,      /**< a channel that is counted twice */
   EBUR128_MpSC,           /**< itu M+SC */
   EBUR128_MmSC,           /**< itu M-SC */
