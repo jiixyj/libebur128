@@ -341,6 +341,10 @@ ebur128_state* ebur128_init(unsigned int channels,
   unsigned int i;
   size_t j;
 
+  if (channels == 0 || samplerate < 5) {
+    return NULL;
+  }
+
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, 0, exit)
   st->d = (struct ebur128_state_internal*)
@@ -703,10 +707,15 @@ int ebur128_change_parameters(ebur128_state* st,
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
+  if (channels == 0 || samplerate < 5) {
+    return EBUR128_ERROR_NOMEM;
+  }
+
   if (channels == st->channels &&
       samplerate == st->samplerate) {
     return EBUR128_ERROR_NO_CHANGE;
   }
+
   free(st->d->audio_data);
   st->d->audio_data = NULL;
 
