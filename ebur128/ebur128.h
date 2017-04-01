@@ -122,7 +122,7 @@ void ebur128_get_version(int* major, int* minor, int* patch);
  *  @param channels the number of channels.
  *  @param samplerate the sample rate.
  *  @param mode see the mode enum for possible values.
- *  @return an initialized library state.
+ *  @return an initialized library state, or NULL on error.
  */
 ebur128_state* ebur128_init(unsigned int channels,
                             unsigned long samplerate,
