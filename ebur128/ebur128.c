@@ -143,7 +143,9 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
 
 static void interp_destroy(interpolator* interp) {
   unsigned int j = 0;
-  if (!interp) return;
+  if (!interp) {
+    return;
+  }
   for (j = 0; j < interp->factor; j++) {
     free(interp->filter[j].index);
     free(interp->filter[j].coeff);
@@ -175,7 +177,9 @@ static void interp_process(interpolator* interp, size_t frames, float* in, float
         acc = 0.0;
         for (t = 0; t < interp->filter[f].count; t++) {
           int i = (int)interp->zi - (int)interp->filter[f].index[t];
-          if (i < 0) i += interp->delay;
+          if (i < 0) {
+            i += interp->delay;
+          }
           c = interp->filter[f].coeff[t];
           acc += interp->z[chan][i] * c;
         }
@@ -185,7 +189,9 @@ static void interp_process(interpolator* interp, size_t frames, float* in, float
     }
     out += out_stride;
     interp->zi++;
-    if (interp->zi == interp->delay) interp->zi = 0;
+    if (interp->zi == interp->delay) {
+      interp->zi = 0;
+    }
   }
 }
 
@@ -246,7 +252,9 @@ static void ebur128_init_filter(ebur128_state* st) {
 static int ebur128_init_channel_map(ebur128_state* st) {
   size_t i;
   st->d->channel_map = (int*) malloc(st->channels * sizeof(int));
-  if (!st->d->channel_map) return EBUR128_ERROR_NOMEM;
+  if (!st->d->channel_map) {
+    return EBUR128_ERROR_NOMEM;
+  }
   if (st->channels == 4) {
     st->d->channel_map[0] = EBUR128_LEFT;
     st->d->channel_map[1] = EBUR128_RIGHT;
@@ -627,7 +635,9 @@ static int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
   double sum = 0.0;
   double channel_sum;
   for (c = 0; c < st->channels; ++c) {
-    if (st->d->channel_map[c] == EBUR128_UNUSED) continue;
+    if (st->d->channel_map[c] == EBUR128_UNUSED) {
+      continue;
+    }
     channel_sum = 0.0;
     if (st->d->audio_data_index < frames_per_block * st->channels) {
       for (i = 0; i < st->d->audio_data_index / st->channels; ++i) {
@@ -675,7 +685,9 @@ static int ebur128_calc_gating_block(ebur128_state* st, size_t frames_per_block,
         STAILQ_REMOVE_HEAD(&st->d->block_list, entries);
       } else {
         block = (struct ebur128_dq_entry*) malloc(sizeof(struct ebur128_dq_entry));
-        if (!block) return EBUR128_ERROR_NOMEM;
+        if (!block) {
+          return EBUR128_ERROR_NOMEM;
+        }
         st->d->block_list_size++;
       }
       block->z = sum;
@@ -979,7 +991,9 @@ static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
   }
 
   for (i = 0; i < size; i++) {
-    if (!sts[i]) continue;
+    if (!sts[i]) {
+      continue;
+    }
     ebur128_calc_relative_threshold(sts[i], &above_thresh_counter, &relative_threshold);
   }
   if (!above_thresh_counter) {
@@ -997,7 +1011,9 @@ static int ebur128_gated_loudness(ebur128_state** sts, size_t size,
     }
   }
   for (i = 0; i < size; i++) {
-    if (!sts[i]) continue;
+    if (!sts[i]) {
+      continue;
+    }
     if (sts[i]->d->use_histogram) {
       for (j = start_index; j < 1000; ++j) {
         gated_loudness += sts[i]->d->block_energy_histogram[j] *
@@ -1026,8 +1042,9 @@ int ebur128_relative_threshold(ebur128_state* st, double* out) {
   double relative_threshold;
   size_t above_thresh_counter;
 
-  if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I)
+  if ((st->mode & EBUR128_MODE_I) != EBUR128_MODE_I) {
     return EBUR128_ERROR_INVALID_MODE;
+  }
 
   ebur128_calc_relative_threshold(st, &above_thresh_counter, &relative_threshold);
 
@@ -1147,7 +1164,9 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
     stl_size = 0;
     stl_power = 0.0;
     for (i = 0; i < size; ++i) {
-      if (!sts[i]) continue;
+      if (!sts[i]) {
+        continue;
+      }
       for (j = 0; j < 1000; ++j) {
         hist[j]   += sts[i]->d->short_term_block_energy_histogram[j];
         stl_size  += sts[i]->d->short_term_block_energy_histogram[j];
@@ -1199,7 +1218,9 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
   } else {
     stl_size = 0;
     for (i = 0; i < size; ++i) {
-      if (!sts[i]) continue;
+      if (!sts[i]) {
+        continue;
+      }
       STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
         ++stl_size;
       }
@@ -1209,12 +1230,15 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
       return EBUR128_SUCCESS;
     }
     stl_vector = (double*) malloc(stl_size * sizeof(double));
-    if (!stl_vector)
+    if (!stl_vector) {
       return EBUR128_ERROR_NOMEM;
+    }
 
     j = 0;
     for (i = 0; i < size; ++i) {
-      if (!sts[i]) continue;
+      if (!sts[i]) {
+        continue;
+      }
       STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
         stl_vector[j] = it->z;
         ++j;
