@@ -880,8 +880,8 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
         if (st->d->short_term_frame_counter == st->d->samples_in_100ms * 30) { \
           struct ebur128_dq_entry* block;                                      \
           double st_energy;                                                    \
-          ebur128_energy_shortterm(st, &st_energy);                            \
-          if (st_energy >= histogram_energy_boundaries[0]) {                   \
+          if (ebur128_energy_shortterm(st, &st_energy) == EBUR128_SUCCESS &&   \
+                  st_energy >= histogram_energy_boundaries[0]) {               \
             if (st->d->use_histogram) {                                        \
               ++st->d->short_term_block_energy_histogram[                      \
                                               find_histogram_index(st_energy)];\
