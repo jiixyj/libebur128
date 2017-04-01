@@ -25,18 +25,18 @@ struct ebur128_dq_entry {
 
 #define ALMOST_ZERO 0.000001
 
-typedef struct {              // Data structure for polyphase FIR interpolator
-  unsigned int factor;        // Interpolation factor of the interpolator
-  unsigned int taps;          // Taps (prefer odd to increase zero coeffs)
-  unsigned int channels;      // Number of channels
-  unsigned int delay;         // Size of delay buffer
+typedef struct {              /* Data structure for polyphase FIR interpolator */
+  unsigned int factor;        /* Interpolation factor of the interpolator */
+  unsigned int taps;          /* Taps (prefer odd to increase zero coeffs) */
+  unsigned int channels;      /* Number of channels */
+  unsigned int delay;         /* Size of delay buffer */
   struct {
-    unsigned int count;       // Number of coefficients in this subfilter
-    unsigned int* index;      // Delay index of corresponding filter coeff
-    double* coeff;            // List of subfilter coefficients
-  }* filter;                  // List of subfilters (one for each factor)
-  float** z;                  // List of delay buffers (one for each channel)
-  unsigned int zi;            // Current delay buffer index
+    unsigned int count;       /* Number of coefficients in this subfilter */
+    unsigned int* index;      /* Delay index of corresponding filter coeff */
+    double* coeff;            /* List of subfilter coefficients */
+  }* filter;                  /* List of subfilters (one for each factor) */
+  float** z;                  /* List of delay buffers (one for each channel) */
+  unsigned int zi;            /* Current delay buffer index */
 } interpolator;
 
 struct ebur128_state_internal {
@@ -106,32 +106,32 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
   interp->channels = channels;
   interp->delay = (interp->taps + interp->factor - 1) / interp->factor;
 
-  // Initialize the filter memory
-  // One subfilter per interpolation factor.
+  /* Initialize the filter memory
+   * One subfilter per interpolation factor. */
   interp->filter = calloc(interp->factor, sizeof(*interp->filter));
   for (j = 0; j < interp->factor; j++) {
     interp->filter[j].index = calloc(interp->delay, sizeof(unsigned int));
     interp->filter[j].coeff = calloc(interp->delay, sizeof(double));
   }
-  // One delay buffer per channel.
+  /* One delay buffer per channel. */
   interp->z = calloc(interp->channels, sizeof(float*));
   for (j = 0; j < interp->channels; j++) {
     interp->z[j] = calloc( interp->delay, sizeof(float) );
   }
 
-  // Calculate the filter coefficients
+  /* Calculate the filter coefficients */
   for (j = 0; j < interp->taps; j++) {
-    // Calculate sinc
+    /* Calculate sinc */
     double m = (double)j - (double)(interp->taps - 1) / 2.0;
     double c = 1.0;
     if (fabs(m) > ALMOST_ZERO) {
       c = sin(m * M_PI / interp->factor) / (m * M_PI / interp->factor);
     }
-    // Apply Hanning window
+    /* Apply Hanning window */
     c *= 0.5 * (1 - cos(2 * M_PI * j / (interp->taps - 1)));
 
-    if (fabs(c) > ALMOST_ZERO) { // Ignore any zero coeffs.
-      // Put the coefficient into the correct subfilter
+    if (fabs(c) > ALMOST_ZERO) { /* Ignore any zero coeffs. */
+      /* Put the coefficient into the correct subfilter */
       unsigned int f = j % interp->factor;
       unsigned int t = interp->filter[f].count++;
       interp->filter[f].coeff[t] = c;
@@ -167,9 +167,9 @@ static void interp_process(interpolator* interp, size_t frames, float* in, float
   double c = 0;
   for (frame = 0; frame < frames; frame++) {
     for (chan = 0; chan < interp->channels; chan++) {
-      // Add sample to delay buffer
+      /* Add sample to delay buffer */
       interp->z[chan][interp->zi] = *in++;
-      // Apply coefficients
+      /* Apply coefficients */
       outp = out + chan;
       for (f = 0; f < interp->factor; f++) {
         acc = 0.0;
