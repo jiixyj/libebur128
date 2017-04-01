@@ -1202,7 +1202,8 @@ int ebur128_loudness_range_multiple(ebur128_state** sts, size_t size,
     if (!stl_vector)
       return EBUR128_ERROR_NOMEM;
 
-    for (j = 0, i = 0; i < size; ++i) {
+    j = 0;
+    for (i = 0; i < size; ++i) {
       if (!sts[i]) continue;
       STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
         stl_vector[j] = it->z;
