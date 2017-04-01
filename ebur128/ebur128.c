@@ -538,8 +538,9 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
 static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
                                   size_t frames) {                             \
-  static double scaling_factor = -((double) min_scale) > (double) max_scale ?  \
-                                 -((double) min_scale) : (double) max_scale;   \
+  static double scaling_factor =                                               \
+                 -((double) (min_scale)) > (double) (max_scale) ?              \
+                 -((double) (min_scale)) : (double) (max_scale);               \
   double* audio_data = st->d->audio_data + st->d->audio_data_index;            \
   size_t i, c;                                                                 \
                                                                                \
