@@ -22,8 +22,8 @@ double test_global_loudness(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0;
   }
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
                     EBUR128_MODE_I);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -66,8 +66,8 @@ double test_loudness_range(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0;
   }
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
                     EBUR128_MODE_LRA);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -95,7 +95,6 @@ double test_loudness_range(const char* filename) {
   return loudness_range;
 }
 
-#ifdef TEST_TRUE_PEAK
 double test_true_peak(const char* filename) {
   SF_INFO file_info;
   SNDFILE* file;
@@ -104,7 +103,7 @@ double test_true_peak(const char* filename) {
 
   ebur128_state* st = NULL;
   double true_peak;
-  double max_true_peak;
+  double max_true_peak = -HUGE_VAL;
   double* buffer;
 
   memset(&file_info, '\0', sizeof(file_info));
@@ -113,8 +112,8 @@ double test_true_peak(const char* filename) {
     fprintf(stderr, "Could not open file %s!\n", filename);
     return 0.0;
   }
-  st = ebur128_init((size_t) file_info.channels,
-                    (size_t) file_info.samplerate,
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
                     EBUR128_MODE_TRUE_PEAK);
   if (file_info.channels == 5) {
     ebur128_set_channel(st, 0, EBUR128_LEFT);
@@ -130,7 +129,7 @@ double test_true_peak(const char* filename) {
   }
 
   for (i = 0; i < file_info.channels; i++) {
-    ebur128_true_peak(st, i, &true_peak);
+    ebur128_true_peak(st, (unsigned)i, &true_peak);
     if (true_peak > max_true_peak)
       max_true_peak = true_peak;
   }
@@ -144,7 +143,6 @@ double test_true_peak(const char* filename) {
   }
   return 20 * log10(max_true_peak);
 }
-#endif
 
 double gr[] = {-23.0,
                -33.0,
@@ -221,7 +219,6 @@ int main() {
   TEST_LRA("seq-3341-7_seq-3342-5-24bit.wav", 4)
   TEST_LRA("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 5)
 
-#ifdef TEST_TRUE_PEAK
 #define TEST_MAX_TRUE_PEAK(filename, expected)                                \
   result = test_true_peak(filename);                                          \
   if (result == result) {                                                     \
@@ -239,7 +236,6 @@ int main() {
   TEST_MAX_TRUE_PEAK("seq-3341-21-24bit.wav.wav", 0.0)
   TEST_MAX_TRUE_PEAK("seq-3341-22-24bit.wav.wav", 0.0)
   TEST_MAX_TRUE_PEAK("seq-3341-23-24bit.wav.wav", 0.0)
-#endif
 
   return 0;
 }
