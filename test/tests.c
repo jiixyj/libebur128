@@ -144,6 +144,108 @@ double test_true_peak(const char* filename) {
   return 20 * log10(max_true_peak);
 }
 
+double test_max_momentary(const char* filename) {
+  SF_INFO file_info;
+  SNDFILE* file;
+  sf_count_t nr_frames_read;
+  sf_count_t total_frames_read;
+  ebur128_state* st = NULL;
+  double momentary;
+  double max_momentary = -HUGE_VAL;
+  double* buffer;
+
+  memset(&file_info, '\0', sizeof(file_info));
+  file = sf_open(filename, SFM_READ, &file_info);
+  if (!file) {
+    fprintf(stderr, "Could not open file %s!\n", filename);
+    return 0.0;
+  }
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
+                    EBUR128_MODE_M);
+  if (file_info.channels == 5) {
+    ebur128_set_channel(st, 0, EBUR128_LEFT);
+    ebur128_set_channel(st, 1, EBUR128_RIGHT);
+    ebur128_set_channel(st, 2, EBUR128_CENTER);
+    ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
+    ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
+  }
+  /* 10 ms buffer/ 100 Hz refresh rate as 10 Hz refresh rate fails on several tests */
+  buffer = (double*) malloc(st->samplerate / 100 * st->channels * sizeof(double));
+  while ((nr_frames_read = sf_readf_double(file, buffer,
+                                           (sf_count_t) st->samplerate / 100))) {
+    ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
+    total_frames_read += nr_frames_read;
+    /* invalid results before the first 400 ms */
+    if (total_frames_read >= 4 * st->samplerate / 10) {
+      ebur128_loudness_momentary(st, &momentary);
+      if (momentary > max_momentary)
+        max_momentary = momentary;
+    }
+  }
+
+  /* clean up */
+  ebur128_destroy(&st);
+
+  free(buffer);
+  buffer = NULL;
+  if (sf_close(file)) {
+    fprintf(stderr, "Could not close input file!\n");
+  }
+  return max_momentary;
+}
+
+double test_max_shortterm(const char* filename) {
+  SF_INFO file_info;
+  SNDFILE* file;
+  sf_count_t nr_frames_read;
+  sf_count_t total_frames_read;
+  ebur128_state* st = NULL;
+  double shortterm;
+  double max_shortterm = -HUGE_VAL;
+  double* buffer;
+
+  memset(&file_info, '\0', sizeof(file_info));
+  file = sf_open(filename, SFM_READ, &file_info);
+  if (!file) {
+    fprintf(stderr, "Could not open file %s!\n", filename);
+    return 0.0;
+  }
+  st = ebur128_init((unsigned) file_info.channels,
+                    (unsigned) file_info.samplerate,
+                    EBUR128_MODE_S);
+  if (file_info.channels == 5) {
+    ebur128_set_channel(st, 0, EBUR128_LEFT);
+    ebur128_set_channel(st, 1, EBUR128_RIGHT);
+    ebur128_set_channel(st, 2, EBUR128_CENTER);
+    ebur128_set_channel(st, 3, EBUR128_LEFT_SURROUND);
+    ebur128_set_channel(st, 4, EBUR128_RIGHT_SURROUND);
+  }
+  /* 100 ms buffer / 10 Hz refresh rate */
+  buffer = (double*) malloc(st->samplerate / 10 * st->channels * sizeof(double));
+  while ((nr_frames_read = sf_readf_double(file, buffer,
+                                           (sf_count_t) st->samplerate / 10))) {
+    ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
+    total_frames_read += nr_frames_read;
+    /* invalid results before the first 3 s */
+    if (total_frames_read >= 3 * st->samplerate) {
+      ebur128_loudness_shortterm(st, &shortterm);
+      if (shortterm > max_shortterm)
+        max_shortterm = shortterm;
+    }
+  }
+
+  /* clean up */
+  ebur128_destroy(&st);
+
+  free(buffer);
+  buffer = NULL;
+  if (sf_close(file)) {
+    fprintf(stderr, "Could not close input file!\n");
+  }
+  return max_shortterm;
+}
+
 double gr[] = {-23.0,
                -33.0,
                -23.0,
@@ -237,5 +339,63 @@ int main() {
   TEST_MAX_TRUE_PEAK("seq-3341-22-24bit.wav.wav", 0.0)
   TEST_MAX_TRUE_PEAK("seq-3341-23-24bit.wav.wav", 0.0)
 
+#define TEST_MAX_MOMENTARY(filename, expected)                                \
+  result = test_max_momentary(filename);                                          \
+  if (result == result) {                                                     \
+    printf("%s - %s: %1.16e\n",                                              \
+      (result <= expected + 0.1 && result >= expected - 0.1) ? "PASSED" : "FAILED",  \
+      filename, result);                                                      \
+  }
+  
+  TEST_MAX_MOMENTARY("seq-3341-13-1-24bit.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-2-24bit.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-3-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-4-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-5-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-6-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-7-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-8-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-9-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-10-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-11-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-12-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-13-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-14-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-15-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-16-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-17-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-18-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-19-24bit.wav.wav", -23.0)
+  TEST_MAX_MOMENTARY("seq-3341-13-20-24bit.wav.wav", -23.0)
+
+#define TEST_MAX_SHORTTERM(filename, expected)                                \
+  result = test_max_shortterm(filename);                                          \
+  if (result == result) {                                                     \
+    printf("%s - %s: %1.16e\n",                                              \
+      (result <= expected + 0.1 && result >= expected - 0.1) ? "PASSED" : "FAILED",  \
+      filename, result);                                                      \
+  }
+  
+  TEST_MAX_SHORTTERM("seq-3341-10-1-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-2-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-3-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-4-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-5-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-6-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-7-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-8-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-9-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-10-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-11-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-12-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-13-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-14-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-15-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-16-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-17-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-18-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-19-24bit.wav", -23.0)
+  TEST_MAX_SHORTTERM("seq-3341-10-20-24bit.wav", -23.0)
+  
   return 0;
 }
