@@ -47,7 +47,7 @@ set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION})
 
-if(UNIX)
+if(UNIX AND NOT HAIKU)
   target_link_libraries(ebur128 m)
 endif()
 
