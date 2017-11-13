@@ -158,7 +158,7 @@ static void interp_destroy(interpolator* interp) {
   free(interp);
 }
 
-static void interp_process(interpolator* interp, size_t frames, float* in, float* out) {
+static size_t interp_process(interpolator* interp, size_t frames, float* in, float* out) {
   size_t frame = 0;
   unsigned int chan = 0;
   unsigned int f = 0;
@@ -167,6 +167,7 @@ static void interp_process(interpolator* interp, size_t frames, float* in, float
   float* outp = 0;
   double acc = 0;
   double c = 0;
+
   for (frame = 0; frame < frames; frame++) {
     for (chan = 0; chan < interp->channels; chan++) {
       /* Add sample to delay buffer */
@@ -193,6 +194,8 @@ static void interp_process(interpolator* interp, size_t frames, float* in, float
       interp->zi = 0;
     }
   }
+
+  return frames * interp->factor;
 }
 
 static void ebur128_init_filter(ebur128_state* st) {
@@ -506,20 +509,20 @@ void ebur128_destroy(ebur128_state** st) {
 }
 
 static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
-  size_t c, i;
-  interp_process(st->d->interp, frames, 
+  size_t c, i, frames_out;
+
+  frames_out = interp_process(st->d->interp, frames,
                  st->d->resampler_buffer_input,
                  st->d->resampler_buffer_output);
-  for (c = 0; c < st->channels; ++c) {
-    for (i = 0; i < st->d->resampler_buffer_output_frames; ++i) {
-      if (st->d->resampler_buffer_output[i * st->channels + c] >
-                                                         st->d->prev_true_peak[c]) {
-        st->d->prev_true_peak[c] =
-            st->d->resampler_buffer_output[i * st->channels + c];
-      } else if (-st->d->resampler_buffer_output[i * st->channels + c] >
-                                                         st->d->prev_true_peak[c]) {
-        st->d->prev_true_peak[c] =
-           -st->d->resampler_buffer_output[i * st->channels + c];
+
+  for (i = 0; i < frames_out; ++i) {
+    for (c = 0; c < st->channels; ++c) {
+      float val = st->d->resampler_buffer_output[i * st->channels + c];
+
+      if (val > st->d->prev_true_peak[c]) {
+        st->d->prev_true_peak[c] = val;
+      } else if (-val > st->d->prev_true_peak[c]) {
+        st->d->prev_true_peak[c] = -val;
       }
     }
   }
