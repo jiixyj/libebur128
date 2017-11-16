@@ -12,6 +12,9 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
+v1.2.3 released:
+ * Fix uninitialized memory access during true peak scanning (bug #72)
+
 v1.2.2 released (v1.2.1 was mistagged):
  * Fix a null pointer dereference when doing true peak scanning of 192kHz data
 
