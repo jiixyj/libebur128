@@ -28,7 +28,9 @@ set(EBUR128_VERSION 1.2.3)
 #### static
 if(BUILD_STATIC_LIBS)
   add_library(ebur128_static STATIC ebur128.c)
-  set_property(TARGET ebur128_static PROPERTY OUTPUT_NAME ebur128)
+  if(NOT MSVC)
+    set_property(TARGET ebur128_static PROPERTY OUTPUT_NAME ebur128)
+  endif()
 endif()
 
 if(WITH_STATIC_PIC)
