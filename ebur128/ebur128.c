@@ -404,7 +404,7 @@ ebur128_state* ebur128_init(unsigned int channels,
                                        sizeof(double));
   CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
   for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
-    st->d->audio_data[i] = 0.0;
+    st->d->audio_data[j] = 0.0;
   }
 
   ebur128_init_filter(st);
