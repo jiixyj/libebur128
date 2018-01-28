@@ -7,7 +7,7 @@
 
 #include "ebur128.h"
 
-double test_global_loudness(const char* filename) {
+double test_global_loudness(const char* filename, ebur128_state** out_state) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
@@ -40,8 +40,7 @@ double test_global_loudness(const char* filename) {
 
   ebur128_loudness_global(st, &gated_loudness);
 
-  /* clean up */
-  ebur128_destroy(&st);
+  *out_state = st;
 
   free(buffer);
   buffer = NULL;
@@ -280,13 +279,15 @@ double lrae[] = {1.0001105488329134e+01,
 
 int main() {
   double result;
+  ebur128_state* states[9] = {0};
+  int i;
 
   fprintf(stderr, "Note: the tests do not have to pass with EXACT_PASSED.\n"
                   "Passing these tests does not mean that the library is "
                   "100%% EBU R 128 compliant!\n\n");
 
-#define TEST_GLOBAL_LOUDNESS(filename, i)                                      \
-  result = test_global_loudness(filename);                                     \
+#define TEST_GLOBAL_LOUDNESS(filename, i, state_array)                         \
+  result = test_global_loudness(filename, &state_array[i]);                    \
   if (result == result) {                                                      \
     printf("%s, %s - %s: %1.16e\n",                                            \
        (result <= gr[i] + 0.1 && result >= gr[i] - 0.1) ? "PASSED" : "FAILED", \
@@ -294,16 +295,40 @@ int main() {
        filename, result);                                                      \
   }
 
-  TEST_GLOBAL_LOUDNESS("seq-3341-1-16bit.wav", 0)
-  TEST_GLOBAL_LOUDNESS("seq-3341-2-16bit.wav", 1)
-  TEST_GLOBAL_LOUDNESS("seq-3341-3-16bit-v02.wav", 2)
-  TEST_GLOBAL_LOUDNESS("seq-3341-4-16bit-v02.wav", 3)
-  TEST_GLOBAL_LOUDNESS("seq-3341-5-16bit-v02.wav", 4)
-  TEST_GLOBAL_LOUDNESS("seq-3341-6-5channels-16bit.wav", 5)
-  TEST_GLOBAL_LOUDNESS("seq-3341-6-6channels-WAVEEX-16bit.wav", 6)
-  TEST_GLOBAL_LOUDNESS("seq-3341-7_seq-3342-5-24bit.wav", 7)
-  TEST_GLOBAL_LOUDNESS("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 8)
+  TEST_GLOBAL_LOUDNESS("seq-3341-1-16bit.wav", 0, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-2-16bit.wav", 1, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-3-16bit-v02.wav", 2, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-4-16bit-v02.wav", 3, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-5-16bit-v02.wav", 4, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-6-5channels-16bit.wav", 5, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-6-6channels-WAVEEX-16bit.wav", 6, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-7_seq-3342-5-24bit.wav", 7, states)
+  TEST_GLOBAL_LOUDNESS("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 8, states)
 
+  /* Move some states around, to make the bug where
+   * ebur128_loudness_global_multiple() calculated the relative threshold just
+   * from the last state easier to reproduce. Don't care for leaks, etc. */
+  states[5] = states[0];
+  states[0] = states[8];
+
+  for (i = 0; i < 6; ++i) {
+    if (states[i] == NULL) {
+      printf("FAILED, ebur128_loudness_global_multiple needs all states of seq-3341-1 until seq-3341-5 (inclusive) and seq-3341-2011-8_seq-3342-6-24bit\n");
+      goto after_multiple_test;
+    }
+  }
+
+  result = 0;
+  ebur128_loudness_global_multiple(states, 6, &result);
+  fprintf(stderr, "multiple output: %f\n", result);
+  if (result >= -23.18758 - 0.05 && result <= -23.18758 + 0.05) {
+    printf("PASSED, ebur128_loudness_global_multiple\n");
+  } else {
+    printf("FAILED, ebur128_loudness_global_multiple\n");
+  }
+
+after_multiple_test:
+  ;
 
 #define TEST_LRA(filename, i)                                                  \
   result = test_loudness_range(filename);                                      \
