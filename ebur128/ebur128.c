@@ -25,6 +25,7 @@ struct ebur128_dq_entry {
 
 #define ALMOST_ZERO 0.000001
 #define FILTER_STATE_SIZE 5
+#define MAX_CHANNELS 1024
 
 typedef struct {              /* Data structure for polyphase FIR interpolator */
   unsigned int factor;        /* Interpolation factor of the interpolator */
@@ -361,7 +362,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   unsigned int i;
   size_t j;
 
-  if (channels == 0 || samplerate < 5  || channels > 1024) {
+  if (channels == 0 || samplerate < 5  || channels > MAX_CHANNELS) {
     return NULL;
   }
 
@@ -731,7 +732,7 @@ int ebur128_change_parameters(ebur128_state* st,
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
-  if (channels == 0 || samplerate < 5) {
+  if (channels == 0 || samplerate < 5 || channels > MAX_CHANNELS) {
     return EBUR128_ERROR_NOMEM;
   }
 
@@ -744,6 +745,9 @@ int ebur128_change_parameters(ebur128_state* st,
   st->d->audio_data = NULL;
 
   if (channels != st->channels) {
+    if (channels == 0 || channels > MAX_CHANNELS) {
+      return EBUR128_ERROR_NOMEM;
+    }
     unsigned int i;
 
     free(st->d->channel_map); st->d->channel_map = NULL;
