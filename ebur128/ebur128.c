@@ -361,7 +361,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   unsigned int i;
   size_t j;
 
-  if (channels == 0 || samplerate < 5) {
+  if (channels == 0 || samplerate < 5  || channels > 1024) {
     return NULL;
   }
 
