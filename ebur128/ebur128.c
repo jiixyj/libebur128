@@ -49,7 +49,7 @@ struct ebur128_state_internal {
   /** How many frames are needed for a gating block. Will correspond to 400ms
    *  of audio at initialization, and 100ms after the first block (75% overlap
    *  as specified in the 2011 revision of BS1770). */
-  unsigned long needed_frames;
+  size_t needed_frames;
   /** The channel map. Has as many elements as there are channels. */
   int* channel_map;
   /** How many samples fit in 100ms (rounded). */
