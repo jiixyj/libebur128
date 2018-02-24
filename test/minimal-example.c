@@ -30,6 +30,10 @@ int main(int ac, const char* av[]) {
     sts[i] = ebur128_init((unsigned) file_info.channels,
                           (unsigned) file_info.samplerate,
                           EBUR128_MODE_I);
+    if (!sts[i]) {
+      fprintf(stderr, "Could not create ebur128_state!\n");
+      return 1;
+    }
 
     /* example: set channel map (note: see ebur128.h for the default map) */
     if (file_info.channels == 5) {
