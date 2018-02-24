@@ -49,6 +49,11 @@ int main(int ac, const char* av[]) {
     }
 
     buffer = (double*) malloc(sts[i]->samplerate * sts[i]->channels * sizeof(double));
+    if (!buffer) {
+      fprintf(stderr, "malloc failed\n");
+      return 1;
+    }
+
     while ((nr_frames_read = sf_readf_double(file, buffer,
                                              (sf_count_t) sts[i]->samplerate))) {
       ebur128_add_frames_double(sts[i], buffer, (size_t) nr_frames_read);
