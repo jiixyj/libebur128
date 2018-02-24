@@ -931,7 +931,7 @@ int ebur128_add_frames_##type(ebur128_state* st,                               \
       if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {                 \
         st->d->short_term_frame_counter += frames;                             \
       }                                                                        \
-      st->d->needed_frames -= frames;                                          \
+      st->d->needed_frames -= (unsigned long) frames;                          \
       frames = 0;                                                              \
     }                                                                          \
   }                                                                            \
