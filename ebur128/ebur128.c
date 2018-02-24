@@ -343,6 +343,17 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
   *patch = EBUR128_VERSION_PATCH;
 }
 
+#define VALIDATE_CHANNELS_AND_SAMPLERATE(err)                                  \
+  do {                                                                         \
+    if (channels == 0 || channels > 64) {                                      \
+      return (err);                                                            \
+    }                                                                          \
+                                                                               \
+    if (samplerate < 16 || samplerate > 2822400) {                             \
+      return (err);                                                            \
+    }                                                                          \
+  } while (0);
+
 ebur128_state* ebur128_init(unsigned int channels,
                             unsigned long samplerate,
                             int mode) {
@@ -352,9 +363,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   unsigned int i;
   size_t j;
 
-  if (channels == 0 || samplerate < 5) {
-    return NULL;
-  }
+  VALIDATE_CHANNELS_AND_SAMPLERATE(NULL);
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, 0, exit)
@@ -723,9 +732,7 @@ int ebur128_change_parameters(ebur128_state* st,
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
-  if (channels == 0 || samplerate < 5) {
-    return EBUR128_ERROR_NOMEM;
-  }
+  VALIDATE_CHANNELS_AND_SAMPLERATE(EBUR128_ERROR_NOMEM);
 
   if (channels == st->channels &&
       samplerate == st->samplerate) {
