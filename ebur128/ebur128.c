@@ -343,13 +343,19 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
   *patch = EBUR128_VERSION_PATCH;
 }
 
+#define VALIDATE_MAX_CHANNELS (64)
+#define VALIDATE_MAX_SAMPLERATE (2822400)
+#define VALIDATE_MAX_WINDOW                                                    \
+  ((3ul << 30) / VALIDATE_MAX_SAMPLERATE / VALIDATE_MAX_CHANNELS /             \
+   sizeof(double))
+
 #define VALIDATE_CHANNELS_AND_SAMPLERATE(err)                                  \
   do {                                                                         \
-    if (channels == 0 || channels > 64) {                                      \
+    if (channels == 0 || channels > VALIDATE_MAX_CHANNELS) {                   \
       return (err);                                                            \
     }                                                                          \
                                                                                \
-    if (samplerate < 16 || samplerate > 2822400) {                             \
+    if (samplerate < 16 || samplerate > VALIDATE_MAX_SAMPLERATE) {             \
       return (err);                                                            \
     }                                                                          \
   } while (0);
@@ -814,8 +820,13 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && window < 400) {
     window = 400;
   }
+
   if (window == st->d->window) {
     return EBUR128_ERROR_NO_CHANGE;
+  }
+
+  if (window >= VALIDATE_MAX_WINDOW) {
+    return EBUR128_ERROR_NOMEM;
   }
 
   st->d->window = window;
@@ -1118,8 +1129,15 @@ int ebur128_loudness_window(ebur128_state* st,
                             unsigned long window,
                             double* out) {
   double energy;
-  size_t interval_frames = st->samplerate * window / 1000;
-  int error = ebur128_energy_in_interval(st, interval_frames, &energy);
+  size_t interval_frames;
+  int error;
+
+  if (window >= VALIDATE_MAX_WINDOW) {
+    return EBUR128_ERROR_INVALID_MODE;
+  }
+
+  interval_frames = st->samplerate * window / 1000;
+  error = ebur128_energy_in_interval(st, interval_frames, &energy);
   if (error) {
     return error;
   } else if (energy <= 0.0) {
