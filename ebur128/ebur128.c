@@ -572,7 +572,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
       for (i = 0; i < frames; ++i) {                                           \
         if (src[i * st->channels + c] > max) {                                 \
           max =        src[i * st->channels + c];                              \
-        } else if (-src[i * st->channels + c] > max) {                         \
+        } else if (-1.0 * src[i * st->channels + c] > max) {                   \
           max = -1.0 * src[i * st->channels + c];                              \
         }                                                                      \
       }                                                                        \
