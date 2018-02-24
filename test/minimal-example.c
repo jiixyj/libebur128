@@ -22,6 +22,10 @@ int main(int ac, const char* av[]) {
   }
 
   sts = malloc((size_t) (ac - 1) * sizeof(ebur128_state*));
+  if (!sts) {
+    fprintf(stderr, "malloc failed\n");
+    return 1;
+  }
 
   for (i = 0; i < ac - 1; ++i) {
     memset(&file_info, '\0', sizeof(file_info));
