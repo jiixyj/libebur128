@@ -179,7 +179,7 @@ static size_t interp_process(interpolator* interp, size_t frames, float* in, flo
         for (t = 0; t < interp->filter[f].count; t++) {
           int i = (int)interp->zi - (int)interp->filter[f].index[t];
           if (i < 0) {
-            i += interp->delay;
+            i += (int)interp->delay;
           }
           c = interp->filter[f].coeff[t];
           acc += interp->z[chan][i] * c;
