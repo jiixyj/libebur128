@@ -778,8 +778,11 @@ int ebur128_change_parameters(ebur128_state* st,
   if (samplerate != st->samplerate) {
     st->samplerate = samplerate;
     st->d->samples_in_100ms = (st->samplerate + 5) / 10;
-    ebur128_init_filter(st);
   }
+  /* if we're here, either samplerate or channels have changed. Re-init filter */
+  errcode = ebur128_init_filter(st);
+  CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
+
   st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
   if (st->d->audio_data_frames % st->d->samples_in_100ms) {
     /* round up to multiple of samples_in_100ms */
