@@ -805,8 +805,7 @@ exit:
   return errcode;
 }
 
-int ebur128_set_max_window(ebur128_state* st, unsigned long window)
-{
+int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
@@ -848,8 +847,7 @@ exit:
   return errcode;
 }
 
-int ebur128_set_max_history(ebur128_state* st, unsigned long history)
-{
+int ebur128_set_max_history(ebur128_state* st, unsigned long history) {
   if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA && history < 3000) {
     history = 3000;
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && history < 400) {
