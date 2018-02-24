@@ -26,6 +26,10 @@ int main(int ac, const char* av[]) {
   for (i = 0; i < ac - 1; ++i) {
     memset(&file_info, '\0', sizeof(file_info));
     file = sf_open(av[i + 1], SFM_READ, &file_info);
+    if (!file) {
+      fprintf(stderr, "Could not open file with sf_open!\n");
+      return 1;
+    }
 
     sts[i] = ebur128_init((unsigned) file_info.channels,
                           (unsigned) file_info.samplerate,
