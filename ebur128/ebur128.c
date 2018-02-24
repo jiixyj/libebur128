@@ -116,7 +116,7 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
   /* One delay buffer per channel. */
   interp->z = calloc(interp->channels, sizeof(float*));
   for (j = 0; j < interp->channels; j++) {
-    interp->z[j] = calloc( interp->delay, sizeof(float) );
+    interp->z[j] = calloc(interp->delay, sizeof(float));
   }
 
   /* Calculate the filter coefficients */
