@@ -182,7 +182,7 @@ static size_t interp_process(interpolator* interp, size_t frames, float* in, flo
             i += (int)interp->delay;
           }
           c = interp->filter[f].coeff[t];
-          acc += interp->z[chan][i] * c;
+          acc += (double) interp->z[chan][i] * c;
         }
         *outp = (float)acc;
         outp += interp->channels;
@@ -532,7 +532,7 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 
   for (i = 0; i < frames_out; ++i) {
     for (c = 0; c < st->channels; ++c) {
-      float val = st->d->resampler_buffer_output[i * st->channels + c];
+      double val = (double) st->d->resampler_buffer_output[i * st->channels + c];
 
       if (val > st->d->prev_true_peak[c]) {
         st->d->prev_true_peak[c] = val;
@@ -576,10 +576,11 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
     for (c = 0; c < st->channels; ++c) {                                       \
       double max = 0.0;                                                        \
       for (i = 0; i < frames; ++i) {                                           \
-        if (src[i * st->channels + c] > max) {                                 \
-          max =        src[i * st->channels + c];                              \
-        } else if (-1.0 * src[i * st->channels + c] > max) {                   \
-          max = -1.0 * src[i * st->channels + c];                              \
+        double cur = (double) src[i * st->channels + c];                       \
+        if (cur > max) {                                                       \
+          max =  cur;                                                          \
+        } else if (-cur > max) {                                               \
+          max = -cur;                                                          \
         }                                                                      \
       }                                                                        \
       max /= scaling_factor;                                                   \
@@ -591,7 +592,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
     for (c = 0; c < st->channels; ++c) {                                       \
       for (i = 0; i < frames; ++i) {                                           \
         st->d->resampler_buffer_input[i * st->channels + c] =                  \
-                      (float) (src[i * st->channels + c] / scaling_factor);    \
+            (float) ((double) src[i * st->channels + c] / scaling_factor);     \
       }                                                                        \
     }                                                                          \
     ebur128_check_true_peak(st, frames);                                       \
@@ -601,7 +602,8 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
     if (ci < 0) continue;                                                      \
     else if (ci == EBUR128_DUAL_MONO - 1) ci = 0; /*dual mono */               \
     for (i = 0; i < frames; ++i) {                                             \
-      st->d->v[ci][0] = (double) (src[i * st->channels + c] / scaling_factor)  \
+      st->d->v[ci][0] = (double)                                               \
+          ((double) src[i * st->channels + c] / scaling_factor)                \
                    - st->d->a[1] * st->d->v[ci][1]                             \
                    - st->d->a[2] * st->d->v[ci][2]                             \
                    - st->d->a[3] * st->d->v[ci][3]                             \
@@ -621,6 +623,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
   }                                                                            \
   TURN_OFF_FTZ                                                                 \
 }
+
 EBUR128_FILTER(short, SHRT_MIN, SHRT_MAX)
 EBUR128_FILTER(int, INT_MIN, INT_MAX)
 EBUR128_FILTER(float, -1.0f, 1.0f)
