@@ -455,7 +455,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   st->d->audio_data = (double*) malloc(st->d->audio_data_frames *
                                        st->channels *
                                        sizeof(double));
-  CHECK_ERROR(!st->d->audio_data, 0, free_true_peak)
+  CHECK_ERROR(!st->d->audio_data, 0, free_prev_true_peak)
   for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
     st->d->audio_data[j] = 0.0;
   }
