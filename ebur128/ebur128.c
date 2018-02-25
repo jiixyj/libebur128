@@ -635,8 +635,8 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
     }                                                                          \
     if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK &&       \
         st->d->interp) {                                                       \
-      for (c = 0; c < st->channels; ++c) {                                     \
-        for (i = 0; i < frames; ++i) {                                         \
+      for (i = 0; i < frames; ++i) {                                           \
+        for (c = 0; c < st->channels; ++c) {                                   \
           st->d->resampler_buffer_input[i * st->channels + c] =                \
               (float) ((double) src[i * st->channels + c] / scaling_factor);   \
         }                                                                      \
