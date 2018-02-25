@@ -1437,9 +1437,8 @@ int ebur128_true_peak(ebur128_state* st,
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
 
-  *out = st->d->true_peak[channel_number] > st->d->sample_peak[channel_number]
-             ? st->d->true_peak[channel_number]
-             : st->d->sample_peak[channel_number];
+  *out = EBUR128_MAX(st->d->true_peak[channel_number],
+                     st->d->sample_peak[channel_number]);
   return EBUR128_SUCCESS;
 }
 
@@ -1454,9 +1453,7 @@ int ebur128_prev_true_peak(ebur128_state* st,
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
 
-  *out = st->d->prev_true_peak[channel_number] >
-                 st->d->prev_sample_peak[channel_number]
-             ? st->d->prev_true_peak[channel_number]
-             : st->d->prev_sample_peak[channel_number];
+  *out = EBUR128_MAX(st->d->prev_true_peak[channel_number],
+                     st->d->prev_sample_peak[channel_number]);
   return EBUR128_SUCCESS;
 }
