@@ -35,7 +35,7 @@ endif()
 
 # default find script may fail due to missing dependencies
 find_path(SNDFILE_INCLUDE_DIR sndfile.h)
-find_library(SNDFILE_LIBRARY NAMES sndfile sndfile-1)
+find_library(SNDFILE_LIBRARY NAMES sndfile sndfile-1 libsndfile libsndfile-1)
 find_package_handle_standard_args(sndfile DEFAULT_MSG SNDFILE_LIBRARY SNDFILE_INCLUDE_DIR)
 mark_as_advanced(SNDFILE_INCLUDE_DIR SNDFILE_LIBRARY)
 
