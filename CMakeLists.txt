@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 project(libebur128 C)
 
+if(ENABLE_FUZZER)
+  enable_language(CXX)
+  set(SANITIZER_FLAGS "-fsanitize=address,undefined,unsigned-integer-overflow")
+  set(FUZZER_FLAGS "${SANITIZER_FLAGS},fuzzer")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
