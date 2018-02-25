@@ -281,7 +281,7 @@ static int ebur128_init_filter(ebur128_state* st) {
   st->d->a[3] = pa[1] * ra[2] + pa[2] * ra[1];
   st->d->a[4] = pa[2] * ra[2];
 
-  st->d->v = malloc(st->channels * sizeof(filter_state));
+  st->d->v = (filter_state*) malloc(st->channels * sizeof(filter_state));
   CHECK_ERROR(!st->d->v, EBUR128_ERROR_NOMEM, exit);
   for (i = 0; i < (int) st->channels; ++i) {
     for (j = 0; j < FILTER_STATE_SIZE; ++j) {
