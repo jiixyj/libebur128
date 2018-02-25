@@ -104,8 +104,12 @@ static double histogram_energies[1000];
 static double histogram_energy_boundaries[1001];
 
 static interpolator* interp_create(unsigned int taps, unsigned int factor, unsigned int channels) {
-  interpolator* interp = (interpolator*) calloc(1, sizeof(interpolator));
-  unsigned int j = 0;
+  int errcode; /* unused */
+  interpolator* interp;
+  unsigned int j;
+
+  interp = (interpolator*) calloc(1, sizeof(interpolator));
+  CHECK_ERROR(!interp, 0, exit);
 
   interp->taps = taps;
   interp->factor = factor;
@@ -116,15 +120,22 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
    * One subfilter per interpolation factor. */
   interp->filter =
       (interp_filter*) calloc(interp->factor, sizeof(*interp->filter));
+  CHECK_ERROR(!interp->filter, 0, free_interp);
+
   for (j = 0; j < interp->factor; j++) {
     interp->filter[j].index =
-        (unsigned int*) calloc(interp->delay, sizeof(unsigned int));
-    interp->filter[j].coeff = (double*) calloc(interp->delay, sizeof(double));
+        (unsigned int *)calloc(interp->delay, sizeof(unsigned int));
+    interp->filter[j].coeff = (double *)calloc(interp->delay, sizeof(double));
+    CHECK_ERROR(!interp->filter[j].index || !interp->filter[j].coeff, 0,
+                free_filter_index_coeff);
   }
+
   /* One delay buffer per channel. */
-  interp->z = (float**) calloc(interp->channels, sizeof(float*));
+  interp->z = (float **)calloc(interp->channels, sizeof(float *));
+  CHECK_ERROR(!interp->z, 0, free_filter_index_coeff);
   for (j = 0; j < interp->channels; j++) {
     interp->z[j] = (float*) calloc(interp->delay, sizeof(float));
+    CHECK_ERROR(!interp->z[j], 0, free_filter_z);
   }
 
   /* Calculate the filter coefficients */
@@ -147,6 +158,22 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
     }
   }
   return interp;
+
+free_filter_z:
+  for (j = 0; j < interp->channels; j++) {
+    free(interp->z[j]);
+  }
+  free(interp->z);
+free_filter_index_coeff:
+  for (j = 0; j < interp->factor; j++) {
+    free(interp->filter[j].index);
+    free(interp->filter[j].coeff);
+  }
+  free(interp->filter);
+free_interp:
+  free(interp);
+exit:
+  return NULL;
 }
 
 static void interp_destroy(interpolator* interp) {
