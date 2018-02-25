@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 2.8.12)
 
 set(ENABLE_TESTS OFF CACHE BOOL "Build test binaries, needs libsndfile")
 set(ENABLE_FUZZER OFF CACHE BOOL "Build fuzzer binary")
