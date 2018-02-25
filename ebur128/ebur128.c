@@ -737,11 +737,15 @@ static int ebur128_calc_gating_block(ebur128_state* st,
     }
     sum += channel_sum;
   }
+
   sum /= (double) frames_per_block;
+
   if (optional_output) {
     *optional_output = sum;
     return EBUR128_SUCCESS;
-  } else if (sum >= histogram_energy_boundaries[0]) {
+  }
+
+  if (sum >= histogram_energy_boundaries[0]) {
     if (st->d->use_histogram) {
       ++st->d->block_energy_histogram[find_histogram_index(sum)];
     } else {
@@ -760,10 +764,9 @@ static int ebur128_calc_gating_block(ebur128_state* st,
       block->z = sum;
       STAILQ_INSERT_TAIL(&st->d->block_list, block, entries);
     }
-    return EBUR128_SUCCESS;
-  } else {
-    return EBUR128_SUCCESS;
   }
+
+  return EBUR128_SUCCESS;
 }
 
 int ebur128_set_channel(ebur128_state* st,
@@ -1178,27 +1181,36 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out) {
 
 int ebur128_loudness_momentary(ebur128_state* st, double* out) {
   double energy;
-  int error =
-      ebur128_energy_in_interval(st, st->d->samples_in_100ms * 4, &energy);
+  int error;
+
+  error = ebur128_energy_in_interval(st, st->d->samples_in_100ms * 4, &energy);
   if (error) {
     return error;
-  } else if (energy <= 0.0) {
+  }
+
+  if (energy <= 0.0) {
     *out = -HUGE_VAL;
     return EBUR128_SUCCESS;
   }
+
   *out = ebur128_energy_to_loudness(energy);
   return EBUR128_SUCCESS;
 }
 
 int ebur128_loudness_shortterm(ebur128_state* st, double* out) {
   double energy;
-  int error = ebur128_energy_shortterm(st, &energy);
+  int error;
+
+  error = ebur128_energy_shortterm(st, &energy);
   if (error) {
     return error;
-  } else if (energy <= 0.0) {
+  }
+
+  if (energy <= 0.0) {
     *out = -HUGE_VAL;
     return EBUR128_SUCCESS;
   }
+
   *out = ebur128_energy_to_loudness(energy);
   return EBUR128_SUCCESS;
 }
@@ -1218,10 +1230,13 @@ int ebur128_loudness_window(ebur128_state* st,
   error = ebur128_energy_in_interval(st, interval_frames, &energy);
   if (error) {
     return error;
-  } else if (energy <= 0.0) {
+  }
+
+  if (energy <= 0.0) {
     *out = -HUGE_VAL;
     return EBUR128_SUCCESS;
   }
+
   *out = ebur128_energy_to_loudness(energy);
   return EBUR128_SUCCESS;
 }
@@ -1316,66 +1331,65 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
       stl_size += hist[j++];
     }
     h_en = histogram_energies[j - 1];
+
     *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
     return EBUR128_SUCCESS;
+  }
 
-  } else {
-    stl_size = 0;
-    for (i = 0; i < size; ++i) {
-      if (!sts[i]) {
-        continue;
-      }
-      STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
-        ++stl_size;
-      }
+  stl_size = 0;
+  for (i = 0; i < size; ++i) {
+    if (!sts[i]) {
+      continue;
     }
-    if (!stl_size) {
-      *out = 0.0;
-      return EBUR128_SUCCESS;
-    }
-    stl_vector = (double*) malloc(stl_size * sizeof(double));
-    if (!stl_vector) {
-      return EBUR128_ERROR_NOMEM;
-    }
-
-    j = 0;
-    for (i = 0; i < size; ++i) {
-      if (!sts[i]) {
-        continue;
-      }
-      STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
-        stl_vector[j] = it->z;
-        ++j;
-      }
-    }
-    qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
-    stl_power = 0.0;
-    for (i = 0; i < stl_size; ++i) {
-      stl_power += stl_vector[i];
-    }
-    stl_power /= (double) stl_size;
-    stl_integrated = minus_twenty_decibels * stl_power;
-
-    stl_relgated = stl_vector;
-    stl_relgated_size = stl_size;
-    while (stl_relgated_size > 0 && *stl_relgated < stl_integrated) {
-      ++stl_relgated;
-      --stl_relgated_size;
-    }
-
-    if (stl_relgated_size) {
-      h_en = stl_relgated[(size_t)((stl_relgated_size - 1) * 0.95 + 0.5)];
-      l_en = stl_relgated[(size_t)((stl_relgated_size - 1) * 0.1 + 0.5)];
-      free(stl_vector);
-      *out =
-          ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
-      return EBUR128_SUCCESS;
-    } else {
-      free(stl_vector);
-      *out = 0.0;
-      return EBUR128_SUCCESS;
+    STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
+      ++stl_size;
     }
   }
+  if (!stl_size) {
+    *out = 0.0;
+    return EBUR128_SUCCESS;
+  }
+  stl_vector = (double*) malloc(stl_size * sizeof(double));
+  if (!stl_vector) {
+    return EBUR128_ERROR_NOMEM;
+  }
+
+  j = 0;
+  for (i = 0; i < size; ++i) {
+    if (!sts[i]) {
+      continue;
+    }
+    STAILQ_FOREACH(it, &sts[i]->d->short_term_block_list, entries) {
+      stl_vector[j] = it->z;
+      ++j;
+    }
+  }
+  qsort(stl_vector, stl_size, sizeof(double), ebur128_double_cmp);
+  stl_power = 0.0;
+  for (i = 0; i < stl_size; ++i) {
+    stl_power += stl_vector[i];
+  }
+  stl_power /= (double) stl_size;
+  stl_integrated = minus_twenty_decibels * stl_power;
+
+  stl_relgated = stl_vector;
+  stl_relgated_size = stl_size;
+  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated) {
+    ++stl_relgated;
+    --stl_relgated_size;
+  }
+
+  if (stl_relgated_size) {
+    h_en = stl_relgated[(size_t)((stl_relgated_size - 1) * 0.95 + 0.5)];
+    l_en = stl_relgated[(size_t)((stl_relgated_size - 1) * 0.1 + 0.5)];
+    free(stl_vector);
+    *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
+  } else {
+    free(stl_vector);
+    *out = 0.0;
+  }
+
+  return EBUR128_SUCCESS;
 }
 
 int ebur128_loudness_range(ebur128_state* st, double* out) {
@@ -1387,9 +1401,12 @@ int ebur128_sample_peak(ebur128_state* st,
                         double* out) {
   if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK) {
     return EBUR128_ERROR_INVALID_MODE;
-  } else if (channel_number >= st->channels) {
+  }
+
+  if (channel_number >= st->channels) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
+
   *out = st->d->sample_peak[channel_number];
   return EBUR128_SUCCESS;
 }
@@ -1399,9 +1416,12 @@ int ebur128_prev_sample_peak(ebur128_state* st,
                              double* out) {
   if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) != EBUR128_MODE_SAMPLE_PEAK) {
     return EBUR128_ERROR_INVALID_MODE;
-  } else if (channel_number >= st->channels) {
+  }
+
+  if (channel_number >= st->channels) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
+
   *out = st->d->prev_sample_peak[channel_number];
   return EBUR128_SUCCESS;
 }
@@ -1411,9 +1431,12 @@ int ebur128_true_peak(ebur128_state* st,
                       double* out) {
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK) {
     return EBUR128_ERROR_INVALID_MODE;
-  } else if (channel_number >= st->channels) {
+  }
+
+  if (channel_number >= st->channels) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
+
   *out = st->d->true_peak[channel_number] > st->d->sample_peak[channel_number]
              ? st->d->true_peak[channel_number]
              : st->d->sample_peak[channel_number];
@@ -1425,9 +1448,12 @@ int ebur128_prev_true_peak(ebur128_state* st,
                            double* out) {
   if ((st->mode & EBUR128_MODE_TRUE_PEAK) != EBUR128_MODE_TRUE_PEAK) {
     return EBUR128_ERROR_INVALID_MODE;
-  } else if (channel_number >= st->channels) {
+  }
+
+  if (channel_number >= st->channels) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
+
   *out = st->d->prev_true_peak[channel_number] >
                  st->d->prev_sample_peak[channel_number]
              ? st->d->prev_true_peak[channel_number]
