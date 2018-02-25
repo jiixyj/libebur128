@@ -785,6 +785,16 @@ int ebur128_change_parameters(ebur128_state* st,
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
+  /* This is needed to suppress a clang-tidy warning. */
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+#if __has_builtin(__builtin_unreachable)
+  if (st->channels == 0) {
+    __builtin_unreachable();
+  }
+#endif
+
   VALIDATE_CHANNELS_AND_SAMPLERATE(EBUR128_ERROR_NOMEM);
 
   if (channels == st->channels && samplerate == st->samplerate) {
