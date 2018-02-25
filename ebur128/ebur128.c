@@ -16,6 +16,7 @@
     errcode = (errorcode);                                                     \
     goto goto_point;                                                           \
   }
+#define EBUR128_MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 STAILQ_HEAD(ebur128_double_queue, ebur128_dq_entry);
 struct ebur128_dq_entry {
@@ -581,10 +582,8 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
       double val =
           (double) st->d->resampler_buffer_output[i * st->channels + c];
 
-      if (val > st->d->prev_true_peak[c]) {
-        st->d->prev_true_peak[c] = val;
-      } else if (-val > st->d->prev_true_peak[c]) {
-        st->d->prev_true_peak[c] = -val;
+      if (EBUR128_MAX(val, -val) > st->d->prev_true_peak[c]) {
+        st->d->prev_true_peak[c] = EBUR128_MAX(val, -val);
       }
     }
   }
@@ -612,9 +611,7 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
   static void ebur128_filter_##type(ebur128_state* st, const type* src,        \
                                     size_t frames) {                           \
     static double scaling_factor =                                             \
-        -((double) (min_scale)) > (double) (max_scale)                         \
-            ? -((double) (min_scale))                                          \
-            : (double) (max_scale);                                            \
+        EBUR128_MAX(-((double) (min_scale)), (double) (max_scale));            \
                                                                                \
     double* audio_data = st->d->audio_data + st->d->audio_data_index;          \
     size_t i, c;                                                               \
@@ -626,10 +623,8 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
         double max = 0.0;                                                      \
         for (i = 0; i < frames; ++i) {                                         \
           double cur = (double) src[i * st->channels + c];                     \
-          if (cur > max) {                                                     \
-            max = cur;                                                         \
-          } else if (-cur > max) {                                             \
-            max = -cur;                                                        \
+          if (EBUR128_MAX(cur, -cur) > max) {                                  \
+            max = EBUR128_MAX(cur, -cur);                                      \
           }                                                                    \
         }                                                                      \
         max /= scaling_factor;                                                 \
