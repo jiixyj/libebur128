@@ -628,8 +628,9 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
           }                                                                    \
         }                                                                      \
         max /= scaling_factor;                                                 \
-        if (max > st->d->prev_sample_peak[c])                                  \
+        if (max > st->d->prev_sample_peak[c]) {                                \
           st->d->prev_sample_peak[c] = max;                                    \
+        }                                                                      \
       }                                                                        \
     }                                                                          \
     if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK &&       \
@@ -643,8 +644,9 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
       ebur128_check_true_peak(st, frames);                                     \
     }                                                                          \
     for (c = 0; c < st->channels; ++c) {                                       \
-      if (st->d->channel_map[c] == EBUR128_UNUSED)                             \
+      if (st->d->channel_map[c] == EBUR128_UNUSED) {                           \
         continue;                                                              \
+      }                                                                        \
       for (i = 0; i < frames; ++i) {                                           \
         st->d->v[c][0] =                                                       \
             (double) ((double) src[i * st->channels + c] / scaling_factor) -   \
@@ -993,8 +995,9 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
                 } else {                                                       \
                   block = (struct ebur128_dq_entry*) malloc(                   \
                       sizeof(struct ebur128_dq_entry));                        \
-                  if (!block)                                                  \
+                  if (!block) {                                                \
                     return EBUR128_ERROR_NOMEM;                                \
+                  }                                                            \
                   st->d->st_block_list_size++;                                 \
                 }                                                              \
                 block->z = st_energy;                                          \
