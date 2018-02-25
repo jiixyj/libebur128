@@ -25,18 +25,20 @@ struct ebur128_dq_entry {
 
 #define ALMOST_ZERO 0.000001
 
-typedef struct {              /* Data structure for polyphase FIR interpolator */
-  unsigned int factor;        /* Interpolation factor of the interpolator */
-  unsigned int taps;          /* Taps (prefer odd to increase zero coeffs) */
-  unsigned int channels;      /* Number of channels */
-  unsigned int delay;         /* Size of delay buffer */
-  struct {
-    unsigned int count;       /* Number of coefficients in this subfilter */
-    unsigned int* index;      /* Delay index of corresponding filter coeff */
-    double* coeff;            /* List of subfilter coefficients */
-  }* filter;                  /* List of subfilters (one for each factor) */
-  float** z;                  /* List of delay buffers (one for each channel) */
-  unsigned int zi;            /* Current delay buffer index */
+typedef struct {
+  unsigned int count;  /* Number of coefficients in this subfilter */
+  unsigned int* index; /* Delay index of corresponding filter coeff */
+  double* coeff;       /* List of subfilter coefficients */
+} interp_filter;
+
+typedef struct {         /* Data structure for polyphase FIR interpolator */
+  unsigned int factor;   /* Interpolation factor of the interpolator */
+  unsigned int taps;     /* Taps (prefer odd to increase zero coeffs) */
+  unsigned int channels; /* Number of channels */
+  unsigned int delay;    /* Size of delay buffer */
+  interp_filter* filter; /* List of subfilters (one for each factor) */
+  float** z;             /* List of delay buffers (one for each channel) */
+  unsigned int zi;       /* Current delay buffer index */
 } interpolator;
 
 struct ebur128_state_internal {
@@ -98,7 +100,7 @@ static double histogram_energies[1000];
 static double histogram_energy_boundaries[1001];
 
 static interpolator* interp_create(unsigned int taps, unsigned int factor, unsigned int channels) {
-  interpolator* interp = calloc(1, sizeof(interpolator));
+  interpolator* interp = (interpolator*) calloc(1, sizeof(interpolator));
   unsigned int j = 0;
 
   interp->taps = taps;
@@ -108,15 +110,17 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
 
   /* Initialize the filter memory
    * One subfilter per interpolation factor. */
-  interp->filter = calloc(interp->factor, sizeof(*interp->filter));
+  interp->filter =
+      (interp_filter*) calloc(interp->factor, sizeof(*interp->filter));
   for (j = 0; j < interp->factor; j++) {
-    interp->filter[j].index = calloc(interp->delay, sizeof(unsigned int));
-    interp->filter[j].coeff = calloc(interp->delay, sizeof(double));
+    interp->filter[j].index =
+        (unsigned int*) calloc(interp->delay, sizeof(unsigned int));
+    interp->filter[j].coeff = (double*) calloc(interp->delay, sizeof(double));
   }
   /* One delay buffer per channel. */
-  interp->z = calloc(interp->channels, sizeof(float*));
+  interp->z = (float**) calloc(interp->channels, sizeof(float*));
   for (j = 0; j < interp->channels; j++) {
-    interp->z[j] = calloc(interp->delay, sizeof(float));
+    interp->z[j] = (float*) calloc(interp->delay, sizeof(float));
   }
 
   /* Calculate the filter coefficients */
@@ -302,18 +306,15 @@ static int ebur128_init_resampler(ebur128_state* st) {
   }
 
   st->d->resampler_buffer_input_frames = st->d->samples_in_100ms * 4;
-  st->d->resampler_buffer_input = malloc(st->d->resampler_buffer_input_frames *
-                                      st->channels *
-                                      sizeof(float));
+  st->d->resampler_buffer_input = (float*) malloc(
+      st->d->resampler_buffer_input_frames * st->channels * sizeof(float));
   CHECK_ERROR(!st->d->resampler_buffer_input, EBUR128_ERROR_NOMEM, free_interp)
 
   st->d->resampler_buffer_output_frames =
                                     st->d->resampler_buffer_input_frames *
                                     st->d->interp->factor;
-  st->d->resampler_buffer_output = malloc
-                                      (st->d->resampler_buffer_output_frames *
-                                       st->channels *
-                                       sizeof(float));
+  st->d->resampler_buffer_output = (float*) malloc(
+      st->d->resampler_buffer_output_frames * st->channels * sizeof(float));
   CHECK_ERROR(!st->d->resampler_buffer_output, EBUR128_ERROR_NOMEM, free_input)
 
   return errcode;
@@ -425,7 +426,8 @@ ebur128_state* ebur128_init(unsigned int channels,
   ebur128_init_filter(st);
 
   if (st->d->use_histogram) {
-    st->d->block_energy_histogram = malloc(1000 * sizeof(unsigned long));
+    st->d->block_energy_histogram =
+        (unsigned long*) malloc(1000 * sizeof(unsigned long));
     CHECK_ERROR(!st->d->block_energy_histogram, 0, free_audio_data)
     for (i = 0; i < 1000; ++i) {
       st->d->block_energy_histogram[i] = 0;
@@ -434,7 +436,8 @@ ebur128_state* ebur128_init(unsigned int channels,
     st->d->block_energy_histogram = NULL;
   }
   if (st->d->use_histogram) {
-    st->d->short_term_block_energy_histogram = malloc(1000 * sizeof(unsigned long));
+    st->d->short_term_block_energy_histogram =
+        (unsigned long*) malloc(1000 * sizeof(unsigned long));
     CHECK_ERROR(!st->d->short_term_block_energy_histogram, 0, free_block_energy_histogram)
     for (i = 0; i < 1000; ++i) {
       st->d->short_term_block_energy_histogram[i] = 0;
