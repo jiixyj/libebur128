@@ -1,6 +1,5 @@
 set(BUILD_STATIC_LIBS       ON  CACHE BOOL "Build static library")
 set(WITH_STATIC_PIC         OFF CACHE BOOL "Compile static library with -fPIC flag")
-set(ENABLE_INTERNAL_QUEUE_H OFF CACHE BOOL "Use own queue.h")
 
 #### queue.h
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c
@@ -9,6 +8,11 @@ try_compile(HAS_QUEUE ${CMAKE_CURRENT_BINARY_DIR}
                       ${CMAKE_CURRENT_BINARY_DIR}/queuetest.c)
 
 set(SUMMARY_HAS_QUEUE ${HAS_QUEUE} CACHE INTERNAL "")
+
+include(CMakeDependentOption)
+cmake_dependent_option(ENABLE_INTERNAL_QUEUE_H "Use own queue.h" OFF "HAS_QUEUE" ON)
+# PARENT_SCOPE set necessary due to status print in parent CMakeLists.txt
+set(ENABLE_INTERNAL_QUEUE_H ${ENABLE_INTERNAL_QUEUE_H} PARENT_SCOPE)
 
 if(ENABLE_INTERNAL_QUEUE_H)
   include_directories(SYSTEM queue)
