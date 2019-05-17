@@ -147,7 +147,7 @@ double test_max_momentary(const char* filename) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
-  sf_count_t total_frames_read;
+  sf_count_t total_frames_read = 0;
   ebur128_state* st = NULL;
   double momentary;
   double max_momentary = -HUGE_VAL;
@@ -198,7 +198,7 @@ double test_max_shortterm(const char* filename) {
   SF_INFO file_info;
   SNDFILE* file;
   sf_count_t nr_frames_read;
-  sf_count_t total_frames_read;
+  sf_count_t total_frames_read = 0;
   ebur128_state* st = NULL;
   double shortterm;
   double max_shortterm = -HUGE_VAL;
