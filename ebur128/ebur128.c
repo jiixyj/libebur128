@@ -1457,3 +1457,42 @@ int ebur128_prev_true_peak(ebur128_state* st,
                      st->d->prev_sample_peak[channel_number]);
   return EBUR128_SUCCESS;
 }
+
+void ebur128_reset(ebur128_state *st) {
+  unsigned int i;
+
+  for (i = 0; i < st->channels; ++i) {
+    st->d->sample_peak[i] = 0.0;
+    st->d->prev_sample_peak[i] = 0.0;
+    st->d->true_peak[i] = 0.0;
+    st->d->prev_true_peak[i] = 0.0;
+  }
+
+  if (st->d->use_histogram) {
+    for (i = 0; i < 1000; ++i) {
+      st->d->block_energy_histogram[i] = 0;
+      st->d->short_term_block_energy_histogram[i] = 0;
+    }
+  }
+
+  while (!STAILQ_EMPTY(&st->d->block_list)) {
+    struct ebur128_dq_entry* block = STAILQ_FIRST(&st->d->block_list);
+    STAILQ_REMOVE_HEAD(&st->d->block_list, entries);
+    free(block);
+    st->d->block_list_size--;
+  }
+  while (!STAILQ_EMPTY(&st->d->short_term_block_list)) {
+    struct ebur128_dq_entry* block =
+        STAILQ_FIRST(&st->d->short_term_block_list);
+    STAILQ_REMOVE_HEAD(&st->d->short_term_block_list, entries);
+    free(block);
+    st->d->st_block_list_size--;
+  }
+
+  /* the first block needs 400ms of audio data */
+  st->d->needed_frames = st->d->samples_in_100ms * 4;
+  /* start at the beginning of the buffer */
+  st->d->audio_data_index = 0;
+  /* reset short term frame counter */
+  st->d->short_term_frame_counter = 0;
+}

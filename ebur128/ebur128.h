@@ -419,6 +419,15 @@ int ebur128_prev_true_peak(ebur128_state* st,
  */
 int ebur128_relative_threshold(ebur128_state* st, double* out);
 
+/** \brief Reset the running measurements.
+ *
+ *  When using the library as a Live Loudness Meter, this function allows for
+ *  resetting all measurements.
+ *
+ *  @param st library state
+ */
+void ebur128_reset(ebur128_state* st);
+
 #ifdef __cplusplus
 }
 #endif
