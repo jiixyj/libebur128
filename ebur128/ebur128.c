@@ -397,9 +397,6 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
 
 #define VALIDATE_MAX_CHANNELS (64)
 #define VALIDATE_MAX_SAMPLERATE (2822400)
-#define VALIDATE_MAX_WINDOW                                                    \
-  ((3ul << 30) / VALIDATE_MAX_SAMPLERATE / VALIDATE_MAX_CHANNELS /             \
-   sizeof(double))
 
 #define VALIDATE_CHANNELS_AND_SAMPLERATE(err)                                  \
   do {                                                                         \
