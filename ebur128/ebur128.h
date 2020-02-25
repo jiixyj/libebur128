@@ -232,6 +232,31 @@ int ebur128_add_frames_double(ebur128_state* st,
                              const double* src,
                              size_t frames);
 
+/** \brief Add frames with planar samples to be processed.
+ *
+ *  @param st library state.
+ *  @param src array of source frame channel data pointers. Channels must be planar.
+ *  @param frames number of frames. Not number of samples!
+ *  @return
+ *    - EBUR128_SUCCESS on success.
+ *    - EBUR128_ERROR_NOMEM on memory allocation error.
+ */
+int ebur128_add_frames_planar_short(ebur128_state* st,
+                             const short** src,
+                             size_t frames);
+/** \brief See \ref ebur128_add_frames_planar_short */
+int ebur128_add_frames_planar_int(ebur128_state* st,
+                             const int** src,
+                             size_t frames);
+/** \brief See \ref ebur128_add_frames_planar_short */
+int ebur128_add_frames_planar_float(ebur128_state* st,
+                             const float** src,
+                             size_t frames);
+/** \brief See \ref ebur128_add_frames_planar_short */
+int ebur128_add_frames_planar_double(ebur128_state* st,
+                             const double** src,
+                             size_t frames);
+
 /** \brief Get global integrated loudness in LUFS.
  *
  *  @param st library state.

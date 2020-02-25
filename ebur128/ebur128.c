@@ -675,6 +675,74 @@ EBUR128_FILTER(int, INT_MIN, INT_MAX)
 EBUR128_FILTER(float, -1.0f, 1.0f)
 EBUR128_FILTER(double, -1.0, 1.0)
 
+#define EBUR128_FILTER_PLANAR(type, min_scale, max_scale)                      \
+  static void ebur128_filter_planar_##type(ebur128_state* st, const type** src,\
+                                           size_t src_index, size_t frames) {  \
+    static double scaling_factor =                                             \
+        EBUR128_MAX(-((double) (min_scale)), (double) (max_scale));            \
+                                                                               \
+    double* audio_data = st->d->audio_data + st->d->audio_data_index;          \
+    size_t i, c;                                                               \
+                                                                               \
+    TURN_ON_FTZ                                                                \
+                                                                               \
+    if ((st->mode & EBUR128_MODE_SAMPLE_PEAK) == EBUR128_MODE_SAMPLE_PEAK) {   \
+      for (c = 0; c < st->channels; ++c) {                                     \
+        double max = 0.0;                                                      \
+        for (i = 0; i < frames; ++i) {                                         \
+          double cur = (double) src[c][src_index + i];                         \
+          if (EBUR128_MAX(cur, -cur) > max) {                                  \
+            max = EBUR128_MAX(cur, -cur);                                      \
+          }                                                                    \
+        }                                                                      \
+        max /= scaling_factor;                                                 \
+        if (max > st->d->prev_sample_peak[c]) {                                \
+          st->d->prev_sample_peak[c] = max;                                    \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+    if ((st->mode & EBUR128_MODE_TRUE_PEAK) == EBUR128_MODE_TRUE_PEAK &&       \
+        st->d->interp) {                                                       \
+      for (i = 0; i < frames; ++i) {                                           \
+        for (c = 0; c < st->channels; ++c) {                                   \
+          st->d->resampler_buffer_input[i * st->channels + c] =                \
+              (float) ((double) src[c][src_index + i] / scaling_factor);       \
+        }                                                                      \
+      }                                                                        \
+      ebur128_check_true_peak(st, frames);                                     \
+    }                                                                          \
+    for (c = 0; c < st->channels; ++c) {                                       \
+      if (st->d->channel_map[c] == EBUR128_UNUSED) {                           \
+        continue;                                                              \
+      }                                                                        \
+      for (i = 0; i < frames; ++i) {                                           \
+        st->d->v[c][0] =                                                       \
+            (double) ((double) src[c][src_index + i] / scaling_factor) -       \
+            st->d->a[1] * st->d->v[c][1] - /**/                                \
+            st->d->a[2] * st->d->v[c][2] - /**/                                \
+            st->d->a[3] * st->d->v[c][3] - /**/                                \
+            st->d->a[4] * st->d->v[c][4];                                      \
+        audio_data[i * st->channels + c] = /**/                                \
+            st->d->b[0] * st->d->v[c][0] + /**/                                \
+            st->d->b[1] * st->d->v[c][1] + /**/                                \
+            st->d->b[2] * st->d->v[c][2] + /**/                                \
+            st->d->b[3] * st->d->v[c][3] + /**/                                \
+            st->d->b[4] * st->d->v[c][4];                                      \
+        st->d->v[c][4] = st->d->v[c][3];                                       \
+        st->d->v[c][3] = st->d->v[c][2];                                       \
+        st->d->v[c][2] = st->d->v[c][1];                                       \
+        st->d->v[c][1] = st->d->v[c][0];                                       \
+      }                                                                        \
+      FLUSH_MANUALLY                                                           \
+    }                                                                          \
+    TURN_OFF_FTZ                                                               \
+  }
+
+EBUR128_FILTER_PLANAR(short, SHRT_MIN, SHRT_MAX)
+EBUR128_FILTER_PLANAR(int, INT_MIN, INT_MAX)
+EBUR128_FILTER_PLANAR(float, -1.0f, 1.0f)
+EBUR128_FILTER_PLANAR(double, -1.0, 1.0)
+
 static double ebur128_energy_to_loudness(double energy) {
   return 10 * (log(energy) / log(10.0)) - 0.691;
 }
@@ -1043,6 +1111,92 @@ EBUR128_ADD_FRAMES(short)
 EBUR128_ADD_FRAMES(int)
 EBUR128_ADD_FRAMES(float)
 EBUR128_ADD_FRAMES(double)
+
+#define EBUR128_ADD_FRAMES_PLANAR(type)                                        \
+  int ebur128_add_frames_planar_##type(ebur128_state* st, const type** src,    \
+                                       size_t frames) {                        \
+    size_t src_index = 0;                                                      \
+    unsigned int c = 0;                                                        \
+    for (c = 0; c < st->channels; c++) {                                       \
+      st->d->prev_sample_peak[c] = 0.0;                                        \
+      st->d->prev_true_peak[c] = 0.0;                                          \
+    }                                                                          \
+    while (frames > 0) {                                                       \
+      if (frames >= st->d->needed_frames) {                                    \
+        ebur128_filter_planar_##type(st, src, src_index, st->d->needed_frames);\
+        src_index += st->d->needed_frames * st->channels;                      \
+        frames -= st->d->needed_frames;                                        \
+        st->d->audio_data_index += st->d->needed_frames * st->channels;        \
+        /* calculate the new gating block */                                   \
+        if ((st->mode & EBUR128_MODE_I) == EBUR128_MODE_I) {                   \
+          if (ebur128_calc_gating_block(st, st->d->samples_in_100ms * 4,       \
+                                        NULL)) {                               \
+            return EBUR128_ERROR_NOMEM;                                        \
+          }                                                                    \
+        }                                                                      \
+        if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {               \
+          st->d->short_term_frame_counter += st->d->needed_frames;             \
+          if (st->d->short_term_frame_counter ==                               \
+              st->d->samples_in_100ms * 30) {                                  \
+            struct ebur128_dq_entry* block;                                    \
+            double st_energy;                                                  \
+            if (ebur128_energy_shortterm(st, &st_energy) == EBUR128_SUCCESS && \
+                st_energy >= histogram_energy_boundaries[0]) {                 \
+              if (st->d->use_histogram) {                                      \
+                ++st->d->short_term_block_energy_histogram                     \
+                      [find_histogram_index(st_energy)];                       \
+              } else {                                                         \
+                if (st->d->st_block_list_size == st->d->st_block_list_max) {   \
+                  block = STAILQ_FIRST(&st->d->short_term_block_list);         \
+                  STAILQ_REMOVE_HEAD(&st->d->short_term_block_list, entries);  \
+                } else {                                                       \
+                  block = (struct ebur128_dq_entry*) malloc(                   \
+                      sizeof(struct ebur128_dq_entry));                        \
+                  if (!block) {                                                \
+                    return EBUR128_ERROR_NOMEM;                                \
+                  }                                                            \
+                  st->d->st_block_list_size++;                                 \
+                }                                                              \
+                block->z = st_energy;                                          \
+                STAILQ_INSERT_TAIL(&st->d->short_term_block_list, block,       \
+                                   entries);                                   \
+              }                                                                \
+            }                                                                  \
+            st->d->short_term_frame_counter = st->d->samples_in_100ms * 20;    \
+          }                                                                    \
+        }                                                                      \
+        /* 100ms are needed for all blocks besides the first one */            \
+        st->d->needed_frames = st->d->samples_in_100ms;                        \
+        /* reset audio_data_index when buffer full */                          \
+        if (st->d->audio_data_index ==                                         \
+            st->d->audio_data_frames * st->channels) {                         \
+          st->d->audio_data_index = 0;                                         \
+        }                                                                      \
+      } else {                                                                 \
+        ebur128_filter_planar_##type(st, src, src_index, frames);              \
+        st->d->audio_data_index += frames * st->channels;                      \
+        if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA) {               \
+          st->d->short_term_frame_counter += frames;                           \
+        }                                                                      \
+        st->d->needed_frames -= (unsigned long) frames;                        \
+        frames = 0;                                                            \
+      }                                                                        \
+    }                                                                          \
+    for (c = 0; c < st->channels; c++) {                                       \
+      if (st->d->prev_sample_peak[c] > st->d->sample_peak[c]) {                \
+        st->d->sample_peak[c] = st->d->prev_sample_peak[c];                    \
+      }                                                                        \
+      if (st->d->prev_true_peak[c] > st->d->true_peak[c]) {                    \
+        st->d->true_peak[c] = st->d->prev_true_peak[c];                        \
+      }                                                                        \
+    }                                                                          \
+    return EBUR128_SUCCESS;                                                    \
+  }
+
+EBUR128_ADD_FRAMES_PLANAR(short)
+EBUR128_ADD_FRAMES_PLANAR(int)
+EBUR128_ADD_FRAMES_PLANAR(float)
+EBUR128_ADD_FRAMES_PLANAR(double)
 
 static int ebur128_calc_relative_threshold(ebur128_state* st,
                                            size_t* above_thresh_counter,
