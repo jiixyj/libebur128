@@ -12,6 +12,10 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
+Next release:
+ * Remove `BUILD_STATIC_LIBS` build option. Instead the CMake-supported
+   `BUILD_SHARED_LIBS` option is now honored as expected.
+
 v1.2.4 released:
  * Fix broken `ebur128_loudness_global_multiple()` function. Since v1.1.0 it
    calculated the relative threshold just from the last state given to it,
