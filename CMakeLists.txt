@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 project(libebur128 C)
 
+option(BUILD_SHARED_LIBS
+    "Build shared libraries instead of static ones" ON)
+
 if(ENABLE_FUZZER)
   enable_language(CXX)
   set(SANITIZER_FLAGS "-fsanitize=address,undefined,unsigned-integer-overflow")
@@ -29,10 +32,10 @@ endif()
 message(STATUS "Status          found / disabled --")
 message(STATUS "queue.h:        ${SUMMARY_HAS_QUEUE}"        "     ${USE_QUEUE}")
 
-if(BUILD_STATIC_LIBS)
-  message(STATUS "build static library and shared library!")
+if(BUILD_SHARED_LIBS)
+  message(STATUS "Building shared library (set BUILD_SHARED_LIBS to OFF to build static)")
 else()
-  message(STATUS "not building static library, set BUILD_STATIC_LIBS to ON to enable")
+  message(STATUS "Building static library")
 endif()
 
 if(ENABLE_TESTS)
