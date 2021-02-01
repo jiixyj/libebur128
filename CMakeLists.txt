@@ -33,7 +33,7 @@ message(STATUS "Status          found / disabled --")
 message(STATUS "queue.h:        ${SUMMARY_HAS_QUEUE}"        "     ${USE_QUEUE}")
 
 if(BUILD_SHARED_LIBS)
-  message(STATUS "Building shared library (set BUILD_SHARED_LIBS to NO to build static)")
+  message(STATUS "Building shared library (set BUILD_SHARED_LIBS to OFF to build static)")
 else()
   message(STATUS "Building static library")
 endif()
