@@ -1,11 +1,10 @@
 /* See COPYING file for copyright and license details. */
 
 #include <sndfile.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ebur128.h"
-
 
 int main(int ac, const char* av[]) {
   SF_INFO file_info;
@@ -36,8 +35,7 @@ int main(int ac, const char* av[]) {
     }
 
     sts[i] = ebur128_init((unsigned) file_info.channels,
-                          (unsigned) file_info.samplerate,
-                          EBUR128_MODE_I);
+                          (unsigned) file_info.samplerate, EBUR128_MODE_I);
     if (!sts[i]) {
       fprintf(stderr, "Could not create ebur128_state!\n");
       return 1;
@@ -52,20 +50,20 @@ int main(int ac, const char* av[]) {
       ebur128_set_channel(sts[i], 4, EBUR128_RIGHT_SURROUND);
     }
 
-    buffer = (double*) malloc(sts[i]->samplerate * sts[i]->channels * sizeof(double));
+    buffer = (double*) malloc(sts[i]->samplerate * sts[i]->channels *
+                              sizeof(double));
     if (!buffer) {
       fprintf(stderr, "malloc failed\n");
       return 1;
     }
 
-    while ((nr_frames_read = sf_readf_double(file, buffer,
-                                             (sf_count_t) sts[i]->samplerate))) {
+    while ((nr_frames_read = sf_readf_double(
+                file, buffer, (sf_count_t) sts[i]->samplerate))) {
       ebur128_add_frames_double(sts[i], buffer, (size_t) nr_frames_read);
     }
 
     ebur128_loudness_global(sts[i], &loudness);
     fprintf(stderr, "%.2f LUFS, %s\n", loudness, av[i + 1]);
-
 
     free(buffer);
     buffer = NULL;

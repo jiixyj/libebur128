@@ -22,7 +22,7 @@ static int safe_size_mul(size_t nmemb, size_t size, size_t* result) {
   /* Adapted from OpenBSD reallocarray. */
 #define MUL_NO_OVERFLOW (((size_t) 1) << (sizeof(size_t) * 4))
   if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) && /**/
-      nmemb > 0 && ((size_t)(-1)) / nmemb < size) {
+      nmemb > 0 && ((size_t) (-1)) / nmemb < size) {
     return 1;
   }
 #undef MUL_NO_OVERFLOW
@@ -1334,8 +1334,8 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
       return EBUR128_SUCCESS;
     }
 
-    percentile_low = (size_t)((stl_size - 1) * 0.1 + 0.5);
-    percentile_high = (size_t)((stl_size - 1) * 0.95 + 0.5);
+    percentile_low = (size_t) ((stl_size - 1) * 0.1 + 0.5);
+    percentile_high = (size_t) ((stl_size - 1) * 0.95 + 0.5);
 
     stl_size = 0;
     j = index;
@@ -1396,8 +1396,8 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
   }
 
   if (stl_relgated_size) {
-    h_en = stl_relgated[(size_t)((stl_relgated_size - 1) * 0.95 + 0.5)];
-    l_en = stl_relgated[(size_t)((stl_relgated_size - 1) * 0.1 + 0.5)];
+    h_en = stl_relgated[(size_t) ((stl_relgated_size - 1) * 0.95 + 0.5)];
+    l_en = stl_relgated[(size_t) ((stl_relgated_size - 1) * 0.1 + 0.5)];
     free(stl_vector);
     *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
   } else {
