@@ -12,9 +12,15 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
-Next release:
+v1.2.5 released:
  * Remove `BUILD_STATIC_LIBS` build option. Instead the CMake-supported
    `BUILD_SHARED_LIBS` option is now honored as expected.
+ * Various code cleanups, warning fixes and documentation improvements
+ * Fix issue related to filter state indexing with high channel enums (#77)
+ * Introduce limits for number of channels and maximum supported samplerate to
+   avoid integer overflows
+ * Fix error return code of `ebur128_set_channel`. The actual behavior is now
+   aligned to the documentation (#90).
 
 v1.2.4 released:
  * Fix broken `ebur128_loudness_global_multiple()` function. Since v1.1.0 it

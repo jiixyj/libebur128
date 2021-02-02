@@ -28,7 +28,7 @@ endif()
 
 
 set(EBUR128_VERSION_MAJOR 1)
-set(EBUR128_VERSION 1.2.4)
+set(EBUR128_VERSION 1.2.5)
 
 add_library(ebur128 ebur128.c)
 
