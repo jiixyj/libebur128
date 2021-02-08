@@ -31,25 +31,18 @@ set(EBUR128_VERSION_MAJOR 1)
 set(EBUR128_VERSION 1.2.5)
 
 add_library(ebur128 ebur128.c)
+set_target_properties(ebur128 PROPERTIES
+  SOVERSION ${EBUR128_VERSION_MAJOR}
+  VERSION ${EBUR128_VERSION}
+)
 
-if(NOT BUILD_SHARED_LIBS)
-  # Static build specific things
-  if(WITH_STATIC_PIC)
-    set_property(TARGET ebur128 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    set_target_properties(ebur128 PROPERTIES
-      SOVERSION ${EBUR128_VERSION_MAJOR}
-      VERSION ${EBUR128_VERSION})
-  endif()
-
-else()
-  # Share build specific things
-  set_target_properties(ebur128 PROPERTIES
-    SOVERSION ${EBUR128_VERSION_MAJOR}
-    VERSION ${EBUR128_VERSION})
-
+if(BUILD_SHARED_LIBS)
   if(MSVC)
     target_sources(ebur128 PRIVATE ebur128.def)
+  endif()
+else()
+  if(WITH_STATIC_PIC)
+    set_property(TARGET ebur128 PROPERTY POSITION_INDEPENDENT_CODE ON)
   endif()
 endif()
 
