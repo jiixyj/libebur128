@@ -48,13 +48,6 @@ else()
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION})
 
-  if(WIN32)
-    set_target_properties(ebur128 PROPERTIES
-      OUTPUT_NAME ebur128
-      RUNTIME_OUTPUT_NAME ebur128-${EBUR128_VERSION_MAJOR}
-      ARCHIVE_OUTPUT_NAME ebur128)
-  endif(WIN32)
-
   if(MSVC)
     target_sources(ebur128 PRIVATE ebur128.def)
   endif()
