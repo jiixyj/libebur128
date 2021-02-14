@@ -12,6 +12,9 @@ See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 News
 ----
 
+v1.2.6 released:
+ * Fix dynamic linking on Windows.
+
 v1.2.5 released:
  * Remove `BUILD_STATIC_LIBS` build option. Instead the CMake-supported
    `BUILD_SHARED_LIBS` option is now honored as expected.
