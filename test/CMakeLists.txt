@@ -4,8 +4,7 @@ set(ENABLE_TESTS OFF CACHE BOOL "Build test binaries, needs libsndfile")
 set(ENABLE_FUZZER OFF CACHE BOOL "Build fuzzer binary")
 
 if(ENABLE_TESTS)
-  find_package(PkgConfig REQUIRED)
-  find_pkg_config(SNDFILE sndfile REQUIRED)
+  find_package(sndfile REQUIRED)
 
   include_directories(${EBUR128_INCLUDE_DIR})
   include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
