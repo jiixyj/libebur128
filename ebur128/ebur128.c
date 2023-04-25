@@ -605,6 +605,11 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
   _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON);
 #define TURN_OFF_FTZ _mm_setcsr(mxcsr);
 #define FLUSH_MANUALLY
+#elif defined(__ARM_NEON__)
+#warning "ARM NEON is being used, disabling FTZ enable/disable"
+#define TURN_ON_FTZ
+#define TURN_OFF_FTZ
+#define FLUSH_MANUALLY
 #else
 #warning "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse)"
 #define TURN_ON_FTZ
