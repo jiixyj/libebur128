@@ -455,7 +455,7 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   } else {
     goto free_prev_true_peak;
   }
-  st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
+  st->d->audio_data_frames = ((unsigned long long)st->samplerate) * st->d->window / 1000;
   if (st->d->audio_data_frames % st->d->samples_in_100ms) {
     /* round up to multiple of samples_in_100ms */
     st->d->audio_data_frames =
