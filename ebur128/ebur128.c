@@ -606,7 +606,13 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #define TURN_OFF_FTZ _mm_setcsr(mxcsr);
 #define FLUSH_MANUALLY
 #else
-#warning "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse)"
+#define SSE2_WARNING \
+  "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse)"
+#ifdef _MSC_VER
+#pragma message ( SSE2_WARNING )
+#else
+#warning SSE2_WARNING
+#endif
 #define TURN_ON_FTZ
 #define TURN_OFF_FTZ
 #define FLUSH_MANUALLY                                                         \
