@@ -18,7 +18,7 @@
   }
 #define EBUR128_MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-static int safe_size_mul(size_t nmemb, size_t size, size_t* result) {
+static int safe_size_mul_div(size_t nmemb, size_t size, size_t div, size_t* result) {
   /* Adapted from OpenBSD reallocarray. */
 #define MUL_NO_OVERFLOW (((size_t) 1) << (sizeof(size_t) * 4))
   if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) && /**/
@@ -26,7 +26,7 @@ static int safe_size_mul(size_t nmemb, size_t size, size_t* result) {
     return 1;
   }
 #undef MUL_NO_OVERFLOW
-  *result = nmemb * size;
+  *result = nmemb * size / div;
   return 0;
 }
 
@@ -907,7 +907,7 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
   }
 
   size_t new_audio_data_frames;
-  if (safe_size_mul(st->samplerate, window, &new_audio_data_frames) != 0 ||
+  if (safe_size_mul_div(st->samplerate, window, 1000, &new_audio_data_frames) != 0 ||
       new_audio_data_frames > ((size_t) -1) - st->d->samples_in_100ms) {
     return EBUR128_ERROR_NOMEM;
   }
@@ -918,7 +918,7 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
   }
 
   size_t new_audio_data_size;
-  if (safe_size_mul(new_audio_data_frames, st->channels * sizeof(double),
+  if (safe_size_mul_div(new_audio_data_frames, st->channels * sizeof(double), 1,
                     &new_audio_data_size) != 0) {
     return EBUR128_ERROR_NOMEM;
   }
