@@ -25,7 +25,7 @@ endif()
 if(ENABLE_FUZZER)
   include_directories(${EBUR128_INCLUDE_DIR})
 
-  add_executable(fuzzer fuzzer)
+  add_executable(fuzzer fuzzer.c)
   target_link_libraries(fuzzer ebur128)
   target_compile_options(fuzzer PUBLIC "${FUZZER_FLAGS}")
   target_link_libraries(fuzzer "${FUZZER_FLAGS}")
