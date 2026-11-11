@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(libebur128 C)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(ENABLE_TESTS "Build test binaries (requires libsndfile)" OFF)
+option(ENABLE_FUZZER "Build fuzzer binary (requires clang++)" OFF)
+option(ENABLE_INTERNAL_QUEUE_H "Use bundled queue.h" OFF)
 
 if(ENABLE_FUZZER)
   enable_language(CXX)
