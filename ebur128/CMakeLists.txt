@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+# SPDX-License-Identifier: MIT
+
 set(BUILD_STATIC_LIBS       ON  CACHE BOOL "Build static library")
 set(WITH_STATIC_PIC         OFF CACHE BOOL "Compile static library with -fPIC flag")
 

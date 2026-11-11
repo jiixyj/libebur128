@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+# SPDX-License-Identifier: MIT
+
 macro(to_yes_no vars)
   foreach(var ${ARGV})
     if(${var})

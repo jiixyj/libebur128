@@ -1,4 +1,5 @@
-/* See COPYING file for copyright and license details. */
+// SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+// SPDX-License-Identifier: MIT
 
 #include <sndfile.h>
 #include <stdlib.h>

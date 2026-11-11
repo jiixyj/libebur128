@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+// SPDX-License-Identifier: MIT
+
 #include <errno.h>
 #include <limits.h>
 #include <stddef.h>

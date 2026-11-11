@@ -1,11 +1,17 @@
+<!--
+	SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+	SPDX-License-Identifier: MIT
+-->
 libebur128
 ==========
 
 libebur128 is a library that implements the EBU R 128 standard for loudness
 normalisation.
 
-All source code is licensed under the MIT license. See COPYING file for
-details.
+This project implements the [REUSE licensing standard][reuse] licensing
+standard.
+
+[reuse]: https://reuse.software/
 
 See also [loudness-scanner tool](https://github.com/jiixyj/loudness-scanner).
 
