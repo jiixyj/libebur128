@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(libebur128 C)
 
+include(GNUInstallDirs)
+
 # Include the add_feature_option macro
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(AddFeatureOption) # includes FetureSummary
@@ -18,8 +20,6 @@ endif()
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
-
-include(GNUInstallDirs)
 
 add_subdirectory(ebur128)
 add_subdirectory(test)
