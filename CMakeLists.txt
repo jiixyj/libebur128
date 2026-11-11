@@ -7,6 +7,7 @@ include(GNUInstallDirs)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(AddFeatureOption) # includes FetureSummary
 
+add_feature_option(BUILD_EXAMPLE "Build a minimal examplary binary" OFF)
 add_feature_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 add_feature_option(EBUR128_COVERAGE "Add LLVM source-based coverage instrumentation" OFF)
 add_feature_option(ENABLE_TESTS "Build test binaries (requires libsndfile)" OFF)
@@ -21,6 +22,7 @@ endif()
 include(CTest)
 if(BUILD_TESTING)
   enable_language(CXX)
+  add_subdirectory(test)
 endif()
 
 if(ENABLE_FUZZER)
@@ -33,8 +35,9 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(ebur128)
-if(BUILD_TESTING)
-  add_subdirectory(test)
+add_subdirectory(test)
+if(BUILD_EXAMPLE)
+  add_subdirectory(example)
 endif()
 
 feature_summary(WHAT ALL)
