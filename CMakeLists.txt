@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 project(libebur128 C)
 
-option(BUILD_SHARED_LIBS "Build shared libraries" ON)
-option(ENABLE_TESTS "Build test binaries (requires libsndfile)" OFF)
-option(ENABLE_FUZZER "Build fuzzer binary (requires clang++)" OFF)
-option(ENABLE_INTERNAL_QUEUE_H "Use bundled queue.h" OFF)
+# Include the add_feature_option macro
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(AddFeatureOption) # includes FetureSummary
+
+add_feature_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+add_feature_option(ENABLE_TESTS "Build test binaries (requires libsndfile)" OFF)
+add_feature_option(ENABLE_FUZZER "Build fuzzer binary (requires clang++)" OFF)
+add_feature_option(ENABLE_INTERNAL_QUEUE_H "Use bundled queue.h" OFF)
 
 if(ENABLE_FUZZER)
   enable_language(CXX)
@@ -12,36 +16,12 @@ if(ENABLE_FUZZER)
   set(FUZZER_FLAGS "${SANITIZER_FLAGS},fuzzer")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
-include(utils)
 include(GNUInstallDirs)
 
 add_subdirectory(ebur128)
 add_subdirectory(test)
 
-to_yes_no(SUMMARY_HAS_QUEUE)
-
-if(ENABLE_INTERNAL_QUEUE_H)
-  set(USE_QUEUE "using own copy of queue.h")
-else()
-  set(USE_QUEUE "using system copy of queue.h")
-endif()
-
-##### Print status
-message(STATUS "Status          found / disabled --")
-message(STATUS "queue.h:        ${SUMMARY_HAS_QUEUE}"        "     ${USE_QUEUE}")
-
-if(BUILD_SHARED_LIBS)
-  message(STATUS "Building shared library (set BUILD_SHARED_LIBS to OFF to build static)")
-else()
-  message(STATUS "Building static library")
-endif()
-
-if(ENABLE_TESTS)
-  message(STATUS "building tests!")
-else()
-  message(STATUS "not building tests, set ENABLE_TESTS to ON to enable")
-endif()
+feature_summary(WHAT ALL)
