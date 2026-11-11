@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+# SPDX-License-Identifier: MIT
+
 prefix=@CMAKE_INSTALL_PREFIX@
 includedir=${prefix}/include
 libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@

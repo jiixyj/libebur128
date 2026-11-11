@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2011-2021 Jan Kokemüller
+# SPDX-License-Identifier: MIT
+
 BasedOnStyle: LLVM
 AllowShortCaseLabelsOnASingleLine: true
 BinPackParameters: false
