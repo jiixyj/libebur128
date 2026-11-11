@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.23)
 project(libebur128 C)
 
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(EBUR128_COVERAGE "Add LLVM source-based coverage instrumentation" OFF)
+
 if(EBUR128_COVERAGE)
   add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
   add_link_options(-fprofile-instr-generate)
@@ -11,9 +13,6 @@ include(CTest)
 if(BUILD_TESTING)
   enable_language(CXX)
 endif()
-
-option(BUILD_SHARED_LIBS
-    "Build shared libraries instead of static ones" ON)
 
 if(ENABLE_FUZZER)
   enable_language(CXX)
