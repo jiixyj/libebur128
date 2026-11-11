@@ -8,8 +8,8 @@ if(ENABLE_TESTS)
   include_directories(${EBUR128_INCLUDE_DIR})
   include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
 
-  add_executable(r128-test-library tests)
-  add_executable(minimal-example minimal-example)
+  add_executable(r128-test-library tests.c)
+  add_executable(minimal-example minimal-example.c)
   set_property(TARGET r128-test-library APPEND_STRING PROPERTY
       COMPILE_FLAGS " ${SNDFILE_CFLAGS}")
   set_property(TARGET minimal-example APPEND_STRING PROPERTY
@@ -21,7 +21,7 @@ endif()
 if(ENABLE_FUZZER)
   include_directories(${EBUR128_INCLUDE_DIR})
 
-  add_executable(fuzzer fuzzer)
+  add_executable(fuzzer fuzzer.c)
   target_link_libraries(fuzzer ebur128)
   target_compile_options(fuzzer PUBLIC "${FUZZER_FLAGS}")
   target_link_libraries(fuzzer "${FUZZER_FLAGS}")
