@@ -3,6 +3,9 @@ project(libebur128 C)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(EBUR128_COVERAGE "Add LLVM source-based coverage instrumentation" OFF)
+option(ENABLE_TESTS "Build test binaries (requires libsndfile)" OFF)
+option(ENABLE_FUZZER "Build fuzzer binary (requires clang++)" OFF)
+option(ENABLE_INTERNAL_QUEUE_H "Use bundled queue.h" OFF)
 
 if(EBUR128_COVERAGE)
   add_compile_options(-fprofile-instr-generate -fcoverage-mapping)

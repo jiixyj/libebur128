@@ -1,6 +1,3 @@
-set(ENABLE_TESTS OFF CACHE BOOL "Build test binaries, needs libsndfile")
-set(ENABLE_FUZZER OFF CACHE BOOL "Build fuzzer binary (requires clang++)")
-
 if(ENABLE_TESTS)
   find_package(PkgConfig REQUIRED)
   find_library(MATH_LIBRARY m)
