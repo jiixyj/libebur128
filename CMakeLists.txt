@@ -8,6 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(AddFeatureOption) # includes FetureSummary
 
 add_feature_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+add_feature_option(BUILD_EXAMPLE "Build a minimal examplary binary" OFF)
 add_feature_option(ENABLE_TESTS "Build test binaries (requires libsndfile)" OFF)
 add_feature_option(ENABLE_FUZZER "Build fuzzer binary (requires clang++)" OFF)
 add_feature_option(ENABLE_INTERNAL_QUEUE_H "Use bundled queue.h" OFF)
@@ -23,5 +24,8 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(ebur128)
 add_subdirectory(test)
+if(BUILD_EXAMPLE)
+  add_subdirectory(example)
+endif()
 
 feature_summary(WHAT ALL)

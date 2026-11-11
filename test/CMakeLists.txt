@@ -3,10 +3,7 @@ if(ENABLE_TESTS)
   pkg_check_modules(SNDFILE REQUIRED IMPORTED_TARGET sndfile)
 
   add_executable(r128-test-library tests.c)
-  add_executable(minimal-example minimal-example.c)
-
   target_link_libraries(r128-test-library PRIVATE ebur128 PkgConfig::SNDFILE)
-  target_link_libraries(minimal-example PRIVATE ebur128 PkgConfig::SNDFILE)
 endif()
 
 if(ENABLE_FUZZER)
