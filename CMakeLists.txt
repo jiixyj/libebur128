@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(libebur128 C)
 
-option(BUILD_SHARED_LIBS
-    "Build shared libraries instead of static ones" ON)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 if(ENABLE_FUZZER)
   enable_language(CXX)
