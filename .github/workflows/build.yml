@@ -75,6 +75,7 @@ jobs:
           -DBUILD_SHARED_LIBS=ON \
           -DBUILD_TESTING=ON \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DEBUR128_TEST_PERFORMANCE=${{ matrix.sanitizer == 'none' }} \
           -DCMAKE_C_FLAGS="$cflags" \
           -DCMAKE_CXX_FLAGS="$cflags" \
           -DCMAKE_EXE_LINKER_FLAGS="$linker_flags" \

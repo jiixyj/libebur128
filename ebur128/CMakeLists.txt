@@ -72,12 +72,17 @@ endif()
 set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")
 
 if(BUILD_TESTING)
+  option(EBUR128_TEST_PERFORMANCE
+         "Enable timing-based FTZ performance test" ON)
   add_executable(ebur128-test ebur128-test.cpp)
   target_link_libraries(ebur128-test PRIVATE ebur128)
   if(TARGET Threads::Threads)
     target_link_libraries(ebur128-test PRIVATE Threads::Threads)
   endif()
   target_include_directories(ebur128-test PRIVATE ${EBUR128_INCLUDE_DIR})
+  if(EBUR128_TEST_PERFORMANCE)
+    target_compile_definitions(ebur128-test PRIVATE EBUR128_TEST_PERFORMANCE)
+  endif()
   add_test(NAME ebur128 COMMAND ebur128-test)
 endif()
 
