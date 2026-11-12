@@ -81,11 +81,11 @@ static bool test_ebur128_threaded_init() {
 namespace {
 
 constexpr unsigned int ftz_samplerate = 48000;
-constexpr std::size_t ftz_seconds = 10;
+constexpr std::size_t ftz_seconds = 20;
 constexpr std::size_t ftz_frames = ftz_samplerate * ftz_seconds;
-constexpr std::size_t ftz_block_frames = ftz_samplerate / 10;
-constexpr int ftz_repetitions = 7;
-constexpr double ftz_max_ratio = 1.5;
+constexpr std::size_t ftz_block_frames = ftz_samplerate * 2 / 5;
+constexpr int ftz_repetitions = 31;
+constexpr double ftz_max_ratio = 1.05;
 
 std::vector<double> make_ftz_input(double impulse) {
   std::vector<double> input(ftz_frames, 0.0);
@@ -105,30 +105,34 @@ double measure_ftz(const std::vector<double>& input) {
 
 bool test_ebur128_ftz_performance() {
   const std::vector<double> denormal_input =
-      make_ftz_input(std::numeric_limits<double>::min() * 8.0);
+      make_ftz_input(std::numeric_limits<double>::min());
   const std::vector<double> normal_input = make_ftz_input(1e-3);
 
   (void) measure_ftz(denormal_input);
   (void) measure_ftz(normal_input);
 
-  double denormal_time = std::numeric_limits<double>::max();
-  double normal_time = std::numeric_limits<double>::max();
+  std::vector<double> ratios;
+  ratios.reserve(ftz_repetitions);
   for (int i = 0; i < ftz_repetitions; ++i) {
+    double denormal_time;
+    double normal_time;
     if (i % 2 == 0) {
-      denormal_time = std::min(denormal_time, measure_ftz(denormal_input));
-      normal_time = std::min(normal_time, measure_ftz(normal_input));
+      denormal_time = measure_ftz(denormal_input);
+      normal_time = measure_ftz(normal_input);
     } else {
-      normal_time = std::min(normal_time, measure_ftz(normal_input));
-      denormal_time = std::min(denormal_time, measure_ftz(denormal_input));
+      normal_time = measure_ftz(normal_input);
+      denormal_time = measure_ftz(denormal_input);
     }
+    ratios.push_back(denormal_time / std::max(normal_time, 1e-9));
   }
 
-  const double ratio = denormal_time / std::max(normal_time, 1e-9);
+  std::sort(ratios.begin(), ratios.end());
+  const double ratio = ratios[ratios.size() / 2];
   if (ratio >= ftz_max_ratio) {
     std::fprintf(stderr,
-                 "FTZ performance test failed: denormal %.6fs, normal %.6fs, "
-                 "ratio %.2f\n",
-                 denormal_time, normal_time, ratio);
+                 "FTZ performance test failed: ratio %.3f (min %.3f, max "
+                 "%.3f)\n",
+                 ratio, ratios.front(), ratios.back());
     return false;
   }
   return true;
