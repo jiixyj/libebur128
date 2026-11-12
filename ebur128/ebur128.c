@@ -108,7 +108,7 @@ struct ebur128_state_internal {
   unsigned long history;
 };
 
-static double relative_gate = -10.0;
+static const double relative_gate = -10.0;
 
 /* Those will be calculated when initializing the library */
 static double relative_gate_factor;
@@ -116,11 +116,31 @@ static double minus_twenty_decibels;
 static double histogram_energies[1000];
 static double histogram_energy_boundaries[1001];
 
+static void ebur128_init_library(void) {
+  int i;
+
+  relative_gate_factor = pow(10.0, relative_gate / 10.0);
+  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
+
+  for (i = 0; i < 1000; ++i) {
+    histogram_energies[i] =
+        pow(10.0, ((double) i / 10.0 - 69.95 + 0.691) / 10.0);
+  }
+
+  histogram_energy_boundaries[0] = pow(10.0, (-70.0 + 0.691) / 10.0);
+  for (i = 1; i < 1001; ++i) {
+    histogram_energy_boundaries[i] =
+        pow(10.0, ((double) i / 10.0 - 70.0 + 0.691) / 10.0);
+  }
+}
+
 static interpolator*
 interp_create(unsigned int taps, unsigned int factor, unsigned int channels) {
   int errcode; /* unused */
   interpolator* interp;
   unsigned int j;
+
+  (void) errcode;
 
   interp = (interpolator*) calloc(1, sizeof(interpolator));
   CHECK_ERROR(!interp, 0, exit);
@@ -510,19 +530,7 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   st->d->audio_data_index = 0;
 
   /* initialize static constants */
-  relative_gate_factor = pow(10.0, relative_gate / 10.0);
-  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
-  histogram_energy_boundaries[0] = pow(10.0, (-70.0 + 0.691) / 10.0);
-  if (st->d->use_histogram) {
-    for (i = 0; i < 1000; ++i) {
-      histogram_energies[i] =
-          pow(10.0, ((double) i / 10.0 - 69.95 + 0.691) / 10.0);
-    }
-    for (i = 1; i < 1001; ++i) {
-      histogram_energy_boundaries[i] =
-          pow(10.0, ((double) i / 10.0 - 70.0 + 0.691) / 10.0);
-    }
-  }
+  ebur128_once_call(ebur128_init_library);
 
   return st;
 

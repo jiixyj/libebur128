@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 project(libebur128 C)
 
+include(CTest)
+if(BUILD_TESTING)
+  enable_language(CXX)
+endif()
+
 option(BUILD_SHARED_LIBS
     "Build shared libraries instead of static ones" ON)
 
@@ -18,7 +23,9 @@ include(utils)
 include(GNUInstallDirs)
 
 add_subdirectory(ebur128)
-add_subdirectory(test)
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()
 
 to_yes_no(SUMMARY_HAS_QUEUE)
 

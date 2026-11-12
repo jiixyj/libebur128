@@ -6,17 +6,21 @@ set(ENABLE_FUZZER OFF CACHE BOOL "Build fuzzer binary")
 if(ENABLE_TESTS)
   find_package(PkgConfig REQUIRED)
   find_pkg_config(SNDFILE sndfile REQUIRED)
+  find_library(MATH_LIBRARY m)
 
   include_directories(${EBUR128_INCLUDE_DIR})
   include_directories(SYSTEM ${SNDFILE_INCLUDE_DIRS})
 
-  add_executable(r128-test-library tests)
-  add_executable(minimal-example minimal-example)
+  add_executable(r128-test-library tests.c)
+  add_executable(minimal-example minimal-example.c)
   set_property(TARGET r128-test-library APPEND_STRING PROPERTY
       COMPILE_FLAGS " ${SNDFILE_CFLAGS}")
   set_property(TARGET minimal-example APPEND_STRING PROPERTY
       COMPILE_FLAGS " ${SNDFILE_CFLAGS}")
   target_link_libraries(r128-test-library ebur128 ${SNDFILE_LIBRARIES})
+  if(MATH_LIBRARY)
+    target_link_libraries(r128-test-library ${MATH_LIBRARY})
+  endif()
   target_link_libraries(minimal-example ebur128 ${SNDFILE_LIBRARIES})
 endif()
 

@@ -49,7 +49,16 @@ endif()
 # Link with Math library if available
 find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
-  target_link_libraries(ebur128 ${MATH_LIBRARY})
+  target_link_libraries(ebur128 PRIVATE ${MATH_LIBRARY})
+endif()
+
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads)
+if(TARGET Threads::Threads)
+  target_sources(ebur128 PRIVATE once.pthread.c)
+  target_link_libraries(ebur128 PRIVATE Threads::Threads)
+else()
+  target_sources(ebur128 PRIVATE once.simple.c)
 endif()
 
 if(ENABLE_FUZZER)
@@ -59,6 +68,13 @@ if(ENABLE_FUZZER)
 endif()
 
 set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")
+
+if(BUILD_TESTING)
+  add_executable(ebur128-test ebur128-test.cpp)
+  target_link_libraries(ebur128-test PRIVATE ebur128)
+  target_include_directories(ebur128-test PRIVATE ${EBUR128_INCLUDE_DIR})
+  add_test(NAME ebur128 COMMAND ebur128-test)
+endif()
 
 install(FILES ebur128.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(TARGETS ebur128
