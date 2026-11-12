@@ -11,6 +11,8 @@
 /* This can be replaced by any BSD-like queue implementation. */
 #include <sys/queue.h>
 
+#include "once.h"
+
 #define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \
     errcode = (errorcode);                                                     \
@@ -108,7 +110,7 @@ struct ebur128_state_internal {
   unsigned long history;
 };
 
-static double relative_gate = -10.0;
+static const double relative_gate = -10.0;
 
 /* Those will be calculated when initializing the library */
 static double relative_gate_factor;
@@ -116,11 +118,31 @@ static double minus_twenty_decibels;
 static double histogram_energies[1000];
 static double histogram_energy_boundaries[1001];
 
+static void ebur128_init_library(void) {
+  int i;
+
+  relative_gate_factor = pow(10.0, relative_gate / 10.0);
+  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
+
+  for (i = 0; i < 1000; ++i) {
+    histogram_energies[i] =
+        pow(10.0, ((double) i / 10.0 - 69.95 + 0.691) / 10.0);
+  }
+
+  histogram_energy_boundaries[0] = pow(10.0, (-70.0 + 0.691) / 10.0);
+  for (i = 1; i < 1001; ++i) {
+    histogram_energy_boundaries[i] =
+        pow(10.0, ((double) i / 10.0 - 70.0 + 0.691) / 10.0);
+  }
+}
+
 static interpolator*
 interp_create(unsigned int taps, unsigned int factor, unsigned int channels) {
   int errcode; /* unused */
   interpolator* interp;
   unsigned int j;
+
+  (void) errcode;
 
   interp = (interpolator*) calloc(1, sizeof(interpolator));
   CHECK_ERROR(!interp, 0, exit);
@@ -370,12 +392,12 @@ static int ebur128_init_resampler(ebur128_state* st) {
 
   return errcode;
 
-free_interp:
-  interp_destroy(st->d->interp);
-  st->d->interp = NULL;
 free_input:
   free(st->d->resampler_buffer_input);
   st->d->resampler_buffer_input = NULL;
+free_interp:
+  interp_destroy(st->d->interp);
+  st->d->interp = NULL;
 exit:
   return errcode;
 }
@@ -510,19 +532,7 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   st->d->audio_data_index = 0;
 
   /* initialize static constants */
-  relative_gate_factor = pow(10.0, relative_gate / 10.0);
-  minus_twenty_decibels = pow(10.0, -20.0 / 10.0);
-  histogram_energy_boundaries[0] = pow(10.0, (-70.0 + 0.691) / 10.0);
-  if (st->d->use_histogram) {
-    for (i = 0; i < 1000; ++i) {
-      histogram_energies[i] =
-          pow(10.0, ((double) i / 10.0 - 69.95 + 0.691) / 10.0);
-    }
-    for (i = 1; i < 1001; ++i) {
-      histogram_energy_boundaries[i] =
-          pow(10.0, ((double) i / 10.0 - 70.0 + 0.691) / 10.0);
-    }
-  }
+  ebur128_once_call(ebur128_init_library);
 
   return st;
 
@@ -598,7 +608,22 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
   }
 }
 
-#if defined(__SSE2_MATH__) || defined(_M_X64) || _M_IX86_FP >= 2
+#if (defined(__aarch64__) || defined(__arm64__)) && !defined(_MSC_VER)
+#define EBUR128_FPCR_FZ (1ULL << 24)
+static unsigned long long ebur128_get_fpcr(void) {
+  unsigned long long fpcr;
+  __asm__ __volatile__("mrs %0, fpcr" : "=r"(fpcr) : : "memory");
+  return fpcr;
+}
+static void ebur128_set_fpcr(unsigned long long fpcr) {
+  __asm__ __volatile__("msr fpcr, %0" : : "r"(fpcr) : "memory");
+}
+#define TURN_ON_FTZ                                                            \
+  unsigned long long fpcr = ebur128_get_fpcr();                                \
+  ebur128_set_fpcr(fpcr | EBUR128_FPCR_FZ);
+#define TURN_OFF_FTZ ebur128_set_fpcr(fpcr);
+#define FLUSH_MANUALLY
+#elif defined(__SSE2_MATH__) || defined(_M_X64) || _M_IX86_FP >= 2
 #include <xmmintrin.h>
 #define TURN_ON_FTZ                                                            \
   unsigned int mxcsr = _mm_getcsr();                                           \
@@ -606,7 +631,8 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
 #define TURN_OFF_FTZ _mm_setcsr(mxcsr);
 #define FLUSH_MANUALLY
 #else
-#warning "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse)"
+#warning                                                                       \
+    "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse) or use AArch64"
 #define TURN_ON_FTZ
 #define TURN_OFF_FTZ
 #define FLUSH_MANUALLY                                                         \

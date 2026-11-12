@@ -49,7 +49,18 @@ endif()
 # Link with Math library if available
 find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
-  target_link_libraries(ebur128 ${MATH_LIBRARY})
+  target_link_libraries(ebur128 PRIVATE ${MATH_LIBRARY})
+endif()
+
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads)
+if(WIN32)
+  target_sources(ebur128 PRIVATE once.windows.c)
+elseif(TARGET Threads::Threads)
+  target_sources(ebur128 PRIVATE once.pthread.c)
+  target_link_libraries(ebur128 PRIVATE Threads::Threads)
+else()
+  target_sources(ebur128 PRIVATE once.simple.c)
 endif()
 
 if(ENABLE_FUZZER)
@@ -59,6 +70,56 @@ if(ENABLE_FUZZER)
 endif()
 
 set(EBUR128_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")
+
+if(BUILD_TESTING)
+  option(EBUR128_TEST_PERFORMANCE
+         "Enable timing-based FTZ performance test" ON)
+  option(EBUR128_TEST_MALLOC_FAIL
+         "Enable malloc/calloc failure injection test" ON)
+  add_executable(ebur128-test ebur128-test.cpp)
+  target_compile_features(ebur128-test PRIVATE cxx_std_17)
+  target_link_libraries(ebur128-test PRIVATE ebur128)
+  if(TARGET Threads::Threads)
+    target_link_libraries(ebur128-test PRIVATE Threads::Threads)
+  endif()
+  target_include_directories(ebur128-test PRIVATE ${EBUR128_INCLUDE_DIR})
+  if(EBUR128_TEST_PERFORMANCE)
+    target_compile_definitions(ebur128-test PRIVATE EBUR128_TEST_PERFORMANCE)
+  endif()
+  add_test(NAME ebur128.tests COMMAND ebur128-test)
+
+  if(EBUR128_TEST_MALLOC_FAIL)
+    add_library(ebur128.malloc_fail STATIC ebur128.c)
+    set_target_properties(ebur128.malloc_fail PROPERTIES
+      POSITION_INDEPENDENT_CODE ON)
+    target_compile_definitions(ebur128.malloc_fail PRIVATE
+      malloc=ebur128_test_malloc
+      calloc=ebur128_test_calloc)
+    target_include_directories(ebur128.malloc_fail
+      PRIVATE ${EBUR128_INCLUDE_DIR})
+    if(WIN32)
+      target_sources(ebur128.malloc_fail PRIVATE once.windows.c)
+    elseif(TARGET Threads::Threads)
+      target_sources(ebur128.malloc_fail PRIVATE once.pthread.c)
+      target_link_libraries(ebur128.malloc_fail PRIVATE Threads::Threads)
+    else()
+      target_sources(ebur128.malloc_fail PRIVATE once.simple.c)
+    endif()
+    if(MATH_LIBRARY)
+      target_link_libraries(ebur128.malloc_fail PRIVATE ${MATH_LIBRARY})
+    endif()
+
+    add_executable(ebur128-test.malloc_fail ebur128-test.malloc_fail.cpp)
+    target_compile_features(ebur128-test.malloc_fail PRIVATE cxx_std_17)
+    target_link_libraries(ebur128-test.malloc_fail PRIVATE ebur128.malloc_fail)
+    if(TARGET Threads::Threads)
+      target_link_libraries(ebur128-test.malloc_fail PRIVATE Threads::Threads)
+    endif()
+    target_include_directories(ebur128-test.malloc_fail
+      PRIVATE ${EBUR128_INCLUDE_DIR})
+    add_test(NAME ebur128.malloc_fail COMMAND ebur128-test.malloc_fail)
+  endif()
+endif()
 
 install(FILES ebur128.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(TARGETS ebur128
