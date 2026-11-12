@@ -4,43 +4,95 @@ on:
   push:
   pull_request:
 
+env:
+  ASAN_OPTIONS: halt_on_error=1
+  UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+  TSAN_OPTIONS: halt_on_error=1
+
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+        sanitizer: [none, thread, address-undefined]
         include:
-          - name: Ubuntu 20.04
-            os: ubuntu-20.04
-            install_dir: ~/libebur128
-            cmake_extras: -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          - name: macOS 10.15
-            os: macos-10.15
-            install_dir: ~/libebur128
-            cmake_extras: -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          - name: Windows 2019
-            os: windows-2019
-            install_dir: C:\libebur128
-            cmake_extras: -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+          - os: ubuntu-24.04
+            name: Ubuntu 24.04
+          - os: macos-15
+            name: macOS 15
+          - os: windows-2022
+            name: Windows 2022
             cmake_config: --config RelWithDebInfo
             ctest_config: --build-config RelWithDebInfo
+        exclude:
+          - os: windows-2022
+            sanitizer: thread
 
-    name: ${{ matrix.name }}
+    name: ${{ matrix.name }} / ${{ matrix.sanitizer }}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Check out Git repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
+
+    - name: Add MSVC ASan runtime to PATH
+      if: runner.os == 'Windows' && matrix.sanitizer == 'address-undefined'
+      shell: pwsh
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        $msvcDir = Get-ChildItem "$vsPath\VC\Tools\MSVC" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+        "$($msvcDir.FullName)\bin\Hostx64\x64" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
     - name: Configure
-      run: cmake -DCMAKE_INSTALL_PREFIX=${{ matrix.install_dir }} -DBUILD_SHARED_LIBS=ON
-           ${{ matrix.cmake_extras }} -S . -B build
+      shell: bash
+      env:
+        SANITIZER: ${{ matrix.sanitizer }}
+        RUNNER_OS: ${{ runner.os }}
+      run: |
+        cflags=""
+        linker_flags=""
+        case "$SANITIZER" in
+          thread)
+            cflags="-fsanitize=thread"
+            linker_flags="$cflags"
+            ;;
+          address-undefined)
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              cflags="/fsanitize=address"
+            else
+              cflags="-fsanitize=address,undefined"
+              linker_flags="$cflags"
+            fi
+            ;;
+        esac
+
+        cmake -S . -B build \
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+          -DBUILD_SHARED_LIBS=ON \
+          -DBUILD_TESTING=ON \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_C_FLAGS="$cflags" \
+          -DCMAKE_CXX_FLAGS="$cflags" \
+          -DCMAKE_EXE_LINKER_FLAGS="$linker_flags" \
+          -DCMAKE_SHARED_LINKER_FLAGS="$linker_flags"
+
     - name: Build
       run: cmake --build build ${{ matrix.cmake_config }}
       env:
         CMAKE_BUILD_PARALLEL_LEVEL: 2
-    # TODO: build and run tests and fuzzer
+
+    - name: Test
+      run: ctest --test-dir build ${{ matrix.ctest_config }} --output-on-failure
+
     - name: Install
+      if: matrix.sanitizer == 'none'
       run: cmake --install build ${{ matrix.cmake_config }}
+
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2
+      if: matrix.sanitizer == 'none'
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.name }} libebur128 build
-        path: ${{ matrix.install_dir }}
+        path: ${{ github.workspace }}/install

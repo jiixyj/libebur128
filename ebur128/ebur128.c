@@ -11,6 +11,8 @@
 /* This can be replaced by any BSD-like queue implementation. */
 #include <sys/queue.h>
 
+#include "once.h"
+
 #define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \
     errcode = (errorcode);                                                     \
