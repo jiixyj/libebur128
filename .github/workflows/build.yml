@@ -94,6 +94,12 @@ jobs:
     - name: Test
       run: ctest --test-dir build ${{ matrix.ctest_config }} --output-on-failure
 
+    - name: Test malloc failure paths under leak detection
+      if: runner.os == 'Linux' && matrix.sanitizer == 'address-undefined'
+      env:
+        ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      run: ctest --test-dir build ${{ matrix.ctest_config }} --output-on-failure -R '^ebur128[.]malloc_fail$'
+
     - name: Install
       if: matrix.sanitizer == 'none'
       run: cmake --install build ${{ matrix.cmake_config }}
