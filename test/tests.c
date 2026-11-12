@@ -174,7 +174,7 @@ double test_max_momentary(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
     total_frames_read += nr_frames_read;
     /* invalid results before the first 400 ms */
-    if (total_frames_read >= 4 * st->samplerate / 10) {
+    if ((unsigned long) total_frames_read >= 4 * st->samplerate / 10) {
       ebur128_loudness_momentary(st, &momentary);
       if (momentary > max_momentary)
         max_momentary = momentary;
@@ -225,7 +225,7 @@ double test_max_shortterm(const char* filename) {
     ebur128_add_frames_double(st, buffer, (size_t) nr_frames_read);
     total_frames_read += nr_frames_read;
     /* invalid results before the first 3 s */
-    if (total_frames_read >= 3 * st->samplerate) {
+    if ((unsigned long) total_frames_read >= 3 * st->samplerate) {
       ebur128_loudness_shortterm(st, &shortterm);
       if (shortterm > max_shortterm)
         max_shortterm = shortterm;

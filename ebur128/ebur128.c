@@ -1,7 +1,8 @@
 /* See COPYING file for copyright and license details. */
 
-#include "ebur128.h"
+#include <ebur128.h>
 
+#include <assert.h>
 #include <float.h>
 #include <limits.h>
 #include <math.h> /* You may have to define _USE_MATH_DEFINES if you use MSVC */
@@ -11,25 +12,115 @@
 /* This can be replaced by any BSD-like queue implementation. */
 #include <sys/queue.h>
 
-#include "once.h"
+#include <ebur128/once.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+/* This is needed to suppress a clang-tidy warning. */
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
 
 #define CHECK_ERROR(condition, errorcode, goto_point)                          \
   if ((condition)) {                                                           \
     errcode = (errorcode);                                                     \
     goto goto_point;                                                           \
   }
+
 #define EBUR128_MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-static int safe_size_mul(size_t nmemb, size_t size, size_t* result) {
+static int safe_size_mul(size_t* out, size_t nmemb, size_t size) {
   /* Adapted from OpenBSD reallocarray. */
 #define MUL_NO_OVERFLOW (((size_t) 1) << (sizeof(size_t) * 4))
   if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) && /**/
       nmemb > 0 && ((size_t) (-1)) / nmemb < size) {
-    return 1;
+    return EBUR128_ERROR_NOMEM;
   }
 #undef MUL_NO_OVERFLOW
-  *result = nmemb * size;
-  return 0;
+  *out = nmemb * size;
+  return EBUR128_SUCCESS;
+}
+
+/* Computes (a * b) / 1000. Returns EBUR128_ERROR_NOMEM if the result
+ * cannot be represented as unsigned long. */
+static int mul_div_1000(unsigned long* out, unsigned long a, unsigned long b) {
+  unsigned long a_hi, a_lo;
+  unsigned long b_hi, b_lo;
+  unsigned long term1, term2, term3, term4;
+
+  /* Split a and b into (q * 1000 + r) */
+  a_hi = a / 1000UL;
+  a_lo = a % 1000UL;
+  b_hi = b / 1000UL;
+  b_lo = b % 1000UL;
+
+  /*
+   * Algebraic expansion of (a * b) / 1000:
+   *
+   *   (a * b) / 1000
+   * = (a_hi * 1000 + a_lo) * (b_hi * 1000 + b_lo) / 1000
+   * =   ( a_hi * b_hi * 1000)   // term1
+   *   + ( a_hi * b_lo)          // term2
+   *   + ( a_lo * b_hi)          // term3
+   *   + ((a_lo * b_lo) / 1000)  // term4
+   */
+
+  /* Check term1: a_hi * b_hi * 1000 */
+  if (a_hi > 0UL && b_hi > (ULONG_MAX / 1000UL) / a_hi) {
+    return EBUR128_ERROR_NOMEM;
+  }
+  term1 = a_hi * b_hi * 1000UL;
+
+  /* Safe from overflow */
+  term2 = a_hi * b_lo;
+  term3 = a_lo * b_hi;
+  term4 = (a_lo * b_lo) / 1000UL;
+
+  /* Safely sum all four terms */
+#define ADD_TERM(term)                                                         \
+  do {                                                                         \
+    if (term1 > ULONG_MAX - (term)) {                                          \
+      return EBUR128_ERROR_NOMEM;                                              \
+    }                                                                          \
+    term1 += (term);                                                           \
+  } while (0)
+
+  ADD_TERM(term2);
+  ADD_TERM(term3);
+  ADD_TERM(term4);
+
+#undef ADD_TERM
+
+  *out = term1;
+  return EBUR128_SUCCESS;
+}
+
+static int calculate_interval_frames(size_t* out,
+                                     unsigned long samplerate,
+                                     unsigned long window,
+                                     unsigned long samples_in_100ms) {
+  int errcode;
+  unsigned long tmp;
+
+  errcode = mul_div_1000(&tmp, samplerate, window);
+  CHECK_ERROR(errcode, errcode, exit)
+
+  if (tmp > ((size_t) -1) - samples_in_100ms) {
+    errcode = EBUR128_ERROR_NOMEM;
+    goto exit;
+  }
+
+  /* round up to multiple of samples_in_100ms */
+  if (tmp % samples_in_100ms) {
+    tmp = (tmp + samples_in_100ms) - (tmp % samples_in_100ms);
+  }
+
+  *out = (size_t) tmp;
+
+exit:
+  return errcode;
 }
 
 STAILQ_HEAD(ebur128_double_queue, ebur128_dq_entry);
@@ -270,6 +361,93 @@ interp_process(interpolator* interp, size_t frames, float* in, float* out) {
   return frames * interp->factor;
 }
 
+/*
+ * Allocates a zeroed out piece of memory for `audio_data` appropriate for `st`.
+ *
+ * These must be set:
+ *
+ * - `st->samplerate`
+ * - `st->d->samples_in_100ms`
+ * - `st->channels`
+ */
+static int ebur128_create_audio_data(double** audio_data,
+                                     size_t* audio_data_frames,
+                                     const ebur128_state* st,
+                                     unsigned long window) {
+  int errcode;
+
+  errcode = calculate_interval_frames(audio_data_frames, st->samplerate, window,
+                                      st->d->samples_in_100ms);
+  CHECK_ERROR(errcode, errcode, exit)
+
+  {
+    size_t audio_data_size;
+
+    errcode = safe_size_mul(&audio_data_size, *audio_data_frames,
+                            st->channels * sizeof(double));
+    CHECK_ERROR(errcode, errcode, exit)
+
+    *audio_data = (double*) malloc(audio_data_size);
+    CHECK_ERROR(!*audio_data, EBUR128_ERROR_NOMEM, exit)
+  }
+
+  {
+    size_t j;
+
+    for (j = 0; j < *audio_data_frames * st->channels; ++j) {
+      (*audio_data)[j] = 0.0;
+    }
+  }
+
+exit:
+  return errcode;
+}
+
+/*
+ * (Re-)Initializes:
+ *
+ * - `st->d->window`
+ * - `st->d->audio_data`
+ * - `st->d->audio_data_frames`
+ * - `st->d->needed_frames`
+ * - `st->d->audio_data_index`
+ * - `st->d->short_term_frame_counter`
+ *
+ * ...appropriately.
+ *
+ * These must be set in `st`:
+ *
+ * - `st->samplerate`
+ * - `st->d->samples_in_100ms`
+ * - `st->channels`
+ * - `st->d->audio_data` (either `NULL` or valid pointer)
+ */
+static int ebur128_reinitialize_audio_data(ebur128_state* st,
+                                           unsigned long window) {
+  int errcode;
+  double* audio_data;
+  size_t audio_data_frames;
+
+  errcode =
+      ebur128_create_audio_data(&audio_data, &audio_data_frames, st, window);
+  CHECK_ERROR(errcode, errcode, exit)
+
+  st->d->window = window;
+  free(st->d->audio_data);
+  st->d->audio_data = audio_data;
+  st->d->audio_data_frames = audio_data_frames;
+
+  /* the first block needs 400ms of audio data */
+  st->d->needed_frames = st->d->samples_in_100ms * 4;
+  /* start at the beginning of the buffer */
+  st->d->audio_data_index = 0;
+  /* reset short term frame counter */
+  st->d->short_term_frame_counter = 0;
+
+exit:
+  return errcode;
+}
+
 static int ebur128_init_filter(ebur128_state* st) {
   int errcode = EBUR128_SUCCESS;
   int i, j;
@@ -282,10 +460,10 @@ static int ebur128_init_filter(ebur128_state* st) {
   double Vh = pow(10.0, G / 20.0);
   double Vb = pow(Vh, 0.4996667741545416);
 
-  double pb[3] = { 0.0, 0.0, 0.0 };
-  double pa[3] = { 1.0, 0.0, 0.0 };
-  double rb[3] = { 1.0, -2.0, 1.0 };
-  double ra[3] = { 1.0, 0.0, 0.0 };
+  double pb[3] = {0.0, 0.0, 0.0};
+  double pa[3] = {1.0, 0.0, 0.0};
+  double rb[3] = {1.0, -2.0, 1.0};
+  double ra[3] = {1.0, 0.0, 0.0};
 
   double a0 = 1.0 + K / Q + K * K;
   pb[0] = (Vh + Vb * K / Q + K * K) / a0;
@@ -437,7 +615,6 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   int errcode;
   ebur128_state* st;
   unsigned int i;
-  size_t j;
 
   VALIDATE_CHANNELS_AND_SAMPLERATE(NULL);
 
@@ -477,19 +654,10 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   } else {
     goto free_prev_true_peak;
   }
-  st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
-  if (st->d->audio_data_frames % st->d->samples_in_100ms) {
-    /* round up to multiple of samples_in_100ms */
-    st->d->audio_data_frames =
-        (st->d->audio_data_frames + st->d->samples_in_100ms) -
-        (st->d->audio_data_frames % st->d->samples_in_100ms);
-  }
-  st->d->audio_data = (double*) malloc(st->d->audio_data_frames * st->channels *
-                                       sizeof(double));
-  CHECK_ERROR(!st->d->audio_data, 0, free_prev_true_peak)
-  for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
-    st->d->audio_data[j] = 0.0;
-  }
+
+  st->d->audio_data = NULL;
+  errcode = ebur128_reinitialize_audio_data(st, st->d->window);
+  CHECK_ERROR(errcode, 0, free_prev_true_peak)
 
   errcode = ebur128_init_filter(st);
   CHECK_ERROR(errcode, 0, free_audio_data)
@@ -521,15 +689,9 @@ ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
   STAILQ_INIT(&st->d->short_term_block_list);
   st->d->st_block_list_size = 0;
   st->d->st_block_list_max = st->d->history / 3000;
-  st->d->short_term_frame_counter = 0;
 
   result = ebur128_init_resampler(st);
   CHECK_ERROR(result, 0, free_short_term_block_energy_histogram)
-
-  /* the first block needs 400ms of audio data */
-  st->d->needed_frames = st->d->samples_in_100ms * 4;
-  /* start at the beginning of the buffer */
-  st->d->audio_data_index = 0;
 
   /* initialize static constants */
   ebur128_once_call(ebur128_init_library);
@@ -823,12 +985,7 @@ int ebur128_change_parameters(ebur128_state* st,
                               unsigned int channels,
                               unsigned long samplerate) {
   int errcode = EBUR128_SUCCESS;
-  size_t j;
 
-  /* This is needed to suppress a clang-tidy warning. */
-#ifndef __has_builtin
-#define __has_builtin(x) 0
-#endif
 #if __has_builtin(__builtin_unreachable)
   if (st->channels == 0) {
     __builtin_unreachable();
@@ -886,33 +1043,16 @@ int ebur128_change_parameters(ebur128_state* st,
    * have changed. Re-init filter. */
   free(st->d->v);
   st->d->v = NULL;
-  errcode = ebur128_init_filter(st);
-  CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
 
-  st->d->audio_data_frames = st->samplerate * st->d->window / 1000;
-  if (st->d->audio_data_frames % st->d->samples_in_100ms) {
-    /* round up to multiple of samples_in_100ms */
-    st->d->audio_data_frames =
-        (st->d->audio_data_frames + st->d->samples_in_100ms) -
-        (st->d->audio_data_frames % st->d->samples_in_100ms);
-  }
-  st->d->audio_data = (double*) malloc(st->d->audio_data_frames * st->channels *
-                                       sizeof(double));
-  CHECK_ERROR(!st->d->audio_data, EBUR128_ERROR_NOMEM, exit)
-  for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
-    st->d->audio_data[j] = 0.0;
-  }
+  errcode = ebur128_init_filter(st);
+  CHECK_ERROR(errcode, errcode, exit)
+
+  errcode = ebur128_reinitialize_audio_data(st, st->d->window);
+  CHECK_ERROR(errcode, errcode, exit)
 
   ebur128_destroy_resampler(st);
   errcode = ebur128_init_resampler(st);
-  CHECK_ERROR(errcode, EBUR128_ERROR_NOMEM, exit)
-
-  /* the first block needs 400ms of audio data */
-  st->d->needed_frames = st->d->samples_in_100ms * 4;
-  /* start at the beginning of the buffer */
-  st->d->audio_data_index = 0;
-  /* reset short term frame counter */
-  st->d->short_term_frame_counter = 0;
+  CHECK_ERROR(errcode, errcode, exit)
 
 exit:
   return errcode;
@@ -920,7 +1060,6 @@ exit:
 
 int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
   int errcode = EBUR128_SUCCESS;
-  size_t j;
 
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S && window < 3000) {
     window = 3000;
@@ -932,40 +1071,8 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
     return EBUR128_ERROR_NO_CHANGE;
   }
 
-  size_t new_audio_data_frames;
-  if (safe_size_mul(st->samplerate, window, &new_audio_data_frames) != 0 ||
-      new_audio_data_frames > ((size_t) -1) - st->d->samples_in_100ms) {
-    return EBUR128_ERROR_NOMEM;
-  }
-  if (new_audio_data_frames % st->d->samples_in_100ms) {
-    /* round up to multiple of samples_in_100ms */
-    new_audio_data_frames = (new_audio_data_frames + st->d->samples_in_100ms) -
-                            (new_audio_data_frames % st->d->samples_in_100ms);
-  }
-
-  size_t new_audio_data_size;
-  if (safe_size_mul(new_audio_data_frames, st->channels * sizeof(double),
-                    &new_audio_data_size) != 0) {
-    return EBUR128_ERROR_NOMEM;
-  }
-
-  double* new_audio_data = (double*) malloc(new_audio_data_size);
-  CHECK_ERROR(!new_audio_data, EBUR128_ERROR_NOMEM, exit)
-
-  st->d->window = window;
-  free(st->d->audio_data);
-  st->d->audio_data = new_audio_data;
-  st->d->audio_data_frames = new_audio_data_frames;
-  for (j = 0; j < st->d->audio_data_frames * st->channels; ++j) {
-    st->d->audio_data[j] = 0.0;
-  }
-
-  /* the first block needs 400ms of audio data */
-  st->d->needed_frames = st->d->samples_in_100ms * 4;
-  /* start at the beginning of the buffer */
-  st->d->audio_data_index = 0;
-  /* reset short term frame counter */
-  st->d->short_term_frame_counter = 0;
+  errcode = ebur128_reinitialize_audio_data(st, window);
+  CHECK_ERROR(errcode, errcode, exit)
 
 exit:
   return errcode;
@@ -1095,7 +1202,7 @@ static int ebur128_calc_relative_threshold(ebur128_state* st,
   if (st->d->use_histogram) {
     for (i = 0; i < 1000; ++i) {
       *relative_threshold +=
-          st->d->block_energy_histogram[i] * histogram_energies[i];
+          (double) st->d->block_energy_histogram[i] * histogram_energies[i];
       *above_thresh_counter += st->d->block_energy_histogram[i];
     }
   } else {
@@ -1152,8 +1259,8 @@ ebur128_gated_loudness(ebur128_state** sts, size_t size, double* out) {
     }
     if (sts[i]->d->use_histogram) {
       for (j = start_index; j < 1000; ++j) {
-        gated_loudness +=
-            sts[i]->d->block_energy_histogram[j] * histogram_energies[j];
+        gated_loudness += (double) sts[i]->d->block_energy_histogram[j] *
+                          histogram_energies[j];
         above_thresh_counter += sts[i]->d->block_energy_histogram[j];
       }
     } else {
@@ -1268,7 +1375,17 @@ int ebur128_loudness_window(ebur128_state* st,
     return EBUR128_ERROR_INVALID_MODE;
   }
 
-  interval_frames = st->samplerate * window / 1000;
+  /*
+   * At this point, the operations (`mul_div_1000` and the cast to `size_t`)
+   * cannot overflow.
+   */
+  {
+    unsigned long tmp;
+    error = mul_div_1000(&tmp, st->samplerate, window);
+    assert(error == EBUR128_SUCCESS);
+    interval_frames = (size_t) tmp;
+  }
+
   error = ebur128_energy_in_interval(st, interval_frames, &energy);
   if (error) {
     return error;
@@ -1318,7 +1435,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
   }
 
   if (use_histogram) {
-    unsigned long hist[1000] = { 0 };
+    unsigned long hist[1000] = {0};
     size_t percentile_low, percentile_high;
     size_t index;
 
@@ -1331,7 +1448,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
       for (j = 0; j < 1000; ++j) {
         hist[j] += sts[i]->d->short_term_block_energy_histogram[j];
         stl_size += sts[i]->d->short_term_block_energy_histogram[j];
-        stl_power += sts[i]->d->short_term_block_energy_histogram[j] *
+        stl_power += (double) sts[i]->d->short_term_block_energy_histogram[j] *
                      histogram_energies[j];
       }
     }
@@ -1340,7 +1457,7 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
       return EBUR128_SUCCESS;
     }
 
-    stl_power /= stl_size;
+    stl_power /= (double) stl_size;
     stl_integrated = minus_twenty_decibels * stl_power;
 
     if (stl_integrated < histogram_energy_boundaries[0]) {
@@ -1360,8 +1477,8 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
       return EBUR128_SUCCESS;
     }
 
-    percentile_low = (size_t) ((stl_size - 1) * 0.1 + 0.5);
-    percentile_high = (size_t) ((stl_size - 1) * 0.95 + 0.5);
+    percentile_low = (size_t) ((double) (stl_size - 1) * 0.1 + 0.5);
+    percentile_high = (size_t) ((double) (stl_size - 1) * 0.95 + 0.5);
 
     stl_size = 0;
     j = index;
@@ -1422,8 +1539,10 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
   }
 
   if (stl_relgated_size) {
-    h_en = stl_relgated[(size_t) ((stl_relgated_size - 1) * 0.95 + 0.5)];
-    l_en = stl_relgated[(size_t) ((stl_relgated_size - 1) * 0.1 + 0.5)];
+    h_en =
+        stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)];
+    l_en =
+        stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.1 + 0.5)];
     free(stl_vector);
     *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
   } else {

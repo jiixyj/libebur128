@@ -1,4 +1,4 @@
-#include "once.h"
+#include <ebur128/once.h>
 
 #warning "choose pthread for thread safety!"
 

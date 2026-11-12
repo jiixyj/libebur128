@@ -1,7 +1,7 @@
 BasedOnStyle: LLVM
 AllowShortCaseLabelsOnASingleLine: true
 BinPackParameters: false
-Cpp11BracedListStyle: false
+Cpp11BracedListStyle: true
 IndentCaseLabels: true
 PointerAlignment: Left
 SpaceAfterCStyleCast: true

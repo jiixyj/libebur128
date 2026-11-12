@@ -1,4 +1,3 @@
-set(BUILD_STATIC_LIBS       ON  CACHE BOOL "Build static library")
 set(WITH_STATIC_PIC         OFF CACHE BOOL "Compile static library with -fPIC flag")
 
 #### queue.h
@@ -30,10 +29,16 @@ endif()
 set(EBUR128_VERSION_MAJOR 1)
 set(EBUR128_VERSION 1.2.6)
 
-add_library(ebur128 ebur128.c)
+add_library(ebur128)
 set_target_properties(ebur128 PROPERTIES
   SOVERSION ${EBUR128_VERSION_MAJOR}
   VERSION ${EBUR128_VERSION}
+)
+target_sources(
+    ebur128
+    PRIVATE ebur128.c
+    PUBLIC FILE_SET HEADERS FILES ebur128.h
+    PRIVATE FILE_SET private_headers TYPE HEADERS FILES ebur128/once.h
 )
 
 if(BUILD_SHARED_LIBS)
@@ -55,12 +60,12 @@ endif()
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
 if(WIN32)
-  target_sources(ebur128 PRIVATE once.windows.c)
+  target_sources(ebur128 PRIVATE ebur128/once.windows.c)
 elseif(TARGET Threads::Threads)
-  target_sources(ebur128 PRIVATE once.pthread.c)
+  target_sources(ebur128 PRIVATE ebur128/once.pthread.c)
   target_link_libraries(ebur128 PRIVATE Threads::Threads)
 else()
-  target_sources(ebur128 PRIVATE once.simple.c)
+  target_sources(ebur128 PRIVATE ebur128/once.simple.c)
 endif()
 
 if(ENABLE_FUZZER)
@@ -77,12 +82,12 @@ if(BUILD_TESTING)
   option(EBUR128_TEST_MALLOC_FAIL
          "Enable malloc/calloc failure injection test" ON)
   add_executable(ebur128-test ebur128-test.cpp)
-  target_compile_features(ebur128-test PRIVATE cxx_std_17)
+  target_compile_features(ebur128-test PRIVATE cxx_std_20)
   target_link_libraries(ebur128-test PRIVATE ebur128)
   if(TARGET Threads::Threads)
     target_link_libraries(ebur128-test PRIVATE Threads::Threads)
   endif()
-  target_include_directories(ebur128-test PRIVATE ${EBUR128_INCLUDE_DIR})
+  target_include_directories(ebur128-test PRIVATE SYSTEM ${EBUR128_INCLUDE_DIR})
   if(EBUR128_TEST_PERFORMANCE)
     target_compile_definitions(ebur128-test PRIVATE EBUR128_TEST_PERFORMANCE)
   endif()
@@ -98,12 +103,12 @@ if(BUILD_TESTING)
     target_include_directories(ebur128.malloc_fail
       PRIVATE ${EBUR128_INCLUDE_DIR})
     if(WIN32)
-      target_sources(ebur128.malloc_fail PRIVATE once.windows.c)
+      target_sources(ebur128.malloc_fail PRIVATE ebur128/once.windows.c)
     elseif(TARGET Threads::Threads)
-      target_sources(ebur128.malloc_fail PRIVATE once.pthread.c)
+      target_sources(ebur128.malloc_fail PRIVATE ebur128/once.pthread.c)
       target_link_libraries(ebur128.malloc_fail PRIVATE Threads::Threads)
     else()
-      target_sources(ebur128.malloc_fail PRIVATE once.simple.c)
+      target_sources(ebur128.malloc_fail PRIVATE ebur128/once.simple.c)
     endif()
     if(MATH_LIBRARY)
       target_link_libraries(ebur128.malloc_fail PRIVATE ${MATH_LIBRARY})
