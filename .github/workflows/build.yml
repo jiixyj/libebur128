@@ -14,11 +14,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15, windows-2022]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, windows-2022]
         sanitizer: [none, thread, address-undefined]
         include:
           - os: ubuntu-24.04
             name: Ubuntu 24.04
+          - os: ubuntu-24.04-arm
+            name: Ubuntu 24.04 ARM
           - os: macos-15
             name: macOS 15
           - os: windows-2022
@@ -34,6 +36,10 @@ jobs:
     steps:
     - name: Check out Git repository
       uses: actions/checkout@v4
+
+    - name: Show CPU
+      if: runner.os == 'Linux'
+      run: lscpu
 
     - name: Add MSVC ASan runtime to PATH
       if: runner.os == 'Windows' && matrix.sanitizer == 'address-undefined'
