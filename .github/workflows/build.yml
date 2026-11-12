@@ -70,7 +70,6 @@ jobs:
         esac
 
         cmake -S . -B build \
-          -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
           -DBUILD_SHARED_LIBS=ON \
           -DBUILD_TESTING=ON \

@@ -75,6 +75,7 @@ if(BUILD_TESTING)
   option(EBUR128_TEST_PERFORMANCE
          "Enable timing-based FTZ performance test" ON)
   add_executable(ebur128-test ebur128-test.cpp)
+  target_compile_features(ebur128-test PRIVATE cxx_std_17)
   target_link_libraries(ebur128-test PRIVATE ebur128)
   if(TARGET Threads::Threads)
     target_link_libraries(ebur128-test PRIVATE Threads::Threads)
