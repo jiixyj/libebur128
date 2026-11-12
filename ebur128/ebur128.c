@@ -608,39 +608,9 @@ static void ebur128_check_true_peak(ebur128_state* st, size_t frames) {
   }
 }
 
-#if (defined(__aarch64__) || defined(__arm64__)) && !defined(_MSC_VER)
-#define EBUR128_FPCR_FZ (1ULL << 24)
-static unsigned long long ebur128_get_fpcr(void) {
-  unsigned long long fpcr;
-  __asm__ __volatile__("mrs %0, fpcr" : "=r"(fpcr) : : "memory");
-  return fpcr;
-}
-static void ebur128_set_fpcr(unsigned long long fpcr) {
-  __asm__ __volatile__("msr fpcr, %0" : : "r"(fpcr) : "memory");
-}
-#define TURN_ON_FTZ                                                            \
-  unsigned long long fpcr = ebur128_get_fpcr();                                \
-  ebur128_set_fpcr(fpcr | EBUR128_FPCR_FZ);
-#define TURN_OFF_FTZ ebur128_set_fpcr(fpcr);
-#define FLUSH_MANUALLY
-#elif defined(__SSE2_MATH__) || defined(_M_X64) || _M_IX86_FP >= 2
-#include <xmmintrin.h>
-#define TURN_ON_FTZ                                                            \
-  unsigned int mxcsr = _mm_getcsr();                                           \
-  _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON);
-#define TURN_OFF_FTZ _mm_setcsr(mxcsr);
-#define FLUSH_MANUALLY
-#else
-#warning                                                                       \
-    "manual FTZ is being used, please enable SSE2 (-msse2 -mfpmath=sse) or use AArch64"
 #define TURN_ON_FTZ
 #define TURN_OFF_FTZ
-#define FLUSH_MANUALLY                                                         \
-  st->d->v[c][4] = fabs(st->d->v[c][4]) < DBL_MIN ? 0.0 : st->d->v[c][4];      \
-  st->d->v[c][3] = fabs(st->d->v[c][3]) < DBL_MIN ? 0.0 : st->d->v[c][3];      \
-  st->d->v[c][2] = fabs(st->d->v[c][2]) < DBL_MIN ? 0.0 : st->d->v[c][2];      \
-  st->d->v[c][1] = fabs(st->d->v[c][1]) < DBL_MIN ? 0.0 : st->d->v[c][1];
-#endif
+#define FLUSH_MANUALLY
 
 #define EBUR128_FILTER(type, min_scale, max_scale)                             \
   static void ebur128_filter_##type(ebur128_state* st, const type* src,        \
