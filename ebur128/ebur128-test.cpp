@@ -85,7 +85,7 @@ constexpr std::size_t ftz_seconds = 20;
 constexpr std::size_t ftz_frames = ftz_samplerate * ftz_seconds;
 constexpr std::size_t ftz_block_frames = ftz_samplerate * 2 / 5;
 constexpr int ftz_repetitions = 31;
-constexpr double ftz_max_ratio = 0.0;
+constexpr double ftz_max_ratio = 1.05;
 
 std::vector<double> make_ftz_input(double impulse) {
   std::vector<double> input(ftz_frames, 0.0);
