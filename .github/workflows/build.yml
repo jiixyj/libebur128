@@ -49,6 +49,8 @@ jobs:
       env:
         SANITIZER: ${{ matrix.sanitizer }}
         RUNNER_OS: ${{ runner.os }}
+        MSYS_NO_PATHCONV: 1
+        MSYS2_ARG_CONV_EXCL: "*"
       run: |
         cflags=""
         linker_flags=""
