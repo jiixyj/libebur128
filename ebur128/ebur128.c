@@ -392,12 +392,12 @@ static int ebur128_init_resampler(ebur128_state* st) {
 
   return errcode;
 
-free_interp:
-  interp_destroy(st->d->interp);
-  st->d->interp = NULL;
 free_input:
   free(st->d->resampler_buffer_input);
   st->d->resampler_buffer_input = NULL;
+free_interp:
+  interp_destroy(st->d->interp);
+  st->d->interp = NULL;
 exit:
   return errcode;
 }
