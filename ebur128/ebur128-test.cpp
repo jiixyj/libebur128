@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <ebur128.h>
+#include <ebur128.test_signals.h>
 
 namespace ebur128 {
 
@@ -116,7 +117,7 @@ public:
         "ebur128_set_max_window");
   }
 
-  double loudness_window(std::chrono::milliseconds window) {
+  double loudness_window(std::chrono::milliseconds window) const {
     double out;
     state::handle_error(
         [&] {
@@ -124,6 +125,36 @@ public:
               state_, static_cast<unsigned long>(window.count()), &out);
         },
         "ebur128_loudness_window");
+    return out;
+  }
+
+  double loudness_global() const {
+    double out;
+    state::handle_error([&] { return ebur128_loudness_global(state_, &out); },
+                        "ebur128_loudness_global");
+    return out;
+  }
+
+  double loudness_range() const {
+    double out;
+    state::handle_error([&] { return ebur128_loudness_range(state_, &out); },
+                        "ebur128_loudness_range");
+    return out;
+  }
+
+  double loudness_shortterm() const {
+    double out;
+    state::handle_error(
+        [&] { return ebur128_loudness_shortterm(state_, &out); },
+        "ebur128_loudness_shortterm");
+    return out;
+  }
+
+  double loudness_momentary() const {
+    double out;
+    state::handle_error(
+        [&] { return ebur128_loudness_momentary(state_, &out); },
+        "ebur128_loudness_momentary");
     return out;
   }
 
@@ -430,14 +461,522 @@ static bool test_ebur128_set_max_window_large_allocation() {
   return true;
 }
 
+namespace {
+
+using test_signal = ebur128::test_signals::test_signal;
+
+constexpr double test_signal_tolerance = 0.1;
+constexpr double test_lra_tolerance = 1.0;
+constexpr std::size_t test_signal_block_frames =
+    static_cast<std::size_t>(
+        ebur128::test_signals::test_signal::default_samplerate) /
+    100;
+
+void add_test_signal_frames(ebur128::state& s,
+                            const ebur128::test_signals::test_signal& signal,
+                            std::size_t first_frame,
+                            std::size_t frames) {
+  const auto signal_channels = signal.channels();
+  const auto channels = static_cast<std::size_t>(signal_channels);
+  const auto samples = signal.samples();
+  s.add_frames(ebur128::audio_data_view<double>(
+      samples.subspan(first_frame * channels, frames * channels),
+      ebur128::channel{signal_channels}));
+}
+
+void configure_test_signal_channels(ebur128::state& s, unsigned int channels) {
+  if (channels != 5)
+    return;
+
+  s.set_channel(ebur128::channel{0}, EBUR128_LEFT);
+  s.set_channel(ebur128::channel{1}, EBUR128_RIGHT);
+  s.set_channel(ebur128::channel{2}, EBUR128_CENTER);
+  s.set_channel(ebur128::channel{3}, EBUR128_LEFT_SURROUND);
+  s.set_channel(ebur128::channel{4}, EBUR128_RIGHT_SURROUND);
+}
+
+ebur128::mode test_signal_mode(ebur128::mode mode, bool histogram) {
+  return histogram ? mode | ebur128::mode::histogram : mode;
+}
+
+const char* test_signal_mode_name(bool histogram) {
+  return histogram ? "histogram" : "plain";
+}
+
+void print_test_signal_success(const char* metric,
+                               int signal,
+                               bool histogram,
+                               double actual,
+                               double expected,
+                               const char* item = nullptr,
+                               int item_number = 0) {
+  std::printf("PASS signal %d", signal);
+  if (item != nullptr)
+    std::printf(" %s %d", item, item_number);
+  std::printf(" (%s): %s = %.3f (expected %.3f)\n",
+              test_signal_mode_name(histogram), metric, actual, expected);
+}
+
+void print_test_signal_constant_success(const char* metric,
+                                        int signal,
+                                        bool histogram,
+                                        double expected,
+                                        std::size_t readings,
+                                        double minimum,
+                                        double maximum) {
+  std::printf("PASS signal %d (%s): %s expected %.3f, %zu readings, "
+              "range [%.3f, %.3f]\n",
+              signal, test_signal_mode_name(histogram), metric, expected,
+              readings, minimum, maximum);
+}
+
+void print_test_signal_lra_success(int signal,
+                                   bool histogram,
+                                   double actual,
+                                   double expected) {
+  std::printf("PASS LRA signal %d (%s): LRA = %.3f (expected %.3f +/- %.1f)\n",
+              signal, test_signal_mode_name(histogram), actual, expected,
+              test_lra_tolerance);
+}
+
+bool check_test_signal_loudness(const char* metric,
+                                int signal,
+                                int variant,
+                                bool histogram,
+                                double actual,
+                                double expected) {
+  if (std::fabs(actual - expected) <= test_signal_tolerance)
+    return true;
+
+  const char* mode_name = test_signal_mode_name(histogram);
+  if (variant != 0) {
+    std::fprintf(stderr,
+                 "signal %d variant %d (%s): %s expected %.3f, got %.3f\n",
+                 signal, variant, mode_name, metric, expected, actual);
+  } else {
+    std::fprintf(stderr, "signal %d (%s): %s expected %.3f, got %.3f\n", signal,
+                 mode_name, metric, expected, actual);
+  }
+  return false;
+}
+
+bool check_and_print_test_signal_loudness(const char* metric,
+                                          int signal,
+                                          int variant,
+                                          bool histogram,
+                                          double actual,
+                                          double expected) {
+  if (!check_test_signal_loudness(metric, signal, variant, histogram, actual,
+                                  expected))
+    return false;
+
+  print_test_signal_success(metric, signal, histogram, actual, expected,
+                            variant != 0 ? "variant" : nullptr, variant);
+  return true;
+}
+
+bool check_test_signal_lra(int signal,
+                           bool histogram,
+                           double actual,
+                           double expected) {
+  if (std::fabs(actual - expected) <= test_lra_tolerance) {
+    print_test_signal_lra_success(signal, histogram, actual, expected);
+    return true;
+  }
+
+  std::fprintf(stderr, "LRA signal %d (%s): expected %.3f +/- %.1f, got %.3f\n",
+               signal, test_signal_mode_name(histogram), expected,
+               test_lra_tolerance, actual);
+  return false;
+}
+
+double
+max_test_signal_loudness(ebur128::state& s,
+                         const ebur128::test_signals::test_signal& signal,
+                         std::size_t threshold_frames,
+                         auto measure) {
+  const auto total_frames = signal.frames();
+  double maximum = -std::numeric_limits<double>::infinity();
+
+  for (std::size_t first = 0; first < total_frames;
+       first += test_signal_block_frames) {
+    const auto frames =
+        std::min(test_signal_block_frames, total_frames - first);
+
+    ::add_test_signal_frames(s, signal, first, frames);
+
+    if (first + frames >= threshold_frames)
+      maximum = std::max(maximum, measure());
+  }
+
+  return maximum;
+}
+
+bool check_test_signal_constant(
+    ebur128::state& s,
+    const ebur128::test_signals::test_signal& signal,
+    std::size_t threshold_frames,
+    const char* metric,
+    int number,
+    int variant,
+    bool histogram,
+    double expected,
+    auto measure) {
+  const auto total_frames = signal.frames();
+  std::size_t readings = 0;
+  double minimum = std::numeric_limits<double>::infinity();
+  double maximum = -std::numeric_limits<double>::infinity();
+
+  for (std::size_t first = 0; first < total_frames;
+       first += test_signal_block_frames) {
+    const auto frames =
+        std::min(test_signal_block_frames, total_frames - first);
+
+    ::add_test_signal_frames(s, signal, first, frames);
+
+    if (first + frames < threshold_frames)
+      continue;
+
+    const double actual = measure();
+    ++readings;
+    minimum = std::min(minimum, actual);
+    maximum = std::max(maximum, actual);
+
+    if (!::check_test_signal_loudness(metric, number, variant, histogram,
+                                      actual, expected)) {
+      return false;
+    }
+  }
+
+  if (readings != 0) {
+    ::print_test_signal_constant_success(metric, number, histogram, expected,
+                                         readings, minimum, maximum);
+  }
+
+  return true;
+}
+
+bool check_test_signal_m_s_constant(
+    ebur128::state& s,
+    const ebur128::test_signals::test_signal& signal,
+    int number,
+    bool histogram,
+    double expected,
+    auto momentary,
+    auto shortterm) {
+  const auto total_frames = signal.frames();
+  const auto momentary_threshold = signal.frames_for_seconds(0.4);
+  const auto shortterm_threshold = signal.frames_for_seconds(3.0);
+  bool momentary_ok = true;
+  bool shortterm_ok = true;
+  std::size_t momentary_readings = 0;
+  std::size_t shortterm_readings = 0;
+  double momentary_minimum = std::numeric_limits<double>::infinity();
+  double momentary_maximum = -std::numeric_limits<double>::infinity();
+  double shortterm_minimum = std::numeric_limits<double>::infinity();
+  double shortterm_maximum = -std::numeric_limits<double>::infinity();
+
+  for (std::size_t first = 0; first < total_frames;
+       first += test_signal_block_frames) {
+    const auto frames =
+        std::min(test_signal_block_frames, total_frames - first);
+
+    ::add_test_signal_frames(s, signal, first, frames);
+
+    const auto end = first + frames;
+
+    if (end >= momentary_threshold && momentary_ok) {
+      const double actual = momentary();
+      ++momentary_readings;
+      momentary_minimum = std::min(momentary_minimum, actual);
+      momentary_maximum = std::max(momentary_maximum, actual);
+      momentary_ok = ::check_test_signal_loudness("M", number, 0, histogram,
+                                                  actual, expected);
+    }
+    if (end >= shortterm_threshold && shortterm_ok) {
+      const double actual = shortterm();
+      ++shortterm_readings;
+      shortterm_minimum = std::min(shortterm_minimum, actual);
+      shortterm_maximum = std::max(shortterm_maximum, actual);
+      shortterm_ok = ::check_test_signal_loudness("S", number, 0, histogram,
+                                                  actual, expected);
+    }
+  }
+
+  if (momentary_ok && momentary_readings != 0) {
+    ::print_test_signal_constant_success("M", number, histogram, expected,
+                                         momentary_readings, momentary_minimum,
+                                         momentary_maximum);
+  }
+  if (shortterm_ok && shortterm_readings != 0) {
+    ::print_test_signal_constant_success("S", number, histogram, expected,
+                                         shortterm_readings, shortterm_minimum,
+                                         shortterm_maximum);
+  }
+
+  return momentary_ok && shortterm_ok;
+}
+
+bool check_test_signal_segment_maxima(
+    ebur128::state& s,
+    const ebur128::test_signals::test_signal& signal,
+    double segment_seconds,
+    std::size_t threshold_frames,
+    const char* metric,
+    int number,
+    bool histogram,
+    auto measure) {
+  const auto total_frames = signal.frames();
+  const auto segment_frames = signal.frames_for_seconds(segment_seconds);
+  const auto segment_count = total_frames / segment_frames;
+  std::vector<double> maxima(segment_count,
+                             -std::numeric_limits<double>::infinity());
+
+  for (std::size_t first = 0; first < total_frames;
+       first += test_signal_block_frames) {
+    const auto frames =
+        std::min(test_signal_block_frames, total_frames - first);
+
+    ::add_test_signal_frames(s, signal, first, frames);
+
+    if (first + frames < threshold_frames)
+      continue;
+
+    const auto segment = first / segment_frames;
+    if (segment >= segment_count)
+      continue;
+
+    maxima[segment] = std::max(maxima[segment], measure());
+  }
+
+  bool ok = true;
+  for (std::size_t segment = 0; segment < segment_count; ++segment) {
+    const double actual = maxima[segment];
+    const double expected = -38.0 + static_cast<double>(segment);
+
+    if (::check_test_signal_loudness(metric, number, 0, histogram, actual,
+                                     expected)) {
+      ::print_test_signal_success(metric, number, histogram, actual, expected,
+                                  "segment", static_cast<int>(segment));
+    } else {
+      ok = false;
+    }
+  }
+  return ok;
+}
+
+bool test_ebur128_signals_1_to_6() {
+  bool ok = true;
+
+  for (int number = 1; number <= 6; ++number) {
+    const auto signal = test_signal{test_signal::kind::ebu3341, number};
+    const double expected = number == 2 ? -33.0 : -23.0;
+
+    for (int h = 0; h != 2; ++h) {
+      const bool histogram = h != 0;
+      auto mode = ebur128::mode::i;
+      if (number <= 2)
+        mode = mode | ebur128::mode::m | ebur128::mode::s;
+      mode = ::test_signal_mode(mode, histogram);
+
+      ebur128::state s(ebur128::channel{signal.channels()},
+                       ebur128::samplerate{signal.samplerate()}, mode);
+      ::configure_test_signal_channels(s, signal.channels());
+
+      if (number <= 2) {
+        ok &= ::check_test_signal_m_s_constant(
+            s, signal, number, histogram, expected,
+            [&] { return s.loudness_momentary(); },
+            [&] { return s.loudness_shortterm(); });
+      } else {
+        ::add_test_signal_frames(s, signal, 0, signal.frames());
+      }
+
+      ok &= ::check_and_print_test_signal_loudness(
+          "I", number, 0, histogram, s.loudness_global(), expected);
+    }
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signal_9() {
+  const auto signal = test_signal{test_signal::kind::ebu3341, 9};
+  const auto threshold_frames = signal.frames_for_seconds(3.0);
+  bool ok = true;
+
+  for (int h = 0; h != 2; ++h) {
+    const bool histogram = h != 0;
+    ebur128::state s(ebur128::channel{signal.channels()},
+                     ebur128::samplerate{signal.samplerate()},
+                     ::test_signal_mode(ebur128::mode::s, histogram));
+    ::configure_test_signal_channels(s, signal.channels());
+    ok &= ::check_test_signal_constant(s, signal, threshold_frames, "S", 9, 0,
+                                       histogram, -23.0,
+                                       [&] { return s.loudness_shortterm(); });
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signal_10() {
+  bool ok = true;
+
+  for (int variant = 1; variant <= 20; ++variant) {
+    const auto signal = test_signal{test_signal::kind::ebu3341, 10, variant};
+    const auto threshold_frames = signal.frames_for_seconds(3.0);
+
+    for (int h = 0; h != 2; ++h) {
+      const bool histogram = h != 0;
+      ebur128::state s(ebur128::channel{signal.channels()},
+                       ebur128::samplerate{signal.samplerate()},
+                       ::test_signal_mode(ebur128::mode::s, histogram));
+      ::configure_test_signal_channels(s, signal.channels());
+      const double maximum = ::max_test_signal_loudness(
+          s, signal, threshold_frames, [&] { return s.loudness_shortterm(); });
+      ok &= ::check_and_print_test_signal_loudness("max S", 10, variant,
+                                                   histogram, maximum, -23.0);
+    }
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signal_11() {
+  const auto signal = test_signal{test_signal::kind::ebu3341, 11};
+  const auto threshold_frames = signal.frames_for_seconds(3.0);
+  bool ok = true;
+
+  for (int h = 0; h != 2; ++h) {
+    const bool histogram = h != 0;
+    ebur128::state s(ebur128::channel{signal.channels()},
+                     ebur128::samplerate{signal.samplerate()},
+                     ::test_signal_mode(ebur128::mode::s, histogram));
+    ::configure_test_signal_channels(s, signal.channels());
+    ok &= ::check_test_signal_segment_maxima(
+        s, signal, 6.0, threshold_frames, "max S", 11, histogram,
+        [&] { return s.loudness_shortterm(); });
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signal_12() {
+  const auto signal = test_signal{test_signal::kind::ebu3341, 12};
+  const auto threshold_frames = signal.frames_for_seconds(1.0);
+  bool ok = true;
+
+  for (int h = 0; h != 2; ++h) {
+    const bool histogram = h != 0;
+    ebur128::state s(ebur128::channel{signal.channels()},
+                     ebur128::samplerate{signal.samplerate()},
+                     ::test_signal_mode(ebur128::mode::m, histogram));
+    ::configure_test_signal_channels(s, signal.channels());
+    ok &= ::check_test_signal_constant(s, signal, threshold_frames, "M", 12, 0,
+                                       histogram, -23.0,
+                                       [&] { return s.loudness_momentary(); });
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signal_13() {
+  bool ok = true;
+
+  for (int variant = 1; variant <= 20; ++variant) {
+    const auto signal = test_signal{test_signal::kind::ebu3341, 13, variant};
+    const auto threshold_frames = signal.frames_for_seconds(0.4);
+
+    for (int h = 0; h != 2; ++h) {
+      const bool histogram = h != 0;
+      ebur128::state s(ebur128::channel{signal.channels()},
+                       ebur128::samplerate{signal.samplerate()},
+                       ::test_signal_mode(ebur128::mode::m, histogram));
+      ::configure_test_signal_channels(s, signal.channels());
+      const double maximum = ::max_test_signal_loudness(
+          s, signal, threshold_frames, [&] { return s.loudness_momentary(); });
+      ok &= ::check_and_print_test_signal_loudness("max M", 13, variant,
+                                                   histogram, maximum, -23.0);
+    }
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signal_14() {
+  const auto signal = test_signal{test_signal::kind::ebu3341, 14};
+  const auto threshold_frames = signal.frames_for_seconds(0.4);
+  bool ok = true;
+
+  for (int h = 0; h != 2; ++h) {
+    const bool histogram = h != 0;
+    ebur128::state s(ebur128::channel{signal.channels()},
+                     ebur128::samplerate{signal.samplerate()},
+                     ::test_signal_mode(ebur128::mode::m, histogram));
+    ::configure_test_signal_channels(s, signal.channels());
+    ok &= ::check_test_signal_segment_maxima(
+        s, signal, 0.8, threshold_frames, "max M", 14, histogram,
+        [&] { return s.loudness_momentary(); });
+  }
+
+  return ok;
+}
+
+bool test_ebur128_lra() {
+  const struct {
+    int number;
+    double expected;
+  } cases[] = {
+      {1, 10.0},
+      {2, 5.0},
+      {3, 20.0},
+      {4, 15.0},
+  };
+  bool ok = true;
+
+  for (const auto& test_case : cases) {
+    const auto signal =
+        test_signal{test_signal::kind::ebu3342, test_case.number};
+
+    for (int h = 0; h != 2; ++h) {
+      const bool histogram = h != 0;
+      ebur128::state s(ebur128::channel{signal.channels()},
+                       ebur128::samplerate{signal.samplerate()},
+                       ::test_signal_mode(ebur128::mode::lra, histogram));
+      ::configure_test_signal_channels(s, signal.channels());
+      ::add_test_signal_frames(s, signal, 0, signal.frames());
+      ok &= ::check_test_signal_lra(test_case.number, histogram,
+                                    s.loudness_range(), test_case.expected);
+    }
+  }
+
+  return ok;
+}
+
+bool test_ebur128_signals() {
+  bool ok = true;
+  ok &= ::test_ebur128_signals_1_to_6();
+  ok &= ::test_ebur128_signal_9();
+  ok &= ::test_ebur128_signal_10();
+  ok &= ::test_ebur128_signal_11();
+  ok &= ::test_ebur128_signal_12();
+  ok &= ::test_ebur128_signal_13();
+  ok &= ::test_ebur128_signal_14();
+  ok &= ::test_ebur128_lra();
+  return ok;
+}
+
+} // namespace
+
 int main() {
-  assert(test_ebur128_simple());
-  assert(test_ebur128_threaded_init());
+  assert(::test_ebur128_simple());
+  assert(::test_ebur128_threaded_init());
 #ifdef EBUR128_TEST_PERFORMANCE
-  assert(test_ebur128_ftz_performance());
+  assert(::test_ebur128_ftz_performance());
 #endif
-  assert(test_ebur128_init());
-  assert(test_ebur128_set_channel());
-  assert(test_ebur128_loudness_window_overflow());
-  assert(test_ebur128_set_max_window_large_allocation());
+  assert(::test_ebur128_init());
+  assert(::test_ebur128_set_channel());
+  assert(::test_ebur128_loudness_window_overflow());
+  assert(::test_ebur128_set_max_window_large_allocation());
+  assert(::test_ebur128_signals());
 }
