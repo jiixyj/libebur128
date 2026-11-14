@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.23)
 project(libebur128 C)
 
+option(EBUR128_COVERAGE "Add LLVM source-based coverage instrumentation" OFF)
+if(EBUR128_COVERAGE)
+  add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+  add_link_options(-fprofile-instr-generate)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
   enable_language(CXX)

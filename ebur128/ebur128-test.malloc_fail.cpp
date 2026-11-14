@@ -5,7 +5,10 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <iostream>
 #include <limits>
+#include <string_view>
 #include <vector>
 
 #include <ebur128.h>
@@ -19,13 +22,12 @@ bool injected_failure = false;
 std::vector<double> make_input(unsigned int channels,
                                unsigned long samplerate,
                                std::size_t seconds) {
-  constexpr double pi = 3.14159265358979323846;
   const std::size_t frames = static_cast<std::size_t>(samplerate) * seconds;
   std::vector<double> input(frames * channels);
   for (std::size_t i = 0; i < frames; ++i) {
-    const double sample =
-        0.1 * std::sin(2.0 * pi * 1000.0 * static_cast<double>(i) /
-                       static_cast<double>(samplerate));
+    const double sample = 0.1 * std::sin(2.0 * std::numbers::pi * 1000.0 *
+                                         static_cast<double>(i) /
+                                         static_cast<double>(samplerate));
     for (unsigned int c = 0; c < channels; ++c) {
       input[i * channels + c] = sample;
     }
@@ -123,6 +125,16 @@ void run_config(bool histogram,
   assert(false);
 }
 
+bool run_malloc_fail(bool histogram) {
+  const std::vector<double> stereo_input = make_input(2, 48000, 5);
+  const std::vector<double> quad_input = make_input(4, 96000, 1);
+  run_config(histogram, stereo_input, quad_input);
+  return true;
+}
+
+bool test_malloc_fail_plain() { return run_malloc_fail(false); }
+bool test_malloc_fail_histogram() { return run_malloc_fail(true); }
+
 } // namespace
 
 extern "C" void* ebur128_test_malloc(std::size_t size) {
@@ -141,9 +153,19 @@ extern "C" void* ebur128_test_calloc(std::size_t nmemb, std::size_t size) {
   return std::calloc(nmemb, size);
 }
 
-int main() {
-  const std::vector<double> stereo_input = make_input(2, 48000, 5);
-  const std::vector<double> quad_input = make_input(4, 96000, 1);
-  run_config(false, stereo_input, quad_input);
-  run_config(true, stereo_input, quad_input);
+int main(int argc, char** argv) {
+  const auto run_test = [&](std::string_view name, bool (*test)()) {
+    if (argc == 2 && std::strcmp(argv[1], "--list-tests") == 0)
+      std::cout << name << '\n';
+    else if (argc == 1 ||
+             (argc == 3 && std::strcmp(argv[1], "--run-test") == 0 &&
+              name == argv[2]))
+      assert(test());
+  };
+#define register_test(name) run_test(&#name[5], (name))
+
+  register_test(test_malloc_fail_plain);
+  register_test(test_malloc_fail_histogram);
+
+#undef register_test
 }

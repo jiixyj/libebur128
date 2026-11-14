@@ -35,13 +35,6 @@ set_target_properties(ebur128 PROPERTIES
   SOVERSION ${EBUR128_VERSION_MAJOR}
   VERSION ${EBUR128_VERSION}
 )
-target_sources(
-    ebur128
-    PRIVATE ebur128.c
-    PUBLIC FILE_SET HEADERS FILES ebur128.h
-    PRIVATE FILE_SET private_headers TYPE HEADERS FILES ebur128/once.h
-)
-
 if(BUILD_SHARED_LIBS)
   if(MSVC)
     target_sources(ebur128 PRIVATE ebur128.def)
@@ -54,20 +47,32 @@ endif()
 
 # Link with Math library if available
 find_library(MATH_LIBRARY m)
-if(MATH_LIBRARY)
-  target_link_libraries(ebur128 PRIVATE ${MATH_LIBRARY})
-endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
-if(WIN32)
-  target_sources(ebur128 PRIVATE ebur128/once.windows.c)
-elseif(TARGET Threads::Threads)
-  target_sources(ebur128 PRIVATE ebur128/once.pthread.c)
-  target_link_libraries(ebur128 PRIVATE Threads::Threads)
-else()
-  target_sources(ebur128 PRIVATE ebur128/once.simple.c)
-endif()
+
+function(ebur128_configure_library target)
+  target_sources(${target}
+    PRIVATE ebur128.c
+    PUBLIC FILE_SET HEADERS FILES ebur128.h
+    PRIVATE FILE_SET private_headers TYPE HEADERS FILES ebur128/once.h
+  )
+
+  if(WIN32)
+    target_sources(${target} PRIVATE ebur128/once.windows.c)
+  elseif(TARGET Threads::Threads)
+    target_sources(${target} PRIVATE ebur128/once.pthread.c)
+    target_link_libraries(${target} PRIVATE Threads::Threads)
+  else()
+    target_sources(${target} PRIVATE ebur128/once.simple.c)
+  endif()
+
+  if(MATH_LIBRARY)
+    target_link_libraries(${target} PRIVATE ${MATH_LIBRARY})
+  endif()
+endfunction()
+
+ebur128_configure_library(ebur128)
 
 if(ENABLE_FUZZER)
   target_compile_options(ebur128 PUBLIC "${FUZZER_FLAGS}")
@@ -75,80 +80,89 @@ if(ENABLE_FUZZER)
   target_link_libraries(ebur128 "${SANITIZER_FLAGS}")
 endif()
 
+macro(ebur128_add_test test_target module)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.4)
+    discover_tests(COMMAND ${test_target}
+      DISCOVERY_ARGS "--list-tests"
+      DISCOVERY_MATCH "^(.*)$"
+      TEST_NAME "${module}-\\1"
+      TEST_ARGS --run-test "\\1"
+      TEST_PROPERTIES
+        WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
+        SKIP_RETURN_CODE 77
+    )
+  else()
+    add_test(NAME ${test_target} COMMAND ${test_target})
+    set_tests_properties(${test_target} PROPERTIES
+      WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
+      SKIP_RETURN_CODE 77
+    )
+  endif()
+endmacro()
+
 if(BUILD_TESTING)
   option(EBUR128_TEST_PERFORMANCE
          "Enable timing-based FTZ performance test" ON)
   option(EBUR128_TEST_MALLOC_FAIL
          "Enable malloc/calloc failure injection test" ON)
-  add_executable(ebur128-test ebur128-test.cpp)
-  target_compile_features(ebur128-test PRIVATE cxx_std_20)
-  target_link_libraries(ebur128-test PRIVATE ebur128::ebur128)
-  if(TARGET Threads::Threads)
-    target_link_libraries(ebur128-test PRIVATE Threads::Threads)
-  endif()
-  if(EBUR128_TEST_PERFORMANCE)
-    target_compile_definitions(ebur128-test PRIVATE EBUR128_TEST_PERFORMANCE)
-  endif()
-  add_test(NAME ebur128.tests COMMAND ebur128-test)
 
   add_library(ebur128.test_signals STATIC)
+  add_library(ebur128::ebur128.test_signals ALIAS ebur128.test_signals)
   target_sources(
       ebur128.test_signals
       PRIVATE ebur128.test_signals.cpp
       PUBLIC FILE_SET HEADERS FILES ebur128.test_signals.h
   )
   target_compile_features(ebur128.test_signals PRIVATE cxx_std_20)
-  target_link_libraries(ebur128-test PRIVATE ebur128.test_signals)
+
+  add_executable(ebur128-test ebur128-test.cpp)
+  target_compile_features(ebur128-test PRIVATE cxx_std_20)
+  target_link_libraries(ebur128-test PRIVATE ebur128::ebur128 ebur128::ebur128.test_signals)
+  if(TARGET Threads::Threads)
+    target_link_libraries(ebur128-test PRIVATE Threads::Threads)
+  endif()
+  if(EBUR128_TEST_PERFORMANCE)
+    target_compile_definitions(ebur128-test PRIVATE EBUR128_TEST_PERFORMANCE)
+  endif()
+  ebur128_add_test(ebur128-test ebur128)
+
+  add_executable(ebur128-test.true_peak ebur128-test.true_peak.cpp)
+  target_compile_features(ebur128-test.true_peak PRIVATE cxx_std_20)
+  target_link_libraries(ebur128-test.true_peak PRIVATE ebur128::ebur128 ebur128::ebur128.test_signals)
+  if(TARGET Threads::Threads)
+    target_link_libraries(ebur128-test.true_peak PRIVATE Threads::Threads)
+  endif()
+  ebur128_add_test(ebur128-test.true_peak ebur128)
 
   add_executable(ebur128.test_signals-test ebur128.test_signals-test.cpp)
   target_compile_features(ebur128.test_signals-test PRIVATE cxx_std_20)
   target_link_libraries(ebur128.test_signals-test PRIVATE ebur128.test_signals)
-  add_test(NAME ebur128.test_signals-tests
+  add_test(NAME ebur128.test_signals-test
     COMMAND ebur128.test_signals-test
-      "${CMAKE_BINARY_DIR}/ebu-loudness-test-setv05")
-  set_tests_properties(ebur128.test_signals-tests PROPERTIES SKIP_RETURN_CODE 77)
+      "${PROJECT_BINARY_DIR}/ebu-loudness-test-setv05")
+  set_tests_properties(ebur128.test_signals-test PROPERTIES SKIP_RETURN_CODE 77)
 
   if(EBUR128_TEST_MALLOC_FAIL)
     add_library(ebur128.malloc_fail STATIC)
     add_library(ebur128::ebur128.malloc_fail ALIAS ebur128.malloc_fail)
-    target_sources(
-        ebur128.malloc_fail
-        PRIVATE ebur128.c
-        PUBLIC FILE_SET HEADERS FILES ebur128.h
-        PRIVATE FILE_SET private_headers TYPE HEADERS FILES ebur128/once.h
-    )
+    ebur128_configure_library(ebur128.malloc_fail)
     set_target_properties(ebur128.malloc_fail PROPERTIES
       POSITION_INDEPENDENT_CODE ON)
     target_compile_definitions(ebur128.malloc_fail PRIVATE
       malloc=ebur128_test_malloc
       calloc=ebur128_test_calloc)
-    if(WIN32)
-      target_sources(ebur128.malloc_fail PRIVATE ebur128/once.windows.c)
-    elseif(TARGET Threads::Threads)
-      target_sources(ebur128.malloc_fail PRIVATE ebur128/once.pthread.c)
-      target_link_libraries(ebur128.malloc_fail PRIVATE Threads::Threads)
-    else()
-      target_sources(ebur128.malloc_fail PRIVATE ebur128/once.simple.c)
-    endif()
-    if(MATH_LIBRARY)
-      target_link_libraries(ebur128.malloc_fail PRIVATE ${MATH_LIBRARY})
-    endif()
 
     add_executable(ebur128-test.malloc_fail ebur128-test.malloc_fail.cpp)
-    target_compile_features(ebur128-test.malloc_fail PRIVATE cxx_std_17)
+    target_compile_features(ebur128-test.malloc_fail PRIVATE cxx_std_20)
     target_link_libraries(ebur128-test.malloc_fail PRIVATE ebur128::ebur128.malloc_fail)
     if(TARGET Threads::Threads)
       target_link_libraries(ebur128-test.malloc_fail PRIVATE Threads::Threads)
     endif()
-    add_test(NAME ebur128.malloc_fail COMMAND ebur128-test.malloc_fail)
+    ebur128_add_test(ebur128-test.malloc_fail ebur128)
   endif()
 endif()
 
-install(FILES ebur128.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(TARGETS ebur128
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS ebur128 FILE_SET HEADERS)
 
 #### pkg-config
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libebur128.pc.cmake

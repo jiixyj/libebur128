@@ -34,8 +34,10 @@
 static int safe_size_mul(size_t* out, size_t nmemb, size_t size) {
   /* Adapted from OpenBSD reallocarray. */
 #define MUL_NO_OVERFLOW (((size_t) 1) << (sizeof(size_t) * 4))
-  if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) && /**/
-      nmemb > 0 && ((size_t) (-1)) / nmemb < size) {
+  if ((nmemb >= MUL_NO_OVERFLOW ||
+       size >= MUL_NO_OVERFLOW) && /* LCOV_EXCL_BR_LINE */
+      nmemb > 0 &&                 /* LCOV_EXCL_BR_LINE */
+      ((size_t) (-1)) / nmemb < size) {
     return EBUR128_ERROR_NOMEM;
   }
 #undef MUL_NO_OVERFLOW
@@ -88,8 +90,8 @@ static int mul_div_1000(unsigned long* out, unsigned long a, unsigned long b) {
   } while (0)
 
   ADD_TERM(term2);
-  ADD_TERM(term3);
-  ADD_TERM(term4);
+  ADD_TERM(term3); /* LCOV_EXCL_BR_LINE */
+  ADD_TERM(term4); /* LCOV_EXCL_BR_LINE */
 
 #undef ADD_TERM
 
@@ -607,7 +609,7 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
     if (samplerate < 16 || samplerate > VALIDATE_MAX_SAMPLERATE) {             \
       return (err);                                                            \
     }                                                                          \
-  } while (0);
+  } while (0)
 
 ebur128_state*
 ebur128_init(unsigned int channels, unsigned long samplerate, int mode) {
@@ -972,9 +974,7 @@ int ebur128_set_channel(ebur128_state* st,
   if (channel_number >= st->channels) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
-  if (value == EBUR128_DUAL_MONO &&
-      (st->channels != 1 || channel_number != 0)) {
-    fprintf(stderr, "EBUR128_DUAL_MONO only works with mono files!\n");
+  if (value == EBUR128_DUAL_MONO && st->channels != 1) {
     return EBUR128_ERROR_INVALID_CHANNEL_INDEX;
   }
   st->d->channel_map[channel_number] = value;
@@ -987,9 +987,9 @@ int ebur128_change_parameters(ebur128_state* st,
   int errcode = EBUR128_SUCCESS;
 
 #if __has_builtin(__builtin_unreachable)
-  if (st->channels == 0) {
-    __builtin_unreachable();
-  }
+  if (st->channels == 0) {   /* LCOV_EXCL_BR_LINE */
+    __builtin_unreachable(); /* LCOV_EXCL_LINE */
+  } /*                          LCOV_EXCL_LINE */
 #endif
 
   VALIDATE_CHANNELS_AND_SAMPLERATE(EBUR128_ERROR_NOMEM);
@@ -1063,7 +1063,11 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
 
   if ((st->mode & EBUR128_MODE_S) == EBUR128_MODE_S && window < 3000) {
     window = 3000;
-  } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && window < 400) {
+  } else if (
+      /* LCOV_EXCL_BR_START */
+      (st->mode & EBUR128_MODE_M) == EBUR128_MODE_M &&
+      /* LCOV_EXCL_BR_STOP */
+      window < 400) {
     window = 400;
   }
 
@@ -1081,7 +1085,11 @@ exit:
 int ebur128_set_max_history(ebur128_state* st, unsigned long history) {
   if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA && history < 3000) {
     history = 3000;
-  } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && history < 400) {
+  } else if (
+      /* LCOV_EXCL_BR_START */
+      (st->mode & EBUR128_MODE_M) == EBUR128_MODE_M &&
+      /* LCOV_EXCL_BR_STOP */
+      history < 400) {
     history = 400;
   }
   if (history == st->d->history) {
@@ -1107,6 +1115,7 @@ int ebur128_set_max_history(ebur128_state* st, unsigned long history) {
 }
 
 static int ebur128_energy_shortterm(ebur128_state* st, double* out);
+
 #define EBUR128_ADD_FRAMES(type)                                               \
   int ebur128_add_frames_##type(ebur128_state* st, const type* src,            \
                                 size_t frames) {                               \
@@ -1133,10 +1142,16 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
           st->d->short_term_frame_counter += st->d->needed_frames;             \
           if (st->d->short_term_frame_counter ==                               \
               st->d->samples_in_100ms * 30) {                                  \
+            int error;                                                         \
             struct ebur128_dq_entry* block;                                    \
             double st_energy;                                                  \
-            if (ebur128_energy_shortterm(st, &st_energy) == EBUR128_SUCCESS && \
-                st_energy >= histogram_energy_boundaries[0]) {                 \
+                                                                               \
+            error = ebur128_energy_shortterm(st, &st_energy);                  \
+            if (error) {    /* LCOV_EXCL_BR_LINE */                            \
+              return error; /* LCOV_EXCL_LINE */                               \
+            } /*               LCOV_EXCL_LINE */                               \
+                                                                               \
+            if (st_energy >= histogram_energy_boundaries[0]) {                 \
               if (st->d->use_histogram) {                                      \
                 ++st->d->short_term_block_energy_histogram                     \
                       [find_histogram_index(st_energy)];                       \
@@ -1157,6 +1172,7 @@ static int ebur128_energy_shortterm(ebur128_state* st, double* out);
                                    entries);                                   \
               }                                                                \
             }                                                                  \
+                                                                               \
             st->d->short_term_frame_counter = st->d->samples_in_100ms * 20;    \
           }                                                                    \
         }                                                                      \
@@ -1272,10 +1288,13 @@ ebur128_gated_loudness(ebur128_state** sts, size_t size, double* out) {
       }
     }
   }
+  /* I think is unreachable, but still leave it in as a defensive check. */
+  /* LCOV_EXCL_START */
   if (!above_thresh_counter) {
     *out = -HUGE_VAL;
     return EBUR128_SUCCESS;
   }
+  /* LCOV_EXCL_STOP */
   gated_loudness /= (double) above_thresh_counter;
   *out = ebur128_energy_to_loudness(gated_loudness);
   return EBUR128_SUCCESS;
@@ -1333,9 +1352,9 @@ int ebur128_loudness_momentary(ebur128_state* st, double* out) {
   int error;
 
   error = ebur128_energy_in_interval(st, st->d->samples_in_100ms * 4, &energy);
-  if (error) {
-    return error;
-  }
+  if (error) {    /* LCOV_EXCL_BR_LINE */
+    return error; /* LCOV_EXCL_LINE */
+  } /*               LCOV_EXCL_LINE */
 
   if (energy <= 0.0) {
     *out = -HUGE_VAL;
@@ -1387,9 +1406,9 @@ int ebur128_loudness_window(ebur128_state* st,
   }
 
   error = ebur128_energy_in_interval(st, interval_frames, &energy);
-  if (error) {
-    return error;
-  }
+  if (error) {    /* LCOV_EXCL_BR_LINE */
+    return error; /* LCOV_EXCL_LINE */
+  } /*               LCOV_EXCL_LINE */
 
   if (energy <= 0.0) {
     *out = -HUGE_VAL;
@@ -1472,10 +1491,13 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
     for (j = index; j < 1000; ++j) {
       stl_size += hist[j];
     }
+    /* defensive check */
+    /* LCOV_EXCL_START */
     if (!stl_size) {
       *out = 0.0;
       return EBUR128_SUCCESS;
     }
+    /* LCOV_EXCL_STOP */
 
     percentile_low = (size_t) ((double) (stl_size - 1) * 0.1 + 0.5);
     percentile_high = (size_t) ((double) (stl_size - 1) * 0.95 + 0.5);
@@ -1533,12 +1555,14 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
 
   stl_relgated = stl_vector;
   stl_relgated_size = stl_size;
-  while (stl_relgated_size > 0 && *stl_relgated < stl_integrated) {
+  while (stl_relgated_size > 0 && /* LCOV_EXCL_BR_LINE */
+         *stl_relgated < stl_integrated) {
     ++stl_relgated;
     --stl_relgated_size;
   }
 
-  if (stl_relgated_size) {
+  /* defensive check */
+  if (stl_relgated_size > 0) { /* LCOV_EXCL_BR_LINE */
     h_en =
         stl_relgated[(size_t) ((double) (stl_relgated_size - 1) * 0.95 + 0.5)];
     l_en =
@@ -1546,9 +1570,9 @@ int ebur128_loudness_range_multiple(ebur128_state** sts,
     free(stl_vector);
     *out = ebur128_energy_to_loudness(h_en) - ebur128_energy_to_loudness(l_en);
   } else {
-    free(stl_vector);
-    *out = 0.0;
-  }
+    free(stl_vector); /* LCOV_EXCL_LINE */
+    *out = 0.0;       /* LCOV_EXCL_LINE */
+  } /*                   LCOV_EXCL_LINE */
 
   return EBUR128_SUCCESS;
 }

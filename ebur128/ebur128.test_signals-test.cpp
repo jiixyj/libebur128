@@ -1,7 +1,6 @@
 #include <ebur128.test_signals.h>
 
 #include <algorithm>
-#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +8,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -17,19 +15,11 @@
 
 namespace {
 
-using ebur128::test_signals::test_signal;
+using test_signal = ebur128::test_signals::test_signal<double>;
 
 constexpr int skip_code = 77;
 constexpr double max_full_scale_difference = 0.001;
-constexpr std::uint16_t wav_format_pcm = 1;
 constexpr unsigned long expected_samplerate = 48000;
-
-struct wav_file {
-  unsigned long samplerate;
-  unsigned int channels;
-  unsigned int bits;
-  std::vector<std::int32_t> samples;
-};
 
 struct reference_file {
   int number;
@@ -47,7 +37,7 @@ std::vector<reference_file> make_reference_files() {
   files.push_back({3, 0, 16, "seq-3341-3-16bit-v02.wav", true});
   files.push_back({4, 0, 16, "seq-3341-4-16bit-v02.wav", true});
   files.push_back({5, 0, 16, "seq-3341-5-16bit-v02.wav", true});
-  files.push_back({6, 0, 16, "seq-3341-6-5channels-16bit.wav", true});
+  files.push_back({6, 1, 16, "seq-3341-6-5channels-16bit.wav", true});
   files.push_back({7, 0, 24, "seq-3341-7_seq-3342-5-24bit.wav", false});
   files.push_back(
       {8, 0, 24, "seq-3341-2011-8_seq-3342-6-24bit-v02.wav", false});
@@ -75,124 +65,6 @@ std::vector<reference_file> make_reference_files() {
   return files;
 }
 
-std::runtime_error error(const std::filesystem::path& path,
-                         const std::string& message) {
-  return std::runtime_error(path.string() + ": " + message);
-}
-
-std::uint16_t read_u16(std::span<const std::uint8_t> data, std::size_t offset) {
-  const auto low = static_cast<std::uint16_t>(data[offset]);
-  const auto high = static_cast<std::uint16_t>(data[offset + 1]) << 8;
-  return static_cast<std::uint16_t>(low | high);
-}
-
-std::uint32_t read_u32(std::span<const std::uint8_t> data, std::size_t offset) {
-  const auto b0 = static_cast<std::uint32_t>(data[offset]);
-  const auto b1 = static_cast<std::uint32_t>(data[offset + 1]) << 8;
-  const auto b2 = static_cast<std::uint32_t>(data[offset + 2]) << 16;
-  const auto b3 = static_cast<std::uint32_t>(data[offset + 3]) << 24;
-  return b0 | b1 | b2 | b3;
-}
-
-std::vector<std::uint8_t> read_file(const std::filesystem::path& path) {
-  const auto size = std::filesystem::file_size(path);
-  std::ifstream stream(path, std::ios::binary);
-  if (!stream) {
-    throw error(path, "cannot open file");
-  }
-
-  std::vector<std::uint8_t> data(static_cast<std::size_t>(size));
-  if (!data.empty() &&
-      !stream.read(reinterpret_cast<char*>(data.data()),
-                   static_cast<std::streamsize>(data.size()))) {
-    throw error(path, "cannot read file");
-  }
-  return data;
-}
-
-wav_file parse_wav(std::span<const std::uint8_t> data,
-                   const std::filesystem::path& path) {
-  if (data.size() < 12 || std::memcmp(data.data(), "RIFF", 4) != 0 ||
-      std::memcmp(data.data() + 8, "WAVE", 4) != 0) {
-    throw error(path, "not a RIFF/WAVE file");
-  }
-
-  std::size_t format_offset = data.size();
-  std::size_t format_size = 0;
-  std::size_t sample_offset = data.size();
-  std::size_t sample_size = 0;
-
-  std::size_t offset = 12;
-  while (offset + 8 <= data.size()) {
-    const auto chunk_size = read_u32(data, offset + 4);
-    const auto chunk_offset = offset + 8;
-    if (chunk_size > data.size() - chunk_offset) {
-      throw error(path, "truncated chunk");
-    }
-
-    if (std::memcmp(data.data() + offset, "fmt ", 4) == 0) {
-      format_offset = chunk_offset;
-      format_size = chunk_size;
-    } else if (std::memcmp(data.data() + offset, "data", 4) == 0) {
-      sample_offset = chunk_offset;
-      sample_size = chunk_size;
-    }
-
-    offset = chunk_offset + chunk_size;
-    if (offset % 2 != 0) {
-      ++offset;
-    }
-  }
-
-  if (format_offset == data.size() || format_size < 16) {
-    throw error(path, "missing or invalid fmt chunk");
-  }
-  if (sample_offset == data.size()) {
-    throw error(path, "missing data chunk");
-  }
-
-  const auto format = read_u16(data, format_offset);
-  const auto channels = read_u16(data, format_offset + 2);
-  const auto samplerate = read_u32(data, format_offset + 4);
-  const auto block_align = read_u16(data, format_offset + 12);
-  const auto bits = read_u16(data, format_offset + 14);
-  const std::size_t bytes_per_sample = bits / 8;
-
-  if (format != wav_format_pcm || channels == 0 || (bits != 16 && bits != 24) ||
-      samplerate != expected_samplerate ||
-      block_align != channels * bytes_per_sample) {
-    throw error(path, "unsupported WAV format");
-  }
-  if (sample_size % block_align != 0) {
-    throw error(path, "invalid data chunk size");
-  }
-
-  std::vector<std::int32_t> samples;
-  samples.reserve(sample_size / bytes_per_sample);
-  for (std::size_t i = 0; i < sample_size; i += bytes_per_sample) {
-    if (bits == 16) {
-      samples.push_back(
-          std::bit_cast<std::int16_t>(read_u16(data, sample_offset + i)));
-    } else {
-      auto value =
-          static_cast<std::uint32_t>(data[sample_offset + i]) |
-          (static_cast<std::uint32_t>(data[sample_offset + i + 1]) << 8) |
-          (static_cast<std::uint32_t>(data[sample_offset + i + 2]) << 16);
-      if ((value & 0x800000U) != 0) {
-        value |= 0xFF000000U;
-      }
-      samples.push_back(std::bit_cast<std::int32_t>(value));
-    }
-  }
-
-  return wav_file{samplerate, channels, bits, std::move(samples)};
-}
-
-wav_file load_wav(const std::filesystem::path& path) {
-  const auto data = read_file(path);
-  return parse_wav(data, path);
-}
-
 std::int32_t quantize(double sample, unsigned int bits) {
   const auto scale = 1LL << (bits - 1);
   auto rounded = std::llround(sample * static_cast<double>(scale));
@@ -208,18 +80,18 @@ long long max_difference(unsigned int bits) {
 void compare_signal(const test_signal& expected,
                     unsigned int bits,
                     const std::filesystem::path& path) {
-  const auto actual = load_wav(path);
+  const ebur128::test_signals::wav_file actual(path);
 
   const auto expected_frames = expected.frames();
   const auto expected_channels = expected.channels();
   const auto expected_samples = expected.samples();
-  const auto actual_frames = actual.samples.size() / actual.channels;
+  const auto actual_frames = actual.frames();
 
-  if (actual.samplerate != expected.samplerate() ||
-      actual.channels != expected_channels || actual.bits != bits ||
+  if (actual.samplerate() != expected.samplerate() ||
+      actual.channels() != expected_channels || actual.bits() != bits ||
       actual_frames != expected_frames) {
-    throw error(path, "unexpected sample rate, channel count, bit depth, or "
-                      "length");
+    throw std::runtime_error(
+        "unexpected sample rate, channel count, bit depth, or length");
   }
 
   const auto tolerance = max_difference(bits);
@@ -230,7 +102,11 @@ void compare_signal(const test_signal& expected,
     for (unsigned int channel = 0; channel < expected_channels; ++channel) {
       const auto index = frame * expected_channels + channel;
       const auto expected_sample = quantize(expected_samples[index], bits);
-      const auto actual_sample = actual.samples[index];
+      auto actual_sample = actual.sample_at(index);
+      if (bits == 24)
+        actual_sample >>= 8;
+      else if (bits == 16)
+        actual_sample >>= 16;
       const auto difference =
           std::llabs(static_cast<long long>(actual_sample) - expected_sample);
       maximum_difference = std::max(maximum_difference, difference);
@@ -253,36 +129,32 @@ void compare_signal(const test_signal& expected,
               static_cast<long long>(maximum_difference));
 
   if (first_mismatch != expected_frames) {
-    throw error(path, "waveform does not match");
+    throw std::runtime_error("waveform does not match");
   }
 }
 
 void validate_authentic_signal(const reference_file& reference,
                                const std::filesystem::path& path) {
-  const auto actual = load_wav(path);
-  const auto frames = actual.samples.size() / actual.channels;
+  const ebur128::test_signals::wav_file actual(path);
+  const auto frames = actual.frames();
 
-  if (actual.samplerate != expected_samplerate || actual.channels != 2 ||
-      actual.bits != reference.bits || frames == 0) {
-    throw error(path, "unexpected authentic signal format");
+  if (actual.samplerate() != expected_samplerate || actual.channels() != 2 ||
+      actual.bits() != reference.bits || frames == 0) {
+    throw std::runtime_error("unexpected authentic signal format");
   }
 
   std::printf("%s: %zu frames, %u channels, %u bits (authentic)\n",
-              path.filename().string().c_str(), frames, actual.channels,
-              actual.bits);
+              path.filename().string().c_str(), frames, actual.channels(),
+              actual.bits());
 }
 
-bool all_reference_files_exist(
-    const std::filesystem::path& directory,
-    const std::vector<reference_file>& reference_files) {
-  for (const auto& reference : reference_files) {
-    std::error_code ec;
-    const auto path = directory / reference.filename;
-    if (!std::filesystem::is_regular_file(path, ec) || ec) {
-      std::fprintf(stderr, "skipping: missing reference file %s\n",
-                   path.string().c_str());
-      return false;
-    }
+bool reference_file_exists(const std::filesystem::path& directory,
+                           const reference_file& reference) {
+  const auto path = directory / reference.filename;
+  if (!std::filesystem::is_regular_file(path)) {
+    std::fprintf(stderr, "skipping: missing reference file %s\n",
+                 path.string().c_str());
+    return false;
   }
   return true;
 }
@@ -299,21 +171,27 @@ int main(int argc, char** argv) {
   const std::filesystem::path directory = argv[1];
   const auto reference_files = ::make_reference_files();
 
-  if (!::all_reference_files_exist(directory, reference_files)) {
+  if (std::ranges::any_of(reference_files, [&](const auto& reference_file) {
+        return !reference_file_exists(directory, reference_file);
+      })) {
     return skip_code;
   }
 
   try {
     for (const auto& reference : reference_files) {
       const auto path = directory / reference.filename;
-      if (reference.synthesized) {
-        const auto kind = reference.lra ? test_signal::kind::ebu3342
-                                        : test_signal::kind::ebu3341;
-        const auto expected =
-            test_signal{kind, reference.number, reference.variant};
-        ::compare_signal(expected, reference.bits, path);
-      } else {
-        ::validate_authentic_signal(reference, path);
+      try {
+        if (reference.synthesized) {
+          ::compare_signal(test_signal(reference.lra
+                                           ? test_signal::kind::ebu3342
+                                           : test_signal::kind::ebu3341,
+                                       reference.number, reference.variant),
+                           reference.bits, path);
+        } else {
+          ::validate_authentic_signal(reference, path);
+        }
+      } catch (const std::runtime_error& e) {
+        throw std::runtime_error(path.string() + ": " + e.what());
       }
     }
   } catch (const std::exception& exception) {
