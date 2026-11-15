@@ -3,9 +3,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <cstring>
-#include <iostream>
 #include <ranges>
 
 #include <ebur128.h>
@@ -16,10 +13,19 @@ namespace ebur128 {
 using namespace ebur128::test;
 }
 
+static ebur128::test_signals::wav_file
+open_file(const std::filesystem::path& path) {
+  try {
+    return ebur128::test_signals::wav_file(
+        std::filesystem::path("ebu-loudness-test-setv05") / path);
+  } catch (const ebur128::test_signals::file_not_found&) {
+    throw ebur128::test::skipped{};
+  }
+}
+
 static bool true_peak(const std::filesystem::path& path, double expected_peak) {
   {
-    ebur128::test_signals::wav_file file(
-        std::filesystem::path("ebu-loudness-test-setv05") / path);
+    auto file = ::open_file(path);
     assert(file.channels() == 2);
     assert(file.bits() == 24);
 
@@ -81,29 +87,15 @@ static bool test_true_peak_23() {
 }
 
 int main(int argc, char** argv) {
-  const auto run_test = [&](std::string_view test_name, bool (*test)()) {
-    if (argc == 2 && std::strcmp(argv[1], "--list-tests") == 0)
-      std::cout << test_name << '\n';
-    else if (argc == 1 ||
-             (argc == 3 && std::strcmp(argv[1], "--run-test") == 0 &&
-              test_name == argv[2]))
-      assert(test());
-  };
-#define register_test(...) run_test(&#__VA_ARGS__[5], (__VA_ARGS__))
-
-  try {
-    register_test(test_true_peak_15);
-    register_test(test_true_peak_16);
-    register_test(test_true_peak_17);
-    register_test(test_true_peak_18);
-    register_test(test_true_peak_19);
-    register_test(test_true_peak_20);
-    register_test(test_true_peak_21);
-    register_test(test_true_peak_22);
-    register_test(test_true_peak_23);
-  } catch (const ebur128::test_signals::file_not_found&) {
-    return 77;
-  }
-
-#undef register_test
+  ebur128::test::suite suite(argc, argv);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_15);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_16);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_17);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_18);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_19);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_20);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_21);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_22);
+  EBUR128_TEST_REGISTER(suite, test_true_peak_23);
+  return suite.run();
 }

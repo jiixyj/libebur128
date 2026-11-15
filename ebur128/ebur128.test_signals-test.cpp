@@ -38,6 +38,7 @@ std::vector<reference_file> make_reference_files() {
   files.push_back({4, 0, 16, "seq-3341-4-16bit-v02.wav", true});
   files.push_back({5, 0, 16, "seq-3341-5-16bit-v02.wav", true});
   files.push_back({6, 1, 16, "seq-3341-6-5channels-16bit.wav", true});
+  files.push_back({6, 2, 16, "seq-3341-6-6channels-WAVEEX-16bit.wav", true});
   files.push_back({7, 0, 24, "seq-3341-7_seq-3342-5-24bit.wav", false});
   files.push_back(
       {8, 0, 24, "seq-3341-2011-8_seq-3342-6-24bit-v02.wav", false});

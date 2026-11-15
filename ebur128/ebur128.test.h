@@ -1,9 +1,18 @@
 #ifndef EBUR128_TEST_H_
 #define EBUR128_TEST_H_
 
+#undef NDEBUG
+#include <cassert>
+
+#include <cstdio>
+#include <cstring>
+#include <exception>
 #include <ranges>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
 #include <ebur128.h>
 #include <ebur128.test_signals.h>
@@ -350,6 +359,95 @@ inline void state::add_frames<double>(audio_data_view<double> data) {
       "ebur128_add_frames_double");
 }
 
+//
+
+class skipped : public std::exception {};
+
+class suite {
+public:
+  explicit suite(int argc, char** argv) {
+    if (argc == 1) {
+      mode_ = run_mode::all;
+    } else if (argc == 2 && std::strcmp(argv[1], "--list-tests") == 0) {
+      mode_ = run_mode::list;
+    } else if (argc == 3 && std::strcmp(argv[1], "--run-test") == 0) {
+      mode_ = run_mode::one;
+      test_name_ = argv[2];
+    }
+  }
+
+  void add(std::string_view name, bool (*test)()) {
+    if (mode_ == run_mode::invalid)
+      return;
+
+    tests_.push_back({suite::normalize_name(name), test});
+  }
+
+  int run() const {
+    if (mode_ == run_mode::invalid)
+      return suite::usage_return_code;
+
+    if (mode_ == run_mode::list) {
+      for (const auto& test : tests_)
+        std::printf("%.*s\n", static_cast<int>(test.name.size()),
+                    test.name.data());
+      return 0;
+    }
+
+    int selected_tests = 0;
+    int skipped_tests = 0;
+
+    for (const auto& test : tests_) {
+      if (mode_ == run_mode::one && test.name != test_name_)
+        continue;
+
+      ++selected_tests;
+      try {
+        assert(test.function());
+      } catch (const ebur128::test::skipped&) {
+        ++skipped_tests;
+      }
+    }
+
+    if (mode_ == run_mode::one && selected_tests == 0)
+      return suite::usage_return_code;
+
+    return selected_tests != 0 && selected_tests == skipped_tests
+               ? suite::skip_return_code
+               : 0;
+  }
+
+private:
+  enum class run_mode { all, list, one, invalid };
+
+  static constexpr int skip_return_code = 77;
+  static constexpr int usage_return_code = 2;
+
+  struct test_case {
+    std::string name;
+    bool (*function)();
+  };
+
+  static std::string normalize_name(std::string_view name) {
+    std::string result = {};
+    result.reserve(name.size());
+    for (const char c : name) {
+      if (c == '<' || c == ',')
+        result += '_';
+      else if (c != '>' && c != ' ')
+        result += c;
+    }
+    return result;
+  }
+
+  run_mode mode_ = run_mode::invalid;
+  std::string_view test_name_ = {};
+  std::vector<test_case> tests_ = {};
+};
+
 } // namespace ebur128::test
+
+#define EBUR128_TEST_REGISTER(suite, ...)                                      \
+  (suite).add(&#__VA_ARGS__[5], (__VA_ARGS__))
 
 #endif

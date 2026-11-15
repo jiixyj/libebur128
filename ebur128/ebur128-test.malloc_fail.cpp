@@ -5,14 +5,12 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <iostream>
 #include <limits>
 #include <numbers>
-#include <string_view>
 #include <vector>
 
 #include <ebur128.h>
+#include <ebur128.test.h>
 
 namespace {
 
@@ -155,18 +153,8 @@ extern "C" void* ebur128_test_calloc(std::size_t nmemb, std::size_t size) {
 }
 
 int main(int argc, char** argv) {
-  const auto run_test = [&](std::string_view name, bool (*test)()) {
-    if (argc == 2 && std::strcmp(argv[1], "--list-tests") == 0)
-      std::cout << name << '\n';
-    else if (argc == 1 ||
-             (argc == 3 && std::strcmp(argv[1], "--run-test") == 0 &&
-              name == argv[2]))
-      assert(test());
-  };
-#define register_test(name) run_test(&#name[5], (name))
-
-  register_test(test_malloc_fail_plain);
-  register_test(test_malloc_fail_histogram);
-
-#undef register_test
+  ebur128::test::suite suite(argc, argv);
+  EBUR128_TEST_REGISTER(suite, test_malloc_fail_plain);
+  EBUR128_TEST_REGISTER(suite, test_malloc_fail_histogram);
+  return suite.run();
 }

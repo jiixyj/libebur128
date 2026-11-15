@@ -74,12 +74,6 @@ endfunction()
 
 ebur128_configure_library(ebur128)
 
-if(ENABLE_FUZZER)
-  target_compile_options(ebur128 PUBLIC "${FUZZER_FLAGS}")
-  target_compile_definitions(ebur128 PRIVATE malloc=my_malloc calloc=my_calloc)
-  target_link_libraries(ebur128 "${SANITIZER_FLAGS}")
-endif()
-
 macro(ebur128_add_test test_target module)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.4)
     discover_tests(COMMAND ${test_target}
@@ -133,6 +127,14 @@ if(BUILD_TESTING)
     target_link_libraries(ebur128-test.true_peak PRIVATE Threads::Threads)
   endif()
   ebur128_add_test(ebur128-test.true_peak ebur128)
+
+  add_executable(ebur128-test.ebu_files ebur128-test.ebu_files.cpp)
+  target_compile_features(ebur128-test.ebu_files PRIVATE cxx_std_20)
+  target_link_libraries(ebur128-test.ebu_files PRIVATE ebur128::ebur128 ebur128::ebur128.test_signals)
+  if(TARGET Threads::Threads)
+    target_link_libraries(ebur128-test.ebu_files PRIVATE Threads::Threads)
+  endif()
+  ebur128_add_test(ebur128-test.ebu_files ebur128)
 
   add_executable(ebur128.test_signals-test ebur128.test_signals-test.cpp)
   target_compile_features(ebur128.test_signals-test PRIVATE cxx_std_20)

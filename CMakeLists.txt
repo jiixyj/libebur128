@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 project(libebur128 C)
 
-option(EBUR128_COVERAGE "Add LLVM source-based coverage instrumentation" OFF)
-if(EBUR128_COVERAGE)
-  add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-  add_link_options(-fprofile-instr-generate)
-endif()
-
 include(CTest)
 if(BUILD_TESTING)
   enable_language(CXX)
@@ -14,11 +8,11 @@ endif()
 
 option(BUILD_SHARED_LIBS
     "Build shared libraries instead of static ones" ON)
-
-if(ENABLE_FUZZER)
-  enable_language(CXX)
-  set(SANITIZER_FLAGS "-fsanitize=address,undefined,unsigned-integer-overflow")
-  set(FUZZER_FLAGS "${SANITIZER_FLAGS},fuzzer")
+option(EBUR128_BUILD_EXAMPLES "Build example programs" OFF)
+option(EBUR128_COVERAGE "Add LLVM source-based coverage instrumentation" OFF)
+if(EBUR128_COVERAGE)
+  add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+  add_link_options(-fprofile-instr-generate)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -29,8 +23,8 @@ include(utils)
 include(GNUInstallDirs)
 
 add_subdirectory(ebur128)
-if(BUILD_TESTING)
-  add_subdirectory(test)
+if(EBUR128_BUILD_EXAMPLES)
+  add_subdirectory(examples)
 endif()
 
 to_yes_no(SUMMARY_HAS_QUEUE)
@@ -51,8 +45,8 @@ else()
   message(STATUS "Building static library")
 endif()
 
-if(ENABLE_TESTS)
-  message(STATUS "building tests!")
+if(EBUR128_BUILD_EXAMPLES)
+  message(STATUS "building examples!")
 else()
-  message(STATUS "not building tests, set ENABLE_TESTS to ON to enable")
+  message(STATUS "not building examples, set EBUR128_BUILD_EXAMPLES to ON to enable")
 endif()

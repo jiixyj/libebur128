@@ -7,13 +7,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <cstring>
-#include <iostream>
 #include <limits>
 #include <numbers>
 #include <span>
-#include <string>
-#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -1517,65 +1513,51 @@ static bool test_prev_true_peak() {
 }
 
 int main(int argc, char** argv) {
-  const auto run_test = [&](std::string_view name, bool (*test)()) {
-    std::string test_name(name);
-    std::ranges::replace(test_name, '<', '_');
-    std::ranges::replace(test_name, ',', '_');
-    std::erase(test_name, '>');
-    std::erase(test_name, ' ');
-
-    if (argc == 2 && std::strcmp(argv[1], "--list-tests") == 0)
-      std::cout << test_name << '\n';
-    else if (argc == 1 ||
-             (argc == 3 && std::strcmp(argv[1], "--run-test") == 0 &&
-              test_name == argv[2]))
-      assert(test());
-  };
-#define register_test(...) run_test(&#__VA_ARGS__[5], (__VA_ARGS__))
+  ebur128::test::suite suite(argc, argv);
 
   constexpr bool plain = false;
   constexpr bool histogram = true;
 
 #define register_test_all_types(name)                                          \
-  register_test(name<short, plain>);                                           \
-  register_test(name<short, histogram>);                                       \
-  register_test(name<int, plain>);                                             \
-  register_test(name<int, histogram>);                                         \
-  register_test(name<float, plain>);                                           \
-  register_test(name<float, histogram>);                                       \
-  register_test(name<double, plain>);                                          \
-  register_test(name<double, histogram>)
+  EBUR128_TEST_REGISTER(suite, name<short, plain>);                            \
+  EBUR128_TEST_REGISTER(suite, name<short, histogram>);                        \
+  EBUR128_TEST_REGISTER(suite, name<int, plain>);                              \
+  EBUR128_TEST_REGISTER(suite, name<int, histogram>);                          \
+  EBUR128_TEST_REGISTER(suite, name<float, plain>);                            \
+  EBUR128_TEST_REGISTER(suite, name<float, histogram>);                        \
+  EBUR128_TEST_REGISTER(suite, name<double, plain>);                           \
+  EBUR128_TEST_REGISTER(suite, name<double, histogram>)
 
-  register_test(test_simple);
-  register_test(test_threaded_init);
+  EBUR128_TEST_REGISTER(suite, test_simple);
+  EBUR128_TEST_REGISTER(suite, test_threaded_init);
 #ifdef EBUR128_TEST_PERFORMANCE
-  register_test(test_ftz_performance);
+  EBUR128_TEST_REGISTER(suite, test_ftz_performance);
 #endif
-  register_test(test_init);
-  register_test(test_set_channel);
-  register_test(test_dual_mono);
-  register_test(test_surround_channels);
-  register_test(test_loudness_window);
-  register_test(test_loudness_window_overflow);
-  register_test(test_set_max_window);
-  register_test(test_set_max_window_large_allocation);
-  register_test(test_set_max_history);
-  register_test(test_integer_overflow);
-  register_test(test_version);
-  register_test(test_change_parameters);
-  register_test(test_global_loudness);
-  register_test(test_global_loudness_quiet);
-  register_test(test_global_loudness_multiple);
-  register_test(test_loudness_range_quiet);
-  register_test(test_loudness_range_multiple);
-  register_test(test_loudness_range_partial_frames);
-  register_test(test_relative_threshold);
-  register_test(test_momentary_loudness);
-  register_test(test_shortterm_loudness);
-  register_test(test_true_peak);
-  register_test(test_sample_peak);
-  register_test(test_prev_true_peak);
-  register_test(test_prev_sample_peak);
+  EBUR128_TEST_REGISTER(suite, test_init);
+  EBUR128_TEST_REGISTER(suite, test_set_channel);
+  EBUR128_TEST_REGISTER(suite, test_dual_mono);
+  EBUR128_TEST_REGISTER(suite, test_surround_channels);
+  EBUR128_TEST_REGISTER(suite, test_loudness_window);
+  EBUR128_TEST_REGISTER(suite, test_loudness_window_overflow);
+  EBUR128_TEST_REGISTER(suite, test_set_max_window);
+  EBUR128_TEST_REGISTER(suite, test_set_max_window_large_allocation);
+  EBUR128_TEST_REGISTER(suite, test_set_max_history);
+  EBUR128_TEST_REGISTER(suite, test_integer_overflow);
+  EBUR128_TEST_REGISTER(suite, test_version);
+  EBUR128_TEST_REGISTER(suite, test_change_parameters);
+  EBUR128_TEST_REGISTER(suite, test_global_loudness);
+  EBUR128_TEST_REGISTER(suite, test_global_loudness_quiet);
+  EBUR128_TEST_REGISTER(suite, test_global_loudness_multiple);
+  EBUR128_TEST_REGISTER(suite, test_loudness_range_quiet);
+  EBUR128_TEST_REGISTER(suite, test_loudness_range_multiple);
+  EBUR128_TEST_REGISTER(suite, test_loudness_range_partial_frames);
+  EBUR128_TEST_REGISTER(suite, test_relative_threshold);
+  EBUR128_TEST_REGISTER(suite, test_momentary_loudness);
+  EBUR128_TEST_REGISTER(suite, test_shortterm_loudness);
+  EBUR128_TEST_REGISTER(suite, test_true_peak);
+  EBUR128_TEST_REGISTER(suite, test_sample_peak);
+  EBUR128_TEST_REGISTER(suite, test_prev_true_peak);
+  EBUR128_TEST_REGISTER(suite, test_prev_sample_peak);
   register_test_all_types(test_signal_1);
   register_test_all_types(test_signal_2);
   register_test_all_types(test_signal_3);
@@ -1595,5 +1577,6 @@ int main(int argc, char** argv) {
   register_test_all_types(test_lra_4);
 
 #undef register_test_all_types
-#undef register_test
+
+  return suite.run();
 }

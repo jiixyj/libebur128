@@ -18,6 +18,7 @@ namespace ebur128::test_signals {
 namespace {
 
 constexpr std::uint16_t wav_format_pcm = 1;
+constexpr std::uint16_t wav_format_extensible = 0xFFFE;
 
 std::uint16_t read_u16(std::span<const std::uint8_t> data, std::size_t offset) {
   const auto low = static_cast<std::uint16_t>(data[offset]);
@@ -273,8 +274,12 @@ wav_file::wav_file(std::span<const std::uint8_t> data) {
   const auto block_align = read_u16(data, format_offset + 12);
   const auto bits = read_u16(data, format_offset + 14);
   const std::size_t bytes_per_sample = bits / 8;
+  const bool pcm = format == wav_format_pcm ||
+                   (format == wav_format_extensible && format_size >= 40 &&
+                    read_u16(data, format_offset + 18) == bits &&
+                    read_u16(data, format_offset + 24) == wav_format_pcm);
 
-  if (format != wav_format_pcm || channels == 0 || (bits != 16 && bits != 24) ||
+  if (!pcm || channels == 0 || (bits != 16 && bits != 24) ||
       samplerate != 48000 || block_align != channels * bytes_per_sample) {
     throw std::runtime_error("unsupported WAV format");
   }
