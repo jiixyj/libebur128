@@ -19,14 +19,18 @@ jobs:
         include:
           - os: ubuntu-24.04
             name: Ubuntu 24.04
+            ctest_parallel: 4
           - os: ubuntu-24.04-arm
             name: Ubuntu 24.04 ARM
+            ctest_parallel: 4
           - os: macos-15
             name: macOS 15
+            ctest_parallel: 3
           - os: windows-2022
             name: Windows 2022
             cmake_config: --config RelWithDebInfo
             ctest_config: --build-config RelWithDebInfo
+            ctest_parallel: 4
         exclude:
           - os: windows-2022
             sanitizer: thread
@@ -92,7 +96,10 @@ jobs:
         CMAKE_BUILD_PARALLEL_LEVEL: 2
 
     - name: Test
-      run: ctest --test-dir build ${{ matrix.ctest_config }} --output-on-failure -E '^ebur128[.]malloc_fail$'
+      run: >-
+        ctest --test-dir build ${{ matrix.ctest_config }}
+        --parallel ${{ matrix.ctest_parallel }}
+        --output-on-failure -E '^ebur128[.]malloc_fail$'
 
     - name: Test malloc failure paths under leak detection
       if: runner.os == 'Linux' && matrix.sanitizer == 'address-undefined'
