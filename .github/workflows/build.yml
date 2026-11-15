@@ -156,7 +156,14 @@ jobs:
       working-directory: build-coverage32
       run: ../tools/check_coverage.sh
 
+    - name: Check coverage thresholds
+      working-directory: build-coverage32
+      run: >-
+        python3 ../tools/check_coverage_thresholds.py show.lcov
+        --min-lines 100 --min-branches 85 --min-functions 100
+
     - name: Upload coverage report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: coverage-32
