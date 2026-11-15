@@ -110,3 +110,58 @@ jobs:
       with:
         name: ${{ matrix.name }} libebur128 build
         path: ${{ github.workspace }}/install
+
+  coverage-32:
+    name: Ubuntu 24.04 / 32-bit coverage
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+
+    - name: Install coverage dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang \
+          llvm \
+          libclang-rt-18-dev \
+          lcov \
+          zsh \
+          ninja-build \
+          g++-multilib \
+          g++-14-multilib \
+          libc6-dev-i386 \
+          python3
+
+    - name: Configure
+      run: |
+        cmake -S . -B build-coverage32 -G Ninja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DBUILD_SHARED_LIBS=ON \
+          -DBUILD_TESTING=ON \
+          -DEBUR128_COVERAGE=ON \
+          -DEBUR128_TEST_PERFORMANCE=ON \
+          -DEBUR128_TEST_MALLOC_FAIL=ON \
+          -DCMAKE_C_FLAGS="-m32 -std=c89 -pedantic" \
+          -DCMAKE_CXX_FLAGS="-m32"
+
+    - name: Build
+      run: cmake --build build-coverage32
+      env:
+        CMAKE_BUILD_PARALLEL_LEVEL: 2
+
+    - name: Generate coverage report
+      working-directory: build-coverage32
+      run: ../tools/check_coverage.sh
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-32
+        path: |
+          build-coverage32/show.html
+          build-coverage32/show.lcov
+          build-coverage32/report.txt
+          build-coverage32/lcov-report/
