@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <numbers>
 #include <span>
 #include <string>
 #include <string_view>
