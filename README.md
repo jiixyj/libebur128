@@ -88,6 +88,9 @@ If you want the git version, run simply:
 
     git clone git://github.com/jiixyj/libebur128.git
 
+Performance benchmarks can be enabled with `-DEBUR128_BUILD_BENCHMARKS=ON`.
+Run `ebur128-benchmark --help` for the available workload options.
+
 Usage
 -----
 

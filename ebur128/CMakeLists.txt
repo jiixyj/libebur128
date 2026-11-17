@@ -74,6 +74,14 @@ endfunction()
 
 ebur128_configure_library(ebur128)
 
+if(BUILD_TESTING OR EBUR128_BUILD_BENCHMARKS)
+  add_library(ebur128.test INTERFACE)
+  add_library(ebur128::ebur128.test ALIAS ebur128.test)
+  target_sources(ebur128.test INTERFACE
+    FILE_SET HEADERS FILES ebur128.test.h)
+  target_compile_features(ebur128.test INTERFACE cxx_std_20)
+endif()
+
 macro(ebur128_add_test test_target module)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.4)
     discover_tests(COMMAND ${test_target}
@@ -110,27 +118,32 @@ if(BUILD_TESTING)
   target_compile_features(ebur128.test_signals PRIVATE cxx_std_20)
 
   add_executable(ebur128-test ebur128-test.cpp)
-  target_compile_features(ebur128-test PRIVATE cxx_std_20)
-  target_link_libraries(ebur128-test PRIVATE ebur128::ebur128 ebur128::ebur128.test_signals)
+  target_link_libraries(ebur128-test PRIVATE
+    ebur128::ebur128 ebur128::ebur128.test ebur128::ebur128.test_signals)
   if(TARGET Threads::Threads)
     target_link_libraries(ebur128-test PRIVATE Threads::Threads)
   endif()
-  if(EBUR128_TEST_PERFORMANCE)
-    target_compile_definitions(ebur128-test PRIVATE EBUR128_TEST_PERFORMANCE)
-  endif()
   ebur128_add_test(ebur128-test ebur128)
 
+  if(EBUR128_TEST_PERFORMANCE)
+    add_executable(ebur128-test.ftz_performance
+      ebur128-test.ftz_performance.cpp)
+    target_link_libraries(ebur128-test.ftz_performance PRIVATE
+      ebur128::ebur128 ebur128::ebur128.test)
+    ebur128_add_test(ebur128-test.ftz_performance ebur128)
+  endif()
+
   add_executable(ebur128-test.true_peak ebur128-test.true_peak.cpp)
-  target_compile_features(ebur128-test.true_peak PRIVATE cxx_std_20)
-  target_link_libraries(ebur128-test.true_peak PRIVATE ebur128::ebur128 ebur128::ebur128.test_signals)
+  target_link_libraries(ebur128-test.true_peak PRIVATE
+    ebur128::ebur128 ebur128::ebur128.test ebur128::ebur128.test_signals)
   if(TARGET Threads::Threads)
     target_link_libraries(ebur128-test.true_peak PRIVATE Threads::Threads)
   endif()
   ebur128_add_test(ebur128-test.true_peak ebur128)
 
   add_executable(ebur128-test.ebu_files ebur128-test.ebu_files.cpp)
-  target_compile_features(ebur128-test.ebu_files PRIVATE cxx_std_20)
-  target_link_libraries(ebur128-test.ebu_files PRIVATE ebur128::ebur128 ebur128::ebur128.test_signals)
+  target_link_libraries(ebur128-test.ebu_files PRIVATE
+    ebur128::ebur128 ebur128::ebur128.test ebur128::ebur128.test_signals)
   if(TARGET Threads::Threads)
     target_link_libraries(ebur128-test.ebu_files PRIVATE Threads::Threads)
   endif()
@@ -155,8 +168,8 @@ if(BUILD_TESTING)
       calloc=ebur128_test_calloc)
 
     add_executable(ebur128-test.malloc_fail ebur128-test.malloc_fail.cpp)
-    target_compile_features(ebur128-test.malloc_fail PRIVATE cxx_std_20)
-    target_link_libraries(ebur128-test.malloc_fail PRIVATE ebur128::ebur128.malloc_fail)
+    target_link_libraries(ebur128-test.malloc_fail PRIVATE
+      ebur128::ebur128.malloc_fail ebur128::ebur128.test)
     if(TARGET Threads::Threads)
       target_link_libraries(ebur128-test.malloc_fail PRIVATE Threads::Threads)
     endif()
