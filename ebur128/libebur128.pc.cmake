@@ -7,5 +7,5 @@ Description: EBU R 128 standard for loudness normalisation
 Version: @EBUR128_VERSION@
 URL: https://github.com/jiixyj/libebur128
 Libs: -L${libdir} -lebur128
-Libs.private: -lm
+Libs.private: @EBUR128_PC_PRIVATE_LIBS@
 Cflags: -I${includedir}

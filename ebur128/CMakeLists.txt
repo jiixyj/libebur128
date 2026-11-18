@@ -28,12 +28,18 @@ endif()
 
 set(EBUR128_VERSION_MAJOR 1)
 set(EBUR128_VERSION 1.2.6)
+if(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+  string(REGEX MATCH "^[0-9]+\\.[0-9]+" EBUR128_SHARED_LIBRARY_VERSION
+         "${EBUR128_VERSION}")
+else()
+  set(EBUR128_SHARED_LIBRARY_VERSION "${EBUR128_VERSION}")
+endif()
 
 add_library(ebur128)
 add_library(ebur128::ebur128 ALIAS ebur128)
 set_target_properties(ebur128 PROPERTIES
   SOVERSION ${EBUR128_VERSION_MAJOR}
-  VERSION ${EBUR128_VERSION}
+  VERSION ${EBUR128_SHARED_LIBRARY_VERSION}
 )
 if(BUILD_SHARED_LIBS)
   if(MSVC)
@@ -58,6 +64,15 @@ endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
+
+set(EBUR128_PC_PRIVATE_LIBS "")
+if(NOT HAVE_LIBC_MATH AND HAVE_LIBM_MATH)
+  list(APPEND EBUR128_PC_PRIVATE_LIBS "-lm")
+endif()
+if(NOT WIN32 AND TARGET Threads::Threads AND CMAKE_THREAD_LIBS_INIT)
+  list(APPEND EBUR128_PC_PRIVATE_LIBS "${CMAKE_THREAD_LIBS_INIT}")
+endif()
+list(JOIN EBUR128_PC_PRIVATE_LIBS " " EBUR128_PC_PRIVATE_LIBS)
 
 function(ebur128_configure_library target)
   set(source_args)
@@ -131,6 +146,13 @@ if(BUILD_TESTING)
          "Enable timing-based FTZ performance test" ON)
   option(EBUR128_TEST_MALLOC_FAIL
          "Enable malloc/calloc failure injection test" ON)
+  if(EBUR128_COVERAGE)
+    set(EBUR128_TEST_PKGCONFIG_DEFAULT OFF)
+  else()
+    set(EBUR128_TEST_PKGCONFIG_DEFAULT ON)
+  endif()
+  option(EBUR128_TEST_PKGCONFIG
+         "Test installed pkg-config metadata" ${EBUR128_TEST_PKGCONFIG_DEFAULT})
 
   add_library(ebur128.test_signals STATIC)
   add_library(ebur128::ebur128.test_signals ALIAS ebur128.test_signals)
@@ -198,6 +220,38 @@ if(BUILD_TESTING)
       target_link_libraries(ebur128-test.malloc_fail PRIVATE Threads::Threads)
     endif()
     ebur128_add_test(ebur128-test.malloc_fail ebur128)
+  endif()
+
+  if(UNIX AND NOT CMAKE_CROSSCOMPILING)
+    find_package(PkgConfig QUIET)
+  endif()
+  if(UNIX AND NOT CMAKE_CROSSCOMPILING AND PkgConfig_FOUND AND
+     EBUR128_TEST_PKGCONFIG)
+    foreach(library_type IN ITEMS static shared)
+      if(library_type STREQUAL "shared")
+        set(build_shared ON)
+      else()
+        set(build_shared OFF)
+      endif()
+      add_test(NAME ebur128-pkgconfig-${library_type}
+        COMMAND ${CMAKE_COMMAND}
+          "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+          "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/pkgconfig-test/${library_type}"
+          "-DBUILD_SHARED_LIBS=${build_shared}"
+          "-DEXPECTED_VERSION=${EBUR128_VERSION}"
+          "-DCMAKE_GENERATOR=${CMAKE_GENERATOR}"
+          "-DCMAKE_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}"
+          "-DCMAKE_GENERATOR_TOOLSET=${CMAKE_GENERATOR_TOOLSET}"
+          "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+          "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+          "-DBUILD_CONFIG=$<CONFIG>"
+          "-DPKG_CONFIG_EXECUTABLE=${PKG_CONFIG_EXECUTABLE}"
+          "-DCONSUMER_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/ebur128-test.pkgconfig.c"
+          -P "${CMAKE_CURRENT_SOURCE_DIR}/ebur128-test.pkgconfig.cmake"
+      )
+      set_tests_properties(ebur128-pkgconfig-${library_type} PROPERTIES
+        LABELS pkgconfig)
+    endforeach()
   endif()
 endif()
 
