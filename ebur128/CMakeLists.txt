@@ -45,34 +45,58 @@ else()
   endif()
 endif()
 
-# Link with Math library if available
-find_library(MATH_LIBRARY m)
+# Link with Math library if needed.
+include(CheckSymbolExists)
+include(CMakePushCheckState)
+check_symbol_exists(pow "math.h" HAVE_LIBC_MATH)
+if(NOT HAVE_LIBC_MATH)
+  cmake_push_check_state()
+  list(APPEND CMAKE_REQUIRED_LIBRARIES m)
+  check_symbol_exists(pow "math.h" HAVE_LIBM_MATH)
+  cmake_pop_check_state()
+endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
 
 function(ebur128_configure_library target)
+  set(source_args)
+  if("CXX" IN_LIST ARGN)
+    target_sources(${target} PRIVATE FILE_SET SOURCES)
+    set_property(FILE_SET SOURCES TARGET ${target} PROPERTY LANGUAGE CXX)
+    set(source_args FILE_SET SOURCES FILES)
+  endif()
+
   target_sources(${target}
-    PRIVATE ebur128.c
+    PRIVATE ${source_args} ebur128.c
     PUBLIC FILE_SET HEADERS FILES ebur128.h
     PRIVATE FILE_SET private_headers TYPE HEADERS FILES ebur128/once.h
   )
 
   if(WIN32)
-    target_sources(${target} PRIVATE ebur128/once.windows.c)
+    target_sources(${target}
+      PRIVATE ${source_args} ebur128/once.windows.c)
   elseif(TARGET Threads::Threads)
-    target_sources(${target} PRIVATE ebur128/once.pthread.c)
+    target_sources(${target}
+      PRIVATE ${source_args} ebur128/once.pthread.c)
     target_link_libraries(${target} PRIVATE Threads::Threads)
   else()
-    target_sources(${target} PRIVATE ebur128/once.simple.c)
+    target_sources(${target}
+      PRIVATE ${source_args} ebur128/once.simple.c)
   endif()
 
-  if(MATH_LIBRARY)
-    target_link_libraries(${target} PRIVATE ${MATH_LIBRARY})
-  endif()
+  target_link_libraries(${target} PRIVATE $<$<BOOL:${HAVE_LIBM_MATH}>:m>)
 endfunction()
 
 ebur128_configure_library(ebur128)
+
+# Check that the code is in the C/C++ language subset by adding this otherwise
+# unused target that uses a C++ compiler to build all `.c` files.
+if(BUILD_TESTING AND CMAKE_VERSION VERSION_GREATER_EQUAL 4.5)
+  add_library(ebur128.cpp STATIC)
+  ebur128_configure_library(ebur128.cpp CXX)
+  target_compile_features(ebur128.cpp PRIVATE cxx_std_20)
+endif()
 
 if(BUILD_TESTING OR EBUR128_BUILD_BENCHMARKS)
   add_library(ebur128.test INTERFACE)
