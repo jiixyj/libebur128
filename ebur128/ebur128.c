@@ -1017,7 +1017,7 @@ static EBUR128_FORCE_INLINE void ebur128_filter_impl(ebur128_state* st,
         v[2] = v[1];
         v[1] = v[0];
       }
-      FLUSH_MANUALLY(v1, v2, v3, v4);
+      FLUSH_MANUALLY(v[1], v[2], v[3], v[4]);
       memcpy(&st->d->v[c], v, 5 * sizeof(double));
     }
   }
