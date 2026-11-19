@@ -122,22 +122,22 @@ if(BUILD_TESTING OR EBUR128_BUILD_BENCHMARKS)
 endif()
 
 macro(ebur128_add_test test_target module)
+  set(test_properties
+    WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
+    SKIP_RETURN_CODE 77
+  )
+  list(APPEND test_properties ${ARGN})
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.4)
     discover_tests(COMMAND ${test_target}
       DISCOVERY_ARGS "--list-tests"
       DISCOVERY_MATCH "^(.*)$"
       TEST_NAME "${module}-\\1"
       TEST_ARGS --run-test "\\1"
-      TEST_PROPERTIES
-        WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
-        SKIP_RETURN_CODE 77
+      TEST_PROPERTIES ${test_properties}
     )
   else()
     add_test(NAME ${test_target} COMMAND ${test_target})
-    set_tests_properties(${test_target} PROPERTIES
-      WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
-      SKIP_RETURN_CODE 77
-    )
+    set_tests_properties(${test_target} PROPERTIES ${test_properties})
   endif()
 endmacro()
 
@@ -176,7 +176,7 @@ if(BUILD_TESTING)
       ebur128-test.ftz_performance.cpp)
     target_link_libraries(ebur128-test.ftz_performance PRIVATE
       ebur128::ebur128 ebur128::ebur128.test)
-    ebur128_add_test(ebur128-test.ftz_performance ebur128)
+    ebur128_add_test(ebur128-test.ftz_performance ebur128 RUN_SERIAL TRUE)
   endif()
 
   add_executable(ebur128-test.true_peak ebur128-test.true_peak.cpp)
