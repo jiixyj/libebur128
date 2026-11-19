@@ -179,3 +179,107 @@ jobs:
           build-coverage32/show.lcov
           build-coverage32/report.txt
           build-coverage32/lcov-report/
+
+  freebsd:
+    name: FreeBSD
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+
+    - name: Build, install, and test in FreeBSD
+      uses: vmactions/freebsd-vm@v1
+      with:
+        copyback: false
+        prepare: |
+          set -e
+          pkg install -y cmake gmake pkgconf
+        run: |
+          set -e
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTING=ON \
+            -DEBUR128_TEST_PKGCONFIG=ON
+          cmake --build build --parallel 2
+          cmake --install build
+          ctest --test-dir build --output-on-failure --parallel 2
+
+  openbsd:
+    name: OpenBSD
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+
+    - name: Build, install, and test in OpenBSD
+      uses: vmactions/openbsd-vm@v1
+      with:
+        copyback: false
+        prepare: |
+          set -e
+          pkg_add cmake gmake
+        run: |
+          set -e
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTING=ON \
+            -DEBUR128_TEST_PKGCONFIG=ON
+          cmake --build build --parallel 2
+          cmake --install build
+          ctest --test-dir build --output-on-failure --parallel 2
+
+  netbsd:
+    name: NetBSD
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+
+    - name: Build, install, and test in NetBSD
+      uses: vmactions/netbsd-vm@v1
+      with:
+        copyback: false
+        prepare: |
+          set -e
+          /usr/sbin/pkg_add -u cmake gmake pkgconf
+        run: |
+          set -e
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTING=ON \
+            -DEBUR128_TEST_PKGCONFIG=ON
+          cmake --build build --parallel 2
+          cmake --install build
+          ctest --test-dir build --output-on-failure --parallel 2
+
+  haiku:
+    name: Haiku
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+
+    - name: Build, install, and test in Haiku
+      uses: vmactions/haiku-vm@v1
+      with:
+        copyback: false
+        prepare: |
+          set -e
+          pkgman install -y cmake make pkgconfig gcc
+        run: |
+          set -e
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTING=ON \
+            -DEBUR128_TEST_PKGCONFIG=ON
+          cmake --build build --parallel 2
+          cmake --install build
+          ctest --test-dir build --output-on-failure --parallel 2
