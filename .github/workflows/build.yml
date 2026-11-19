@@ -193,7 +193,8 @@ jobs:
         copyback: false
         prepare: |
           set -e
-          pkg install -y cmake gmake pkgconf
+          pkg -4 update -f
+          pkg -4 install -y cmake gmake pkgconf
         run: |
           set -e
           cmake -S . -B build \
