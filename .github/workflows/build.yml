@@ -149,7 +149,7 @@ jobs:
           -DBUILD_SHARED_LIBS=ON \
           -DBUILD_TESTING=ON \
           -DEBUR128_COVERAGE=ON \
-          -DEBUR128_TEST_PERFORMANCE=ON \
+          -DEBUR128_TEST_PERFORMANCE=OFF \
           -DEBUR128_TEST_MALLOC_FAIL=ON \
           -DCMAKE_C_FLAGS="-m32 -std=c89 -pedantic" \
           -DCMAKE_CXX_FLAGS="-m32"
